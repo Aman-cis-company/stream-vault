@@ -10,6 +10,10 @@ const logger = require('./config/logger');
 
 const app = express();
 
+// ── Trust proxy — required when running behind Nginx/load balancer ────────────
+// Without this, req.ip resolves to the proxy IP and all users share one rate limit counter.
+app.set('trust proxy', 1);
+
 // ── Security Middleware ───────────────────────────────────────────────────────
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },

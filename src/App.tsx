@@ -19,6 +19,9 @@ import PaymentCancel from "./routes/payment-cancel";
 import NotFound from "./pages/NotFound";
 import ParentalControls from "./pages/ParentalControls";
 import { AgeVerificationModal } from "./components/streaming/AgeVerificationModal";
+import SeriesDetail from "./routes/series.$seriesId";
+import WatchEpisode from "./routes/watch.series.$seriesId.episode.$episodeId";
+import AdminSeries from "./pages/admin/AdminSeries";
 
 export default function App() {
   return (
@@ -42,6 +45,9 @@ export default function App() {
         <Route path="/admin/categories" element={<AdminCategories />} />
         <Route path="/admin/movies" element={<AdminMovies />} />
         <Route path="/admin/plans" element={<AdminPlans />} />
+        <Route path="/admin/series" element={<AdminSeries />} />
+        <Route path="/series/:seriesId" element={<SeriesDetail />} />
+        <Route path="/watch/series/:seriesId/episode/:episodeId" element={<WatchEpisode />} />
         <Route path="/watch/:titleId" element={<Watch />} />
         <Route path="/payment/success" element={<PaymentSuccess />} />
         <Route path="/payment/cancel" element={<PaymentCancel />} />

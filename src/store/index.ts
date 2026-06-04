@@ -14,6 +14,7 @@ import storage from "redux-persist/lib/storage";
 import authReducer from "./slices/authSlice";
 import categoriesReducer from "./slices/categoriesSlice";
 import moviesReducer from "./slices/moviesSlice";
+import seriesReducer from "./slices/seriesSlice";
 
 const authPersistConfig = {
   key: "sv-auth",
@@ -25,6 +26,7 @@ const rootReducer = combineReducers({
   auth: persistReducer(authPersistConfig, authReducer),
   categories: categoriesReducer,
   movies: moviesReducer,
+  series: seriesReducer,
 });
 
 export const store = configureStore({

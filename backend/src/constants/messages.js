@@ -64,6 +64,21 @@ const MESSAGES = {
   VIDEO_TOKEN_ISSUED: 'Video stream token issued.',
   VIDEO_NOT_LOCAL: 'Video is not stored locally; direct streaming is not available.',
 
+  // Series
+  SERIES_CREATED: 'Series created successfully.',
+  SERIES_UPDATED: 'Series updated successfully.',
+  SERIES_DELETED: 'Series deleted successfully.',
+  SERIES_FETCHED: 'Series fetched successfully.',
+  SERIES_NOT_FOUND: 'Series not found.',
+
+  // Episodes
+  EPISODE_CREATED: 'Episode created successfully.',
+  EPISODE_UPDATED: 'Episode updated successfully.',
+  EPISODE_DELETED: 'Episode deleted successfully.',
+  EPISODE_FETCHED: 'Episode fetched successfully.',
+  EPISODES_FETCHED: 'Episodes fetched successfully.',
+  EPISODE_NOT_FOUND: 'Episode not found.',
+
   // Age verification
   AGE_VERIFIED: 'Age verified successfully.',
   AGE_VERIFICATION_FAILED: 'Age verification failed. You must be 18 or older.',

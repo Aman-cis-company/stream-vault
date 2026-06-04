@@ -10,6 +10,7 @@ const dashboardRoutes = require('./dashboard.routes');
 const videoRoutes = require('./video.routes');
 const ageRoutes = require('./age.routes');
 const parentalControlsRoutes = require('./parentalControls.routes');
+const seriesRoutes = require('./series.routes');
 
 // Health check
 router.get('/health', (req, res) => {
@@ -30,5 +31,6 @@ router.use('/dashboard', dashboardRoutes);
 router.use('/videos', videoRoutes);
 router.use('/age', ageRoutes);
 router.use('/parental-controls', parentalControlsRoutes);
+router.use('/series', seriesRoutes);
 
 module.exports = router;

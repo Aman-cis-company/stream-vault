@@ -11,6 +11,8 @@ const Payment = require('./Payment');
 const WatchHistory = require('./WatchHistory');
 const UserAgeVerification = require('./UserAgeVerification');
 const ParentalControl = require('./ParentalControl');
+const Series = require('./Series');
+const Episode = require('./Episode');
 
 // ── Role ↔ User ─────────────────────────────────────────────────────────────
 Role.hasMany(User, { foreignKey: 'role_id', as: 'users' });
@@ -60,6 +62,20 @@ WatchHistory.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 Movie.hasMany(WatchHistory, { foreignKey: 'movie_id', as: 'watchHistory' });
 WatchHistory.belongsTo(Movie, { foreignKey: 'movie_id', as: 'movie' });
 
+// ── Category ↔ Series ────────────────────────────────────────────────────────
+Category.hasMany(Series, { foreignKey: 'category_id', as: 'seriesList' });
+Series.belongsTo(Category, { foreignKey: 'category_id', as: 'category' });
+
+// ── User ↔ Series (created_by / updated_by) ──────────────────────────────────
+User.hasMany(Series, { foreignKey: 'created_by', as: 'createdSeries' });
+User.hasMany(Series, { foreignKey: 'updated_by', as: 'updatedSeries' });
+Series.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
+Series.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
+
+// ── Series ↔ Episode ─────────────────────────────────────────────────────────
+Series.hasMany(Episode, { foreignKey: 'series_id', as: 'episodes', onDelete: 'CASCADE' });
+Episode.belongsTo(Series, { foreignKey: 'series_id', as: 'series' });
+
 // ── User ↔ UserAgeVerification ───────────────────────────────────────────────
 User.hasMany(UserAgeVerification, { foreignKey: 'user_id', as: 'ageVerifications', onDelete: 'CASCADE' });
 UserAgeVerification.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
@@ -82,4 +98,6 @@ module.exports = {
   WatchHistory,
   UserAgeVerification,
   ParentalControl,
+  Series,
+  Episode,
 };

@@ -21,6 +21,7 @@ import {
   Layers,
   Activity,
   CreditCard,
+  Tv,
 } from "lucide-react";
 import {
   LineChart,
@@ -244,6 +245,25 @@ function Admin() {
               </p>
               <Button asChild className="w-full">
                 <Link to="/admin/movies">Manage Movies</Link>
+              </Button>
+            </div>
+
+            {/* Web Series card */}
+            <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex size-10 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                  <Tv className="size-5" />
+                </span>
+                <div>
+                  <h2 className="font-semibold">Web Series</h2>
+                  <p className="text-xs text-muted-foreground">Manage series and episodes</p>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Create and manage web series with multiple seasons and episodes. Upload videos per episode.
+              </p>
+              <Button asChild className="w-full">
+                <Link to="/admin/series">Manage Series</Link>
               </Button>
             </div>
 
