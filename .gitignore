@@ -1,0 +1,12 @@
+node_modules
+uploads
+dist
+.codex
+.env
+package-lock.json
+package.json
+PERFORMANCE_CHANGES
+.claude
+# Sentry Config File
+.env.sentry-build-plugin
+htaccess

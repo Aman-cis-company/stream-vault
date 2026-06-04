@@ -1,0 +1,9 @@
+node_modules/
+.env
+logs/*.log
+uploads/thumbnails/*
+!uploads/thumbnails/.gitkeep
+dist/
+coverage/
+.nyc_output/
+*.DS_Store

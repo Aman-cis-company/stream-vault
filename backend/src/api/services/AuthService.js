@@ -1,0 +1,230 @@
+const bcrypt = require('bcryptjs');
+const { Op } = require('sequelize');
+const UserRepository = require('../repositories/UserRepository');
+const { RefreshToken, Role } = require('../../models');
+const {
+  generateAccessToken,
+  generateRefreshToken,
+  getRefreshTokenExpiry,
+  generatePasswordResetToken,
+  verifyPasswordResetToken,
+} = require('../../helpers/tokenHelper');
+const EmailService = require('./EmailService');
+const logger = require('../../config/logger');
+const ROLES = require('../../constants/roles');
+
+class AuthService {
+  /**
+   * Register a new subscriber.
+   */
+  async register(data) {
+    const { first_name, last_name, email, password, phone } = data;
+
+    // Check for existing email
+    const existing = await UserRepository.findByEmail(email);
+    if (existing) {
+      const err = new Error('Email already exists');
+      err.statusCode = 409;
+      throw err;
+    }
+
+    // Find subscriber role
+    const role = await Role.findOne({ where: { name: ROLES.SUBSCRIBER } });
+    if (!role) throw new Error('Subscriber role not found. Please run seeders.');
+
+    // Hash password
+    const hashed = await bcrypt.hash(password, 12);
+
+    const user = await UserRepository.create({
+      role_id: role.id,
+      first_name,
+      last_name,
+      email,
+      password: hashed,
+      phone: phone || null,
+      email_verified: false,
+      status: 'active',
+    });
+
+    // Send welcome email (non-blocking)
+    EmailService.sendWelcomeEmail(user).catch((e) =>
+      logger.warn('Welcome email failed', { userId: user.id, error: e.message })
+    );
+
+    const safeUser = await UserRepository.findById(user.id);
+    return safeUser;
+  }
+
+  /**
+   * Login any user.
+   * Returns { user, accessToken, refreshToken }
+   */
+  async login(email, password) {
+    const user = await UserRepository.findByEmailWithPassword(email);
+
+    if (!user) {
+      const err = new Error('Invalid credentials');
+      err.statusCode = 401;
+      throw err;
+    }
+
+    if (user.status === 'inactive') {
+      const err = new Error('Account is inactive');
+      err.statusCode = 403;
+      throw err;
+    }
+    if (user.status === 'banned') {
+      const err = new Error('Account is banned');
+      err.statusCode = 403;
+      throw err;
+    }
+
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+      const err = new Error('Invalid credentials');
+      err.statusCode = 401;
+      throw err;
+    }
+
+    // Update last_login (non-blocking)
+    UserRepository.updateById(user.id, { last_login: new Date() }).catch(() => {});
+
+    const payload = { id: user.id, email: user.email, role: user.role?.name };
+    const accessToken = generateAccessToken(payload);
+    const refreshTokenValue = generateRefreshToken();
+    const expiresAt = getRefreshTokenExpiry();
+
+    await RefreshToken.create({
+      user_id: user.id,
+      token: refreshTokenValue,
+      expires_at: expiresAt,
+      is_revoked: false,
+    });
+
+    const safeUser = await UserRepository.findById(user.id);
+    return { user: safeUser, accessToken, refreshToken: refreshTokenValue };
+  }
+
+  /**
+   * Rotate refresh token.
+   * Returns { accessToken, refreshToken }
+   */
+  async refreshToken(oldToken) {
+    const record = await RefreshToken.findOne({
+      where: {
+        token: oldToken,
+        is_revoked: false,
+        expires_at: { [Op.gt]: new Date() },
+      },
+    });
+
+    if (!record) {
+      const err = new Error('Invalid or expired refresh token');
+      err.statusCode = 401;
+      throw err;
+    }
+
+    // Revoke old token
+    await record.update({ is_revoked: true });
+
+    const user = await UserRepository.findById(record.user_id);
+    if (!user || user.status !== 'active') {
+      const err = new Error('User not found or inactive');
+      err.statusCode = 401;
+      throw err;
+    }
+
+    const payload = { id: user.id, email: user.email, role: user.role?.name };
+    const accessToken = generateAccessToken(payload);
+    const newRefreshToken = generateRefreshToken();
+    const expiresAt = getRefreshTokenExpiry();
+
+    await RefreshToken.create({
+      user_id: user.id,
+      token: newRefreshToken,
+      expires_at: expiresAt,
+      is_revoked: false,
+    });
+
+    return { accessToken, refreshToken: newRefreshToken };
+  }
+
+  /**
+   * Logout — revoke the refresh token.
+   */
+  async logout(refreshTokenValue) {
+    await RefreshToken.update(
+      { is_revoked: true },
+      { where: { token: refreshTokenValue } }
+    );
+  }
+
+  /**
+   * Forgot password — generate reset token, store in user, send email.
+   */
+  async forgotPassword(email) {
+    const user = await UserRepository.findByEmail(email);
+    // Always return success (don't expose whether email exists)
+    if (!user) return;
+
+    const resetToken = generatePasswordResetToken({ id: user.id, email: user.email });
+    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await UserRepository.updateById(user.id, {
+      reset_token: resetToken,
+      reset_token_expiry: expiry,
+    });
+
+    EmailService.sendPasswordResetEmail(user, resetToken).catch((e) =>
+      logger.warn('Reset email failed', { userId: user.id, error: e.message })
+    );
+  }
+
+  /**
+   * Reset password — verify token, update password.
+   */
+  async resetPassword(token, newPassword) {
+    let decoded;
+    try {
+      decoded = verifyPasswordResetToken(token);
+    } catch {
+      const err = new Error('Invalid or expired reset token');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const user = await UserRepository.findByResetToken(token);
+    if (!user || user.id !== decoded.id) {
+      const err = new Error('Invalid or expired reset token');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 12);
+    await UserRepository.updateById(user.id, {
+      password: hashed,
+      reset_token: null,
+      reset_token_expiry: null,
+    });
+
+    // Revoke all refresh tokens for this user
+    await RefreshToken.update({ is_revoked: true }, { where: { user_id: user.id } });
+  }
+
+  /**
+   * Get profile.
+   */
+  async getProfile(userId) {
+    return UserRepository.findById(userId);
+  }
+
+  /**
+   * Update profile.
+   */
+  async updateProfile(userId, data) {
+    await UserRepository.updateById(userId, data);
+    return UserRepository.findById(userId);
+  }
+}
+
+module.exports = new AuthService();

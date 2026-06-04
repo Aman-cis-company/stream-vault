@@ -1,0 +1,85 @@
+const { sequelize, Sequelize } = require('../config/database');
+
+const Role = require('./Role');
+const User = require('./User');
+const RefreshToken = require('./RefreshToken');
+const Category = require('./Category');
+const Movie = require('./Movie');
+const SubscriptionPlan = require('./SubscriptionPlan');
+const UserSubscription = require('./UserSubscription');
+const Payment = require('./Payment');
+const WatchHistory = require('./WatchHistory');
+const UserAgeVerification = require('./UserAgeVerification');
+const ParentalControl = require('./ParentalControl');
+
+// ── Role ↔ User ─────────────────────────────────────────────────────────────
+Role.hasMany(User, { foreignKey: 'role_id', as: 'users' });
+User.belongsTo(Role, { foreignKey: 'role_id', as: 'role' });
+
+// ── User ↔ RefreshToken ──────────────────────────────────────────────────────
+User.hasMany(RefreshToken, { foreignKey: 'user_id', as: 'refreshTokens', onDelete: 'CASCADE' });
+RefreshToken.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+// ── User ↔ Category (created_by / updated_by) ────────────────────────────────
+User.hasMany(Category, { foreignKey: 'created_by', as: 'createdCategories' });
+User.hasMany(Category, { foreignKey: 'updated_by', as: 'updatedCategories' });
+Category.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
+Category.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
+
+// ── Category ↔ Movie ─────────────────────────────────────────────────────────
+Category.hasMany(Movie, { foreignKey: 'category_id', as: 'movies' });
+Movie.belongsTo(Category, { foreignKey: 'category_id', as: 'category' });
+
+// ── User ↔ Movie (created_by / updated_by) ───────────────────────────────────
+User.hasMany(Movie, { foreignKey: 'created_by', as: 'createdMovies' });
+User.hasMany(Movie, { foreignKey: 'updated_by', as: 'updatedMovies' });
+Movie.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
+Movie.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
+
+// ── User ↔ UserSubscription ──────────────────────────────────────────────────
+User.hasMany(UserSubscription, { foreignKey: 'user_id', as: 'subscriptions' });
+UserSubscription.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+// ── SubscriptionPlan ↔ UserSubscription ─────────────────────────────────────
+SubscriptionPlan.hasMany(UserSubscription, { foreignKey: 'plan_id', as: 'userSubscriptions' });
+UserSubscription.belongsTo(SubscriptionPlan, { foreignKey: 'plan_id', as: 'plan' });
+
+// ── UserSubscription ↔ Payment ───────────────────────────────────────────────
+UserSubscription.hasMany(Payment, { foreignKey: 'subscription_id', as: 'payments' });
+Payment.belongsTo(UserSubscription, { foreignKey: 'subscription_id', as: 'subscription' });
+
+// ── User ↔ Payment ───────────────────────────────────────────────────────────
+User.hasMany(Payment, { foreignKey: 'user_id', as: 'payments' });
+Payment.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+// ── User ↔ WatchHistory ──────────────────────────────────────────────────────
+User.hasMany(WatchHistory, { foreignKey: 'user_id', as: 'watchHistory', onDelete: 'CASCADE' });
+WatchHistory.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+// ── Movie ↔ WatchHistory ─────────────────────────────────────────────────────
+Movie.hasMany(WatchHistory, { foreignKey: 'movie_id', as: 'watchHistory' });
+WatchHistory.belongsTo(Movie, { foreignKey: 'movie_id', as: 'movie' });
+
+// ── User ↔ UserAgeVerification ───────────────────────────────────────────────
+User.hasMany(UserAgeVerification, { foreignKey: 'user_id', as: 'ageVerifications', onDelete: 'CASCADE' });
+UserAgeVerification.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+// ── User ↔ ParentalControl ───────────────────────────────────────────────────
+User.hasOne(ParentalControl, { foreignKey: 'user_id', as: 'parentalControl', onDelete: 'CASCADE' });
+ParentalControl.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+module.exports = {
+  sequelize,
+  Sequelize,
+  Role,
+  User,
+  RefreshToken,
+  Category,
+  Movie,
+  SubscriptionPlan,
+  UserSubscription,
+  Payment,
+  WatchHistory,
+  UserAgeVerification,
+  ParentalControl,
+};

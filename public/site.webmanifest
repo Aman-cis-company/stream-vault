@@ -1,0 +1,17 @@
+{
+  "name": "StreamVault",
+  "short_name": "StreamVault",
+  "description": "Premium Movies & Series in 4K",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1b0c0a",
+  "theme_color": "#c0392b",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
