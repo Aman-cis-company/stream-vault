@@ -6,14 +6,16 @@ import { AgeRatingBadge } from "@/components/streaming/AgeRatingBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  fetchSeriesById, fetchEpisodesBySeriesId, groupEpisodesBySeasons,
-  episodeVideoUrl, episodeThumbnail, formatDuration, seriesThumbnail,
+  fetchSeriesById, fetchEpisodesBySeriesId, fetchEpisodeStreamUrl,
+  getEpisodeProgress, saveEpisodeProgress,
+  groupEpisodesBySeasons, episodeVideoUrl, episodeThumbnail,
+  formatDuration, seriesThumbnail,
   type BackendSeries, type BackendEpisode,
 } from "@/lib/series";
 import { assetUrl } from "@/services/api";
 import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
-  SkipBack, SkipForward, ArrowLeft, Loader2, ChevronDown, ChevronRight,
+  SkipBack, SkipForward, ArrowLeft, Loader2, ChevronDown, ChevronRight, RotateCcw,
 } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -26,9 +28,7 @@ function fmtTime(s: number) {
 }
 
 function isHls(url: string) { return url.includes(".m3u8") || url.includes("/hls/"); }
-function isYoutube(url: string) {
-  return url.includes("youtube.com") || url.includes("youtu.be");
-}
+function isYoutube(url: string) { return url.includes("youtube.com") || url.includes("youtu.be"); }
 function extractYouTubeId(url: string) {
   const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([^?&\s]+)/);
   return m ? m[1] : null;
@@ -36,11 +36,21 @@ function extractYouTubeId(url: string) {
 
 // ── Video Player ──────────────────────────────────────────────────────────────
 
-function EpisodePlayer({ src, poster, title }: { src: string; poster: string; title: string }) {
+interface EpisodePlayerProps {
+  src: string;
+  poster: string;
+  title: string;
+  resumeFrom?: number;
+  onProgress?: (currentTime: number, duration: number) => void;
+  onResumeConfirmed?: () => void;
+}
+
+function EpisodePlayer({ src, poster, title, resumeFrom = 0, onProgress, onResumeConfirmed }: EpisodePlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const hasSeekRef = useRef(false);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -50,12 +60,27 @@ function EpisodePlayer({ src, poster, title }: { src: string; poster: string; ti
   const [showControls, setShowControls] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
   const [buffering, setBuffering] = useState(true);
+  const [showResumeBanner, setShowResumeBanner] = useState(false);
+
+  // Seek to resume position once the video has enough metadata
+  const handleReady = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    setBuffering(false);
+    if (resumeFrom > 5 && !hasSeekRef.current) {
+      hasSeekRef.current = true;
+      video.currentTime = resumeFrom;
+      setShowResumeBanner(true);
+    }
+    video.play().catch(() => { video.muted = true; setMuted(true); video.play().catch(() => {}); });
+  }, [resumeFrom]);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !src) return;
+    hasSeekRef.current = false;
     setBuffering(true);
-    const tryPlay = () => { video.play().catch(() => { video.muted = true; setMuted(true); video.play().catch(() => {}); }); };
+    setShowResumeBanner(false);
 
     if (isYoutube(src)) return;
 
@@ -64,19 +89,23 @@ function EpisodePlayer({ src, poster, title }: { src: string; poster: string; ti
       hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => { setBuffering(false); tryPlay(); });
+      hls.on(Hls.Events.MANIFEST_PARSED, handleReady);
       hls.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) hls.recoverMediaError(); });
       return () => { hls.destroy(); hlsRef.current = null; };
     } else {
-      video.src = src; video.load();
-      video.addEventListener("loadeddata", () => { setBuffering(false); tryPlay(); }, { once: true });
+      video.src = src;
+      video.load();
+      video.addEventListener("loadedmetadata", handleReady, { once: true });
     }
-  }, [src]);
+  }, [src, handleReady]);
 
   useEffect(() => {
     const v = videoRef.current; if (!v) return;
     const handlers = {
-      timeupdate: () => setCurrentTime(v.currentTime),
+      timeupdate: () => {
+        setCurrentTime(v.currentTime);
+        if (isFinite(v.duration) && v.duration > 0) onProgress?.(v.currentTime, v.duration);
+      },
       durationchange: () => { if (isFinite(v.duration)) setDuration(v.duration); },
       play: () => setPlaying(true), pause: () => setPlaying(false),
       waiting: () => setBuffering(true), playing: () => setBuffering(false),
@@ -87,7 +116,7 @@ function EpisodePlayer({ src, poster, title }: { src: string; poster: string; ti
     const onFs = () => setFullscreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", onFs);
     return () => { Object.entries(handlers).forEach(([e, h]) => v.removeEventListener(e, h)); document.removeEventListener("fullscreenchange", onFs); };
-  }, []);
+  }, [onProgress]);
 
   const resetHide = useCallback(() => {
     setShowControls(true); clearTimeout(hideTimer.current);
@@ -100,20 +129,51 @@ function EpisodePlayer({ src, poster, title }: { src: string; poster: string; ti
   if (ytId) {
     return (
       <div className="relative w-full aspect-video bg-black">
-        <iframe src={`https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`} title={title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="absolute inset-0 w-full h-full border-0" />
+        <iframe src={`https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&start=${Math.floor(resumeFrom)}`} title={title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="absolute inset-0 w-full h-full border-0" />
       </div>
     );
   }
 
   return (
     <div ref={containerRef} className="relative w-full bg-black select-none overflow-hidden" style={{ maxHeight: "62vh", aspectRatio: "16/7" }}
-      onMouseMove={resetHide} onMouseLeave={() => { if (playing) setShowControls(false); }} onDoubleClick={() => document.fullscreenElement ? document.exitFullscreen() : containerRef.current?.requestFullscreen()}>
-      <video ref={videoRef} className="w-full h-full object-contain" poster={poster} playsInline onClick={() => { const v = videoRef.current; if (!v) return; v.paused ? v.play() : v.pause(); }} />
+      onMouseMove={resetHide} onMouseLeave={() => { if (playing) setShowControls(false); }}
+      onDoubleClick={() => document.fullscreenElement ? document.exitFullscreen() : containerRef.current?.requestFullscreen()}>
+      <video ref={videoRef} className="w-full h-full object-contain" poster={poster} playsInline
+        onClick={() => { const v = videoRef.current; if (!v) return; v.paused ? v.play() : v.pause(); }} />
       <div className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.1) 60%, rgba(0,0,0,0.25) 100%)" }} />
-      {buffering && <div className="pointer-events-none absolute inset-0 flex items-center justify-center z-20"><div className="relative size-12"><div className="absolute inset-0 rounded-full border-[3px] border-white/10" /><div className="absolute inset-0 rounded-full border-[3px] border-transparent border-t-white animate-spin" /></div></div>}
+
+      {buffering && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center z-20">
+          <div className="relative size-12">
+            <div className="absolute inset-0 rounded-full border-[3px] border-white/10" />
+            <div className="absolute inset-0 rounded-full border-[3px] border-transparent border-t-white animate-spin" />
+          </div>
+        </div>
+      )}
+
+      {/* Resume banner */}
+      {showResumeBanner && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 rounded-xl bg-black/80 backdrop-blur-sm border border-white/15 px-4 py-3 shadow-xl">
+          <RotateCcw className="size-4 text-primary shrink-0" />
+          <span className="text-sm text-white/90">Resumed from <span className="font-semibold text-white">{fmtTime(resumeFrom)}</span></span>
+          <button
+            className="ml-1 text-xs text-white/50 hover:text-white underline-offset-2 hover:underline transition-colors"
+            onClick={() => {
+              const v = videoRef.current; if (v) v.currentTime = 0;
+              setShowResumeBanner(false);
+              onResumeConfirmed?.();
+            }}
+          >
+            Start over
+          </button>
+          <button className="ml-1 text-white/40 hover:text-white transition-colors" onClick={() => setShowResumeBanner(false)}>✕</button>
+        </div>
+      )}
+
       <div className={`absolute inset-x-0 bottom-0 z-30 transition-all duration-300 ${showControls || !playing ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-        {/* Progress */}
-        <div className="group/seek relative mx-3 mb-2 h-[3px] cursor-pointer rounded-full bg-white/20 hover:h-[5px] transition-all" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); const v = videoRef.current; if (!v || !isFinite(v.duration)) return; v.currentTime = ((e.clientX - r.left) / r.width) * v.duration; }}>
+        {/* Seek bar */}
+        <div className="group/seek relative mx-3 mb-2 h-[3px] cursor-pointer rounded-full bg-white/20 hover:h-[5px] transition-all"
+          onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); const v = videoRef.current; if (!v || !isFinite(v.duration)) return; v.currentTime = ((e.clientX - r.left) / r.width) * v.duration; }}>
           <div className="absolute inset-y-0 left-0 rounded-full bg-white/20" style={{ width: `${buffered}%` }} />
           <div className="absolute inset-y-0 left-0 rounded-full bg-primary" style={{ width: `${progress}%` }} />
         </div>
@@ -140,7 +200,7 @@ function EpisodePlayer({ src, poster, title }: { src: string; poster: string; ti
   );
 }
 
-// ── Episode List Sidebar ──────────────────────────────────────────────────────
+// ── Episode Sidebar ───────────────────────────────────────────────────────────
 
 function EpisodeSidebar({ series, episodes, currentEpId, onSelect }: { series: BackendSeries; episodes: BackendEpisode[]; currentEpId: number; onSelect: (ep: BackendEpisode) => void }) {
   const seasonMap = groupEpisodesBySeasons(episodes);
@@ -161,12 +221,14 @@ function EpisodeSidebar({ series, episodes, currentEpId, onSelect }: { series: B
       <div className="flex-1 overflow-y-auto">
         {seasons.map((s) => (
           <div key={s}>
-            <button className="flex items-center justify-between w-full px-4 py-2.5 text-sm font-medium hover:bg-secondary/30 transition-colors text-left" onClick={() => setExpanded((p) => ({ ...p, [s]: !p[s] }))}>
+            <button className="flex items-center justify-between w-full px-4 py-2.5 text-sm font-medium hover:bg-secondary/30 transition-colors text-left"
+              onClick={() => setExpanded((p) => ({ ...p, [s]: !p[s] }))}>
               Season {s}
               {expanded[s] ? <ChevronDown className="size-4 text-muted-foreground" /> : <ChevronRight className="size-4 text-muted-foreground" />}
             </button>
             {expanded[s] && (seasonMap[s] ?? []).map((ep) => (
-              <button key={ep.id} onClick={() => onSelect(ep)} className={`w-full flex gap-3 px-3 py-2 text-left hover:bg-secondary/40 transition-colors ${ep.id === currentEpId ? "bg-primary/10 border-l-2 border-primary" : ""}`}>
+              <button key={ep.id} onClick={() => onSelect(ep)}
+                className={`w-full flex gap-3 px-3 py-2 text-left hover:bg-secondary/40 transition-colors ${ep.id === currentEpId ? "bg-primary/10 border-l-2 border-primary" : ""}`}>
                 <div className="relative shrink-0 rounded overflow-hidden bg-secondary" style={{ width: 72, aspectRatio: "16/9" }}>
                   <img src={episodeThumbnail(ep)} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                   {ep.id === currentEpId && <div className="absolute inset-0 flex items-center justify-center bg-black/50"><Play className="size-3 fill-white text-white" /></div>}
@@ -202,6 +264,11 @@ function WatchEpisodeInner() {
   const [allEpisodes, setAllEpisodes] = useState<BackendEpisode[]>([]);
   const [currentEp, setCurrentEp] = useState<BackendEpisode | null>(null);
   const [loading, setLoading] = useState(true);
+  const [resolvedVideoUrl, setResolvedVideoUrl] = useState<string>("");
+  const [resumeFrom, setResumeFrom] = useState(0);
+
+  // Throttle: only save when position moved ≥10 s since last save
+  const lastSavedRef = useRef(0);
 
   useEffect(() => {
     if (!seriesId) return;
@@ -223,6 +290,39 @@ function WatchEpisodeInner() {
     if (ep) setCurrentEp(ep);
   }, [episodeId, allEpisodes]);
 
+  // Resolve video URL (signed token for local files)
+  useEffect(() => {
+    if (!currentEp) { setResolvedVideoUrl(""); return; }
+    if (currentEp.provider_name === "local") {
+      setResolvedVideoUrl("");
+      fetchEpisodeStreamUrl(currentEp.id).then((url) => setResolvedVideoUrl(url ?? ""));
+    } else {
+      setResolvedVideoUrl(episodeVideoUrl(currentEp));
+    }
+  }, [currentEp]);
+
+  // Load saved progress whenever the episode changes
+  useEffect(() => {
+    if (!currentEp) { setResumeFrom(0); return; }
+    lastSavedRef.current = 0;
+    getEpisodeProgress(currentEp.id).then((p) => {
+      // Only resume if watched >5 s and not essentially complete (≥95%)
+      if (p && p.watch_time > 5 && Number(p.completion_percentage) < 95) {
+        setResumeFrom(p.watch_time);
+      } else {
+        setResumeFrom(0);
+      }
+    });
+  }, [currentEp?.id]);
+
+  // Save progress — called from player's onProgress, throttled to every 10 s
+  const handleProgress = useCallback((currentTime: number, duration: number) => {
+    if (!currentEp || !duration || currentTime < 5) return;
+    if (currentTime - lastSavedRef.current < 10) return;
+    lastSavedRef.current = currentTime;
+    saveEpisodeProgress(currentEp.id, currentTime, duration);
+  }, [currentEp]);
+
   function selectEpisode(ep: BackendEpisode) {
     setCurrentEp(ep);
     navigate(`/watch/series/${seriesId}/episode/${ep.id}`, { replace: true });
@@ -241,7 +341,6 @@ function WatchEpisodeInner() {
     );
   }
 
-  const videoUrl = episodeVideoUrl(currentEp);
   const currentIdx = allEpisodes.findIndex((e) => e.id === currentEp.id);
   const nextEp = allEpisodes[currentIdx + 1] ?? null;
   const prevEp = allEpisodes[currentIdx - 1] ?? null;
@@ -262,22 +361,39 @@ function WatchEpisodeInner() {
         {/* Player column */}
         <div className="flex-1 min-w-0">
           <div className="w-full bg-black">
-            {!videoUrl ? (
+            {!resolvedVideoUrl ? (
               <div className="relative w-full aspect-video bg-black flex items-center justify-center">
                 <img src={episodeThumbnail(currentEp)} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />
-                <div className="relative text-center"><Play className="size-10 text-white/20 mx-auto" /><p className="text-white/40 text-sm mt-2">No video source</p></div>
+                <div className="relative text-center">
+                  {currentEp.provider_name === "local" && !resolvedVideoUrl ? (
+                    <><Loader2 className="size-8 text-white/30 mx-auto animate-spin" /><p className="text-white/40 text-sm mt-2">Loading video…</p></>
+                  ) : (
+                    <><Play className="size-10 text-white/20 mx-auto" /><p className="text-white/40 text-sm mt-2">No video source</p></>
+                  )}
+                </div>
               </div>
             ) : (
-              <EpisodePlayer src={videoUrl} poster={episodeThumbnail(currentEp)} title={`${series.title} - S${currentEp.season_number}E${currentEp.episode_number}`} />
+              <EpisodePlayer
+                src={resolvedVideoUrl}
+                poster={episodeThumbnail(currentEp)}
+                title={`${series.title} — S${currentEp.season_number}E${currentEp.episode_number}`}
+                resumeFrom={resumeFrom}
+                onProgress={handleProgress}
+              />
             )}
           </div>
 
-          {/* Episode info below player */}
+          {/* Episode info */}
           <div className="px-4 py-6 sm:px-6 max-w-4xl">
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <Badge variant="outline" className="text-xs">S{currentEp.season_number} E{currentEp.episode_number}</Badge>
               {series.content_rating && <AgeRatingBadge rating={series.content_rating} />}
               {currentEp.duration && <span className="text-sm text-muted-foreground">{formatDuration(currentEp.duration)}</span>}
+              {resumeFrom > 5 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 border border-primary/25 px-2 py-0.5 text-xs text-primary font-medium">
+                  <RotateCcw className="size-3" /> Saved at {fmtTime(resumeFrom)}
+                </span>
+              )}
             </div>
             <h1 className="text-xl sm:text-2xl font-bold">{currentEp.title}</h1>
             <p className="text-sm text-muted-foreground mt-0.5">{series.title}</p>

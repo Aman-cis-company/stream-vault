@@ -6,10 +6,9 @@ import { AgeRatingBadge } from "@/components/streaming/AgeRatingBadge";
 import { ContentWarningModal } from "@/components/streaming/ContentWarningModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { fetchSeriesById, groupEpisodesBySeasons, seriesThumbnail, episodeThumbnail, formatDuration, type BackendSeries, type BackendEpisode } from "@/lib/series";
 import { assetUrl } from "@/services/api";
-import { Loader2, Play, Star, Calendar, Globe, Tv, ArrowLeft } from "lucide-react";
+import { Loader2, Play, Calendar, Globe, Tv, ArrowLeft, Clock } from "lucide-react";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/store";
 
@@ -26,7 +25,7 @@ function SeriesDetailInner() {
   const navigate = useNavigate();
   const user = useSelector((s: RootState) => s.auth.user);
   const [series, setSeries] = useState<BackendSeries | null | undefined>(undefined);
-  const [activeTab, setActiveTab] = useState("1");
+  const [activeSeason, setActiveSeason] = useState(1);
   const [showWarning, setShowWarning] = useState(false);
   const [pendingEpisode, setPendingEpisode] = useState<BackendEpisode | null>(null);
 
@@ -58,6 +57,8 @@ function SeriesDetailInner() {
   const seasonMap = groupEpisodesBySeasons(publishedEpisodes);
   const seasons = Object.keys(seasonMap).map(Number).sort((a, b) => a - b);
   const year = series.release_date ? new Date(series.release_date).getFullYear() : null;
+  const currentSeasonEps = (seasonMap[activeSeason] ?? []).sort((a, b) => a.episode_number - b.episode_number);
+  const firstEp = publishedEpisodes[0] ?? null;
 
   function handlePlayEpisode(ep: BackendEpisode) {
     if ((series!.is_age_restricted || (series!.warning_flags_json?.length ?? 0) > 0) && user?.age_verified) {
@@ -83,103 +84,249 @@ function SeriesDetailInner() {
         />
       )}
 
-      {/* Hero banner */}
-      <div className="relative min-h-[420px] bg-[#0a0a0f] overflow-hidden">
+      {/* ── Hero Banner ─────────────────────────────────────────────────────── */}
+      <div className="relative bg-[#0a0a0f] overflow-hidden">
+        {/* Backdrop blur */}
         {series.thumbnail_url && (
           <>
-            <img src={assetUrl(series.thumbnail_url)} alt={series.title} className="absolute inset-0 w-full h-full object-cover opacity-25" />
-            <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(10,10,15,0.97) 40%, rgba(10,10,15,0.6) 100%)" }} />
+            <img
+              src={assetUrl(series.thumbnail_url)}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover opacity-20 scale-105 blur-sm"
+            />
+            <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(10,10,15,0.98) 0%, rgba(10,10,15,0.75) 60%, rgba(10,10,15,0.55) 100%)" }} />
+            <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(10,10,15,1) 0%, transparent 40%)" }} />
           </>
         )}
-        <div className="relative z-10 mx-auto max-w-7xl px-4 py-12 sm:px-6 flex flex-col sm:flex-row gap-8 items-start">
-          {/* Poster */}
-          <img
-            src={seriesThumbnail(series)}
-            alt={series.title}
-            className="w-40 sm:w-52 rounded-xl object-cover shadow-2xl ring-1 ring-white/10 shrink-0"
-          />
-          {/* Info */}
-          <div className="flex-1 min-w-0">
-            <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-white/50 hover:text-white text-sm mb-4 transition-colors">
-              <ArrowLeft className="size-4" /> Back
-            </button>
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              <Badge className="bg-primary/20 text-primary border-primary/30 text-xs">SERIES</Badge>
-              {series.is_featured && <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">⭐ Featured</Badge>}
-              {series.content_rating && <AgeRatingBadge rating={series.content_rating} />}
+
+        <div className="relative z-10 mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+          {/* Back */}
+          <button
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-1.5 text-white/50 hover:text-white text-sm mb-8 transition-colors group"
+          >
+            <ArrowLeft className="size-4 group-hover:-translate-x-0.5 transition-transform" /> Back
+          </button>
+
+          <div className="flex flex-col sm:flex-row gap-8 items-start">
+            {/* Poster */}
+            <div className="shrink-0 w-36 sm:w-44 lg:w-52">
+              <img
+                src={seriesThumbnail(series)}
+                alt={series.title}
+                className="w-full rounded-xl object-cover shadow-2xl ring-1 ring-white/10"
+                style={{ aspectRatio: "2/3" }}
+              />
             </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">{series.title}</h1>
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-white/50">
-              {year && <span className="flex items-center gap-1"><Calendar className="size-3.5" />{year}</span>}
-              {series.language && <span className="flex items-center gap-1"><Globe className="size-3.5" />{series.language}</span>}
-              <span className="flex items-center gap-1"><Tv className="size-3.5" />{series.total_seasons} Season{series.total_seasons !== 1 ? "s" : ""}</span>
-              <span>{publishedEpisodes.length} Episodes</span>
+
+            {/* Meta */}
+            <div className="flex-1 min-w-0">
+              {/* Chips */}
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <Badge className="bg-primary/20 text-primary border-primary/30 text-xs font-semibold tracking-wide">SERIES</Badge>
+                {series.is_featured && <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">⭐ Featured</Badge>}
+                {series.content_rating && <AgeRatingBadge rating={series.content_rating} />}
+              </div>
+
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">{series.title}</h1>
+
+              {/* Stats row */}
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-white/50">
+                {year && (
+                  <span className="flex items-center gap-1.5">
+                    <Calendar className="size-3.5 shrink-0" />{year}
+                  </span>
+                )}
+                {series.language && (
+                  <span className="flex items-center gap-1.5">
+                    <Globe className="size-3.5 shrink-0" />{series.language}
+                  </span>
+                )}
+                <span className="flex items-center gap-1.5">
+                  <Tv className="size-3.5 shrink-0" />
+                  {series.total_seasons} Season{series.total_seasons !== 1 ? "s" : ""}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Play className="size-3.5 shrink-0" />
+                  {publishedEpisodes.length} Episode{publishedEpisodes.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+
+              {series.description && (
+                <p className="mt-4 text-white/65 leading-relaxed max-w-2xl text-sm sm:text-[15px] line-clamp-3">
+                  {series.description}
+                </p>
+              )}
+
+              {/* CTA */}
+              {firstEp && (
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Button
+                    size="lg"
+                    className="gap-2 font-semibold px-6"
+                    onClick={() => handlePlayEpisode(firstEp)}
+                  >
+                    <Play className="size-4 fill-current" />
+                    Play S1 E1
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="gap-2 text-white border-white/20 hover:bg-white/10 hover:text-white bg-transparent"
+                    onClick={() => document.getElementById("episodes-section")?.scrollIntoView({ behavior: "smooth" })}
+                  >
+                    Browse Episodes
+                  </Button>
+                </div>
+              )}
             </div>
-            {series.description && (
-              <p className="mt-4 text-white/70 leading-relaxed max-w-2xl text-sm sm:text-base line-clamp-4">{series.description}</p>
-            )}
-            {publishedEpisodes.length > 0 && (
-              <Button className="mt-6 gap-2" size="lg" onClick={() => handlePlayEpisode(publishedEpisodes[0])}>
-                <Play className="size-4 fill-current" /> Play S1 E1
-              </Button>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Episodes by season */}
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      {/* ── Episodes Section ─────────────────────────────────────────────────── */}
+      <div id="episodes-section" className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         {seasons.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">No episodes available yet.</div>
+          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+            <Tv className="size-12 mb-4 opacity-20" />
+            <p className="text-base font-medium">No episodes available yet.</p>
+            <p className="text-sm mt-1 opacity-60">Check back soon for new content.</p>
+          </div>
         ) : (
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-6 flex-wrap h-auto gap-1">
-              {seasons.map((s) => (
-                <TabsTrigger key={s} value={String(s)}>Season {s}</TabsTrigger>
-              ))}
-            </TabsList>
-            {seasons.map((s) => (
-              <TabsContent key={s} value={String(s)}>
-                <div className="space-y-3">
-                  {(seasonMap[s] ?? []).map((ep) => (
-                    <EpisodeCard key={ep.id} ep={ep} onPlay={() => handlePlayEpisode(ep)} />
+          <>
+            {/* Season Selector */}
+            <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+              <h2 className="text-xl font-bold text-foreground">Episodes</h2>
+              {seasons.length > 1 && (
+                <div className="flex items-center gap-1.5 bg-card border border-border rounded-lg p-1">
+                  {seasons.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setActiveSeason(s)}
+                      className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                        activeSeason === s
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                      }`}
+                    >
+                      Season {s}
+                    </button>
                   ))}
                 </div>
-              </TabsContent>
-            ))}
-          </Tabs>
+              )}
+            </div>
+
+            {/* Season summary line */}
+            <p className="text-sm text-muted-foreground mb-5">
+              Season {activeSeason} · {currentSeasonEps.length} episode{currentSeasonEps.length !== 1 ? "s" : ""}
+            </p>
+
+            {/* Episode list */}
+            <div className="space-y-1">
+              {currentSeasonEps.map((ep, idx) => (
+                <EpisodeCard
+                  key={ep.id}
+                  ep={ep}
+                  index={idx + 1}
+                  onPlay={() => handlePlayEpisode(ep)}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
     </MainLayout>
   );
 }
 
-function EpisodeCard({ ep, onPlay }: { ep: BackendEpisode; onPlay: () => void }) {
+function EpisodeCard({ ep, index, onPlay }: { ep: BackendEpisode; index: number; onPlay: () => void }) {
+  const [imgError, setImgError] = useState(false);
+  const isNew = ep.release_date
+    ? new Date(ep.release_date) > new Date(Date.now() - 14 * 24 * 3600 * 1000)
+    : false;
+
   return (
     <div
-      className="group flex gap-4 rounded-xl border border-border bg-card p-4 hover:bg-secondary/30 transition-colors cursor-pointer"
+      role="button"
+      tabIndex={0}
       onClick={onPlay}
+      onKeyDown={(e) => e.key === "Enter" && onPlay()}
+      className="group flex items-start gap-4 rounded-xl px-4 py-4 hover:bg-white/5 transition-all cursor-pointer border border-transparent hover:border-white/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
     >
+      {/* Episode Number */}
+      <div className="shrink-0 w-7 text-center mt-1 hidden sm:block">
+        <span className="text-lg font-bold text-muted-foreground/50 group-hover:text-muted-foreground transition-colors tabular-nums">
+          {index}
+        </span>
+      </div>
+
       {/* Thumbnail */}
-      <div className="relative shrink-0 rounded-lg overflow-hidden bg-secondary" style={{ width: 180, aspectRatio: "16/9" }}>
-        <img src={episodeThumbnail(ep)} alt={ep.title} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="size-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
+      <div
+        className="relative shrink-0 rounded-lg overflow-hidden bg-secondary/60"
+        style={{ width: 200, aspectRatio: "16/9" }}
+      >
+        {!imgError ? (
+          <img
+            src={episodeThumbnail(ep)}
+            alt={ep.title}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-secondary">
+            <Tv className="size-6 text-muted-foreground/40" />
+          </div>
+        )}
+        {/* Play overlay */}
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="size-11 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center shadow-lg">
             <Play className="size-5 fill-white text-white ml-0.5" />
           </div>
         </div>
-      </div>
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-xs text-muted-foreground font-medium">E{ep.episode_number}</p>
-            <h3 className="font-semibold text-base leading-tight mt-0.5 truncate">{ep.title}</h3>
+        {/* Duration badge */}
+        {ep.duration && (
+          <div className="absolute bottom-1.5 right-1.5 rounded bg-black/70 backdrop-blur-sm px-1.5 py-0.5 text-[10px] font-medium text-white/90 leading-none">
+            {formatDuration(ep.duration)}
           </div>
-          {ep.duration && <span className="text-xs text-muted-foreground shrink-0 mt-1">{formatDuration(ep.duration)}</span>}
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="flex-1 min-w-0 py-0.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">
+                E{ep.episode_number}
+              </span>
+              {isNew && (
+                <span className="inline-flex items-center rounded-full bg-primary/15 text-primary border border-primary/25 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                  New
+                </span>
+              )}
+            </div>
+            <h3 className="font-semibold text-base text-foreground leading-snug group-hover:text-primary transition-colors">
+              {ep.title}
+            </h3>
+          </div>
+          {/* Duration for small screens */}
+          {ep.duration && (
+            <span className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground shrink-0 mt-0.5">
+              <Clock className="size-3" />
+              {formatDuration(ep.duration)}
+            </span>
+          )}
         </div>
-        {ep.description && <p className="mt-2 text-sm text-muted-foreground line-clamp-2 leading-relaxed">{ep.description}</p>}
-        {ep.release_date && <p className="mt-1.5 text-xs text-muted-foreground">{new Date(ep.release_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>}
+        {ep.description && (
+          <p className="mt-2 text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+            {ep.description}
+          </p>
+        )}
+        {ep.release_date && (
+          <p className="mt-2 text-xs text-muted-foreground/60">
+            {new Date(ep.release_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+          </p>
+        )}
       </div>
     </div>
   );

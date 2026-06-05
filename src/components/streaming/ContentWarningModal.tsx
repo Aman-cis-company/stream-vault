@@ -21,7 +21,7 @@ interface Props {
   open: boolean;
   title: string;
   contentRating?: ContentRating | null;
-  warningFlags?: WarningFlag[] | null;
+  warningFlags?: WarningFlag[] | string | null;
   minimumAge?: number | null;
   onConfirm: () => void;
   onCancel: () => void;
@@ -36,7 +36,17 @@ export function ContentWarningModal({
   onConfirm,
   onCancel,
 }: Props) {
-  const flags = warningFlags?.filter((f) => FLAG_META[f]) ?? [];
+  const flags: WarningFlag[] = (() => {
+    if (!warningFlags) return [];
+    if (Array.isArray(warningFlags)) return warningFlags.filter((f) => FLAG_META[f as WarningFlag]);
+    if (typeof warningFlags === "string") {
+      try {
+        const parsed = JSON.parse(warningFlags);
+        return Array.isArray(parsed) ? parsed.filter((f: unknown) => FLAG_META[f as WarningFlag]) : [];
+      } catch { return []; }
+    }
+    return [];
+  })();
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onCancel(); }}>

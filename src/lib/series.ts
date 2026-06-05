@@ -53,6 +53,35 @@ export function episodeVideoUrl(ep: BackendEpisode): string {
   return ep.video_url ? assetUrl(ep.video_url) : "";
 }
 
+export async function getEpisodeProgress(episodeId: string | number): Promise<{ watch_time: number; completion_percentage: number } | null> {
+  try {
+    const { data } = await apiClient.get(`/progress/episode/${episodeId}`);
+    return data.data.progress ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveEpisodeProgress(episodeId: string | number, watchTime: number, duration: number): Promise<void> {
+  try {
+    await apiClient.put(`/progress/episode/${episodeId}`, { watch_time: watchTime, duration });
+  } catch {
+    // non-critical — silently ignore
+  }
+}
+
+export async function fetchEpisodeStreamUrl(episodeId: string | number): Promise<string | null> {
+  try {
+    const { data } = await apiClient.post(`/videos/token/episode/${episodeId}`);
+    const streamPath: string = data.data.streamUrl;
+    const backendBase = (import.meta.env.VITE_API_URL as string || "http://localhost:5000/api/v1")
+      .replace(/\/api\/v1\/?$/, "");
+    return `${backendBase}${streamPath}`;
+  } catch {
+    return null;
+  }
+}
+
 export function groupEpisodesBySeasons(episodes: BackendEpisode[]): Record<number, BackendEpisode[]> {
   return episodes.reduce<Record<number, BackendEpisode[]>>((acc, ep) => {
     if (!acc[ep.season_number]) acc[ep.season_number] = [];

@@ -80,6 +80,7 @@ function EpisodeManager({ series, onClose }: { series: BackendSeries; onClose: (
   const [epThumbPreview, setEpThumbPreview] = useState("");
   const [epVideoFile, setEpVideoFile] = useState<File | null>(null);
   const [savingEp, setSavingEp] = useState(false);
+  const [epUploadProgress, setEpUploadProgress] = useState(0);
   const [deletingEpId, setDeletingEpId] = useState<number | null>(null);
   const [expandedSeasons, setExpandedSeasons] = useState<Record<number, boolean>>({ 1: true });
   const thumbRef = useRef<HTMLInputElement>(null);
@@ -108,6 +109,7 @@ function EpisodeManager({ series, onClose }: { series: BackendSeries; onClose: (
     setEditingEp(null);
     setEpForm({ ...EMPTY_EPISODE, season_number: String(seasonNum), episode_number: String(nextEp) });
     setEpThumbFile(null); setEpThumbPreview(""); setEpVideoFile(null);
+    setEpUploadProgress(0);
     setOpenEpDialog(true);
   }
 
@@ -127,6 +129,7 @@ function EpisodeManager({ series, onClose }: { series: BackendSeries; onClose: (
     setEpThumbFile(null);
     setEpThumbPreview(ep.thumbnail_url ? assetUrl(ep.thumbnail_url) : "");
     setEpVideoFile(null);
+    setEpUploadProgress(0);
     setOpenEpDialog(true);
   }
 
@@ -134,6 +137,7 @@ function EpisodeManager({ series, onClose }: { series: BackendSeries; onClose: (
     if (!epForm.title.trim()) { toast.error("Episode title is required"); return; }
     if (!epForm.episode_number) { toast.error("Episode number is required"); return; }
     setSavingEp(true);
+    setEpUploadProgress(0);
     try {
       const fd = new FormData();
       fd.append("season_number", epForm.season_number);
@@ -148,11 +152,19 @@ function EpisodeManager({ series, onClose }: { series: BackendSeries; onClose: (
       else if (epForm.videoMode === "local" && epVideoFile) { fd.append("video", epVideoFile); fd.append("provider_name", "local"); }
       if (epThumbFile) fd.append("thumbnail", epThumbFile);
 
+      const axiosCfg = {
+        headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (evt: { loaded: number; total?: number }) => {
+          const pct = Math.round((evt.loaded * 100) / (evt.total || evt.loaded || 1));
+          setEpUploadProgress(pct);
+        },
+      };
+
       if (editingEp) {
-        await apiClient.put(`/series/${series.id}/episodes/${editingEp.id}`, fd, { headers: { "Content-Type": "multipart/form-data" } });
+        await apiClient.put(`/series/${series.id}/episodes/${editingEp.id}`, fd, axiosCfg);
         toast.success("Episode updated");
       } else {
-        await apiClient.post(`/series/${series.id}/episodes`, fd, { headers: { "Content-Type": "multipart/form-data" } });
+        await apiClient.post(`/series/${series.id}/episodes`, fd, axiosCfg);
         toast.success("Episode added");
       }
       setOpenEpDialog(false);
@@ -160,7 +172,7 @@ function EpisodeManager({ series, onClose }: { series: BackendSeries; onClose: (
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Failed";
       toast.error(msg);
-    } finally { setSavingEp(false); }
+    } finally { setSavingEp(false); setEpUploadProgress(0); }
   }
 
   async function handleDeleteEpisode(ep: BackendEpisode) {
@@ -307,24 +319,49 @@ function EpisodeManager({ series, onClose }: { series: BackendSeries; onClose: (
             </div>
 
             {/* Video */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label>Video Source</Label>
               <div className="flex flex-wrap gap-2">
-                {[{ mode: "url", icon: Link2, label: "External URL" }, { mode: "file", icon: CloudUpload, label: "Bunny Stream" }, { mode: "local", icon: HardDrive, label: "Local" }].map(({ mode, icon: Icon, label }) => (
-                  <Button key={mode} type="button" size="sm" variant={epForm.videoMode === mode ? "default" : "secondary"} onClick={() => setEpForm({ ...epForm, videoMode: mode as EpisodeForm["videoMode"] })}>
-                    <Icon className="mr-1 size-3.5" />{label}
-                  </Button>
-                ))}
+                <Button type="button" size="sm" variant={epForm.videoMode === "url" ? "default" : "secondary"} onClick={() => setEpForm({ ...epForm, videoMode: "url" })}>
+                  <Link2 className="mr-1 size-3.5" /> External URL
+                </Button>
+                <Button type="button" size="sm" variant={epForm.videoMode === "file" ? "default" : "secondary"} onClick={() => setEpForm({ ...epForm, videoMode: "file" })}>
+                  <CloudUpload className="mr-1 size-3.5" /> Bunny Stream
+                </Button>
+                <Button type="button" size="sm" variant={epForm.videoMode === "local" ? "default" : "secondary"} onClick={() => setEpForm({ ...epForm, videoMode: "local" })}>
+                  <HardDrive className="mr-1 size-3.5" /> Local Storage
+                </Button>
               </div>
               {epForm.videoMode === "url" && (
-                <Input value={epForm.video_url} onChange={(e) => setEpForm({ ...epForm, video_url: e.target.value })} placeholder="https://... or YouTube URL" />
+                <Input value={epForm.video_url} onChange={(e) => setEpForm({ ...epForm, video_url: e.target.value })} placeholder="https://example.com/video.m3u8 or YouTube URL" />
               )}
               {(epForm.videoMode === "file" || epForm.videoMode === "local") && (
-                <div>
-                  <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={(e) => setEpVideoFile(e.target.files?.[0] ?? null)} />
+                <div className="space-y-2">
+                  <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={(e) => { setEpVideoFile(e.target.files?.[0] ?? null); setEpUploadProgress(0); }} />
                   <Button type="button" variant="secondary" size="sm" onClick={() => videoRef.current?.click()}>
                     <Upload className="mr-1.5 size-3.5" />{epVideoFile ? epVideoFile.name : "Choose Video File"}
                   </Button>
+                  <p className="text-xs text-muted-foreground">
+                    {epForm.videoMode === "local"
+                      ? "MP4, MKV or MOV. File will be stored on the server's local disk."
+                      : "MP4, MKV or MOV. File will be uploaded to Bunny Stream CDN."}
+                  </p>
+                  {savingEp && epVideoFile && epUploadProgress > 0 && epUploadProgress < 100 && (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{epForm.videoMode === "local" ? "Uploading to server…" : "Uploading to Bunny Stream…"}</span>
+                        <span>{epUploadProgress}%</span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
+                        <div className="h-full rounded-full bg-primary transition-all duration-200" style={{ width: `${epUploadProgress}%` }} />
+                      </div>
+                    </div>
+                  )}
+                  {savingEp && epVideoFile && epUploadProgress === 100 && epForm.videoMode === "file" && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Loader2 className="size-3 animate-spin" /> Processing on Bunny Stream…
+                    </p>
+                  )}
                 </div>
               )}
             </div>

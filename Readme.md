@@ -15,3 +15,6 @@ admin@streamvault.com / Admin@123456
 bunny.net
 username = aman.k@cisinlabs.com
 password = Aman@1234567
+
+
+https://github.com/Aman-cis-company/stream-vault.git

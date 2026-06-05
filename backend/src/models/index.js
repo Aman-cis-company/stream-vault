@@ -76,6 +76,10 @@ Series.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
 Series.hasMany(Episode, { foreignKey: 'series_id', as: 'episodes', onDelete: 'CASCADE' });
 Episode.belongsTo(Series, { foreignKey: 'series_id', as: 'series' });
 
+// ── Episode ↔ WatchHistory ───────────────────────────────────────────────────
+Episode.hasMany(WatchHistory, { foreignKey: 'episode_id', as: 'watchHistory' });
+WatchHistory.belongsTo(Episode, { foreignKey: 'episode_id', as: 'episode' });
+
 // ── User ↔ UserAgeVerification ───────────────────────────────────────────────
 User.hasMany(UserAgeVerification, { foreignKey: 'user_id', as: 'ageVerifications', onDelete: 'CASCADE' });
 UserAgeVerification.belongsTo(User, { foreignKey: 'user_id', as: 'user' });

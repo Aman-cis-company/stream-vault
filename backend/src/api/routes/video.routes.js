@@ -4,7 +4,15 @@ const VideoController = require('../controllers/VideoController');
 const authenticate = require('../middlewares/authenticate');
 const verifySubscription = require('../middlewares/verifySubscription');
 
-// Issue a short-lived signed stream URL — requires auth + active subscription
+// Issue a signed stream URL for a locally-stored episode video
+router.post(
+  '/token/episode/:episodeId',
+  authenticate,
+  verifySubscription,
+  VideoController.issueEpisodeToken.bind(VideoController)
+);
+
+// Issue a short-lived signed stream URL for a locally-stored movie video
 router.post(
   '/token/:movieId',
   authenticate,

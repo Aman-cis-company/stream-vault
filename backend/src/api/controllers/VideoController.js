@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const MovieRepository = require('../repositories/MovieRepository');
+const EpisodeRepository = require('../repositories/EpisodeRepository');
 const VideoTokenService = require('../services/VideoTokenService');
 const { successResponse, errorResponse } = require('../../helpers/responseHelper');
 const MESSAGES = require('../../constants/messages');
@@ -42,6 +43,34 @@ class VideoController {
       return successResponse(res, MESSAGES.VIDEO_TOKEN_ISSUED, { streamUrl });
     } catch (err) {
       logger.error('VideoController.issueToken error', { error: err.message });
+      return errorResponse(res, MESSAGES.INTERNAL_ERROR, STATUS_CODES.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  /**
+   * POST /api/v1/videos/token/episode/:episodeId
+   * Requires: authenticate + verifySubscription
+   * Returns a short-lived signed stream URL for a locally-stored episode video.
+   */
+  async issueEpisodeToken(req, res) {
+    try {
+      const episode = await EpisodeRepository.findById(req.params.episodeId);
+      if (!episode) {
+        return errorResponse(res, 'Episode not found', STATUS_CODES.NOT_FOUND);
+      }
+
+      const videoUrl = episode.video_url;
+      if (!videoUrl || !videoUrl.startsWith('/uploads/videos/')) {
+        return errorResponse(res, MESSAGES.VIDEO_NOT_LOCAL, STATUS_CODES.UNPROCESSABLE_ENTITY);
+      }
+
+      const filename = path.basename(videoUrl);
+      const token = VideoTokenService.generate(req.user.id, filename);
+      const streamUrl = `/api/v1/videos/stream/${encodeURIComponent(filename)}?token=${token}`;
+
+      return successResponse(res, MESSAGES.VIDEO_TOKEN_ISSUED, { streamUrl });
+    } catch (err) {
+      logger.error('VideoController.issueEpisodeToken error', { error: err.message });
       return errorResponse(res, MESSAGES.INTERNAL_ERROR, STATUS_CODES.INTERNAL_SERVER_ERROR);
     }
   }
