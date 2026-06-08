@@ -63,6 +63,22 @@ class MovieController {
       return errorResponse(res, MESSAGES.INTERNAL_ERROR, STATUS_CODES.INTERNAL_SERVER_ERROR);
     }
   }
+
+  async getTranscodingStatus(req, res) {
+    try {
+      const movie = await MovieService.getById(req.params.id);
+      return successResponse(res, 'Transcoding status fetched', {
+        transcoding_status: movie.transcoding_status,
+        video_url: movie.video_url,
+      });
+    } catch (err) {
+      logger.error('MovieController.getTranscodingStatus error', { error: err.message });
+      if (err.statusCode === 404) {
+        return errorResponse(res, MESSAGES.MOVIE_NOT_FOUND, STATUS_CODES.NOT_FOUND);
+      }
+      return errorResponse(res, MESSAGES.INTERNAL_ERROR, STATUS_CODES.INTERNAL_SERVER_ERROR);
+    }
+  }
 }
 
 module.exports = new MovieController();

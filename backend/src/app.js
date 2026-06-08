@@ -44,11 +44,22 @@ app.use('/api/v1/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ── Static Files — thumbnails only ────────────────────────────────────────────
-// Videos are NOT served statically; they go through /api/v1/videos/stream
-// with token-based authentication to prevent unauthorized direct access.
+// ── Static Files ──────────────────────────────────────────────────────────────
+// Thumbnails: public, long-cached
 app.use('/uploads/thumbnails', express.static(path.join(__dirname, '../uploads/thumbnails'), {
   maxAge: '1d',
+}));
+
+// HLS segments & playlists: served statically for local-transcoded videos
+app.use('/uploads/hls', express.static(path.join(__dirname, '../uploads/hls'), {
+  maxAge: '1h',
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.m3u8')) {
+      res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+    } else if (filePath.endsWith('.ts')) {
+      res.setHeader('Content-Type', 'video/mp2t');
+    }
+  },
 }));
 
 // ── General Rate Limiter ──────────────────────────────────────────────────────

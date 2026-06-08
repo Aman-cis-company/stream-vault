@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const MovieRepository = require('../repositories/MovieRepository');
 const BunnyStreamService = require('./BunnyStreamService');
+const TranscodingService = require('./TranscodingService');
 const { generateUniqueSlug } = require('../../utils/slugify');
 const { getPagination } = require('../../utils/pagination');
 const { paginationMeta } = require('../../helpers/responseHelper');
@@ -12,6 +13,10 @@ const UPLOADS_DIR = path.join(__dirname, '../../../uploads');
 
 function deleteLocalVideoFile(videoUrl) {
   if (!videoUrl) return;
+  if (videoUrl.includes('/uploads/hls/')) {
+    TranscodingService.deleteHLSDirectory(videoUrl);
+    return;
+  }
   const filename = path.basename(videoUrl);
   const filePath = path.join(UPLOADS_DIR, 'videos', filename);
   fs.unlink(filePath, (err) => {
@@ -44,14 +49,18 @@ class MovieService {
     }
 
     // Handle video upload
+    let localVideoPath = null;
+    let localVideoOutputName = null;
     if (files && files.video && files.video[0]) {
       const videoFile = files.video[0];
       const resolvedProvider = provider_name || 'bunny';
 
       if (resolvedProvider === 'local') {
-        // Keep file on local disk — video_url becomes the static-serve path
+        // Keep file on local disk — transcoding runs async after DB save
         finalVideoUrl = `/uploads/videos/${videoFile.filename}`;
         finalVideoId = null;
+        localVideoPath = videoFile.path;
+        localVideoOutputName = path.basename(videoFile.filename, path.extname(videoFile.filename));
       } else {
         // Upload to Bunny Stream then remove temp file
         try {
@@ -80,6 +89,7 @@ class MovieService {
       provider_name: provider_name || (finalVideoUrl ? 'external' : 'bunny'),
       provider_video_id: finalVideoId,
       video_url: finalVideoUrl,
+      transcoding_status: localVideoPath ? 'pending' : null,
       duration: duration || null,
       release_date: release_date || null,
       is_featured: is_featured || false,
@@ -92,6 +102,18 @@ class MovieService {
       created_by: userId,
       updated_by: userId,
     });
+
+    // Fire-and-forget transcoding for local uploads
+    if (localVideoPath) {
+      const movieId = movie.id;
+      TranscodingService.transcodeAsync({
+        inputPath: localVideoPath,
+        outputName: localVideoOutputName,
+        onProcessing: () => MovieRepository.updateById(movieId, { transcoding_status: 'processing' }),
+        onComplete: (hlsUrl) => MovieRepository.updateById(movieId, { video_url: hlsUrl, transcoding_status: 'completed' }),
+        onError: () => MovieRepository.updateById(movieId, { transcoding_status: 'failed' }),
+      });
+    }
 
     return MovieRepository.findById(movie.id);
   }
@@ -120,6 +142,8 @@ class MovieService {
     }
 
     // Handle new video upload
+    let localVideoPath = null;
+    let localVideoOutputName = null;
     if (files && files.video && files.video[0]) {
       const videoFile = files.video[0];
       const resolvedProvider = data.provider_name || updateData.provider_name || movie.provider_name || 'bunny';
@@ -128,7 +152,10 @@ class MovieService {
         updateData.video_url = `/uploads/videos/${videoFile.filename}`;
         updateData.provider_video_id = null;
         updateData.provider_name = 'local';
-        // Delete the old local video file if it was also local
+        updateData.transcoding_status = 'pending';
+        localVideoPath = videoFile.path;
+        localVideoOutputName = path.basename(videoFile.filename, path.extname(videoFile.filename));
+        // Delete the old local video/HLS if it was also local
         if (movie.provider_name === 'local') {
           deleteLocalVideoFile(movie.video_url);
         } else if (movie.provider_video_id && movie.provider_name === 'bunny') {
@@ -144,6 +171,7 @@ class MovieService {
           );
           updateData.provider_video_id = result.videoId;
           updateData.video_url = result.videoUrl;
+          updateData.transcoding_status = null;
 
           // Delete old video (Bunny or local)
           if (movie.provider_name === 'local') {
@@ -163,6 +191,18 @@ class MovieService {
     }
 
     await MovieRepository.updateById(id, updateData);
+
+    // Fire-and-forget transcoding for local uploads
+    if (localVideoPath) {
+      TranscodingService.transcodeAsync({
+        inputPath: localVideoPath,
+        outputName: localVideoOutputName,
+        onProcessing: () => MovieRepository.updateById(id, { transcoding_status: 'processing' }),
+        onComplete: (hlsUrl) => MovieRepository.updateById(id, { video_url: hlsUrl, transcoding_status: 'completed' }),
+        onError: () => MovieRepository.updateById(id, { transcoding_status: 'failed' }),
+      });
+    }
+
     return MovieRepository.findById(id);
   }
 

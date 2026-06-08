@@ -58,6 +58,20 @@ class EpisodeController {
       return errorResponse(res, MESSAGES.INTERNAL_ERROR, STATUS_CODES.INTERNAL_SERVER_ERROR);
     }
   }
+
+  async getTranscodingStatus(req, res) {
+    try {
+      const episode = await EpisodeService.getById(req.params.seriesId, req.params.episodeId);
+      return successResponse(res, 'Transcoding status fetched', {
+        transcoding_status: episode.transcoding_status,
+        video_url: episode.video_url,
+      });
+    } catch (err) {
+      logger.error('EpisodeController.getTranscodingStatus error', { error: err.message });
+      if (err.statusCode === 404) return errorResponse(res, MESSAGES.EPISODE_NOT_FOUND, STATUS_CODES.NOT_FOUND);
+      return errorResponse(res, MESSAGES.INTERNAL_ERROR, STATUS_CODES.INTERNAL_SERVER_ERROR);
+    }
+  }
 }
 
 module.exports = new EpisodeController();

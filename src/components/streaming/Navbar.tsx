@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Film, Search, Sun, Moon, Monitor, Menu, X, Bell } from "lucide-react";
+import { Film, Search, Sun, Moon, Monitor, Menu, X, Bell, Bookmark } from "lucide-react";
 
 const NAV = [
   { to: "/browse", label: "Home" },
@@ -50,12 +50,21 @@ export function Navbar() {
             </Link>
           ))}
           {isAuthenticated && (
-            <Link
-              to="/dashboard"
-              className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary/50"
-            >
-              Dashboard
-            </Link>
+            <>
+              <Link
+                to="/my-list"
+                className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary/50 inline-flex items-center gap-1.5"
+              >
+                <Bookmark className="size-3.5" />
+                My List
+              </Link>
+              <Link
+                to="/dashboard"
+                className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary/50"
+              >
+                Dashboard
+              </Link>
+            </>
           )}
         </nav>
 
@@ -114,6 +123,11 @@ export function Navbar() {
                   <Link to="/dashboard">Dashboard</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
+                  <Link to="/my-list" className="flex items-center gap-2">
+                    <Bookmark className="size-3.5" /> My List
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
                   <Link to="/profile">Profile & Security</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -170,10 +184,22 @@ export function Navbar() {
               </Link>
             ))}
             {isAuthenticated && (
-              <Link to="/dashboard" onClick={() => setOpen(false)}
-                className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
-                Dashboard
-              </Link>
+              <>
+                <Link
+                  to="/my-list"
+                  onClick={() => setOpen(false)}
+                  className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors inline-flex items-center gap-2"
+                >
+                  <Bookmark className="size-3.5" /> My List
+                </Link>
+                <Link
+                  to="/dashboard"
+                  onClick={() => setOpen(false)}
+                  className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                >
+                  Dashboard
+                </Link>
+              </>
             )}
             {!isAuthenticated && (
               <div className="mt-2 flex gap-2">

@@ -3,12 +3,17 @@ const path = require('path');
 const EpisodeRepository = require('../repositories/EpisodeRepository');
 const SeriesRepository = require('../repositories/SeriesRepository');
 const BunnyStreamService = require('./BunnyStreamService');
+const TranscodingService = require('./TranscodingService');
 const logger = require('../../config/logger');
 
 const UPLOADS_DIR = path.join(__dirname, '../../../uploads');
 
 function deleteLocalVideoFile(videoUrl) {
   if (!videoUrl) return;
+  if (videoUrl.includes('/uploads/hls/')) {
+    TranscodingService.deleteHLSDirectory(videoUrl);
+    return;
+  }
   const filePath = path.join(UPLOADS_DIR, 'videos', path.basename(videoUrl));
   fs.unlink(filePath, () => {});
 }
@@ -33,6 +38,8 @@ class EpisodeService {
 
     let finalVideoId = provider_video_id || null;
     let finalVideoUrl = video_url || null;
+    let localVideoPath = null;
+    let localVideoOutputName = null;
 
     if (files?.video?.[0]) {
       const videoFile = files.video[0];
@@ -40,6 +47,8 @@ class EpisodeService {
       if (resolvedProvider === 'local') {
         finalVideoUrl = `/uploads/videos/${videoFile.filename}`;
         finalVideoId = null;
+        localVideoPath = videoFile.path;
+        localVideoOutputName = path.basename(videoFile.filename, path.extname(videoFile.filename));
       } else {
         try {
           const result = await BunnyStreamService.uploadVideo(videoFile.path, videoFile.originalname);
@@ -64,11 +73,24 @@ class EpisodeService {
       provider_name: provider_name || (finalVideoUrl ? 'external' : 'bunny'),
       provider_video_id: finalVideoId,
       video_url: finalVideoUrl,
+      transcoding_status: localVideoPath ? 'pending' : null,
       status: status || 'draft',
       release_date: release_date || null,
       created_by: userId,
       updated_by: userId,
     });
+
+    // Fire-and-forget transcoding for local uploads
+    if (localVideoPath) {
+      const episodeId = episode.id;
+      TranscodingService.transcodeAsync({
+        inputPath: localVideoPath,
+        outputName: localVideoOutputName,
+        onProcessing: () => EpisodeRepository.updateById(episodeId, { transcoding_status: 'processing' }),
+        onComplete: (hlsUrl) => EpisodeRepository.updateById(episodeId, { video_url: hlsUrl, transcoding_status: 'completed' }),
+        onError: () => EpisodeRepository.updateById(episodeId, { transcoding_status: 'failed' }),
+      });
+    }
 
     // Keep total_seasons in sync
     const maxSeason = await this._maxSeason(seriesId);
@@ -87,6 +109,8 @@ class EpisodeService {
 
     if (files?.thumbnail?.[0]) updateData.thumbnail_url = `/uploads/thumbnails/${files.thumbnail[0].filename}`;
 
+    let localVideoPath = null;
+    let localVideoOutputName = null;
     if (files?.video?.[0]) {
       const videoFile = files.video[0];
       const resolvedProvider = data.provider_name || episode.provider_name || 'bunny';
@@ -95,6 +119,9 @@ class EpisodeService {
         updateData.video_url = `/uploads/videos/${videoFile.filename}`;
         updateData.provider_video_id = null;
         updateData.provider_name = 'local';
+        updateData.transcoding_status = 'pending';
+        localVideoPath = videoFile.path;
+        localVideoOutputName = path.basename(videoFile.filename, path.extname(videoFile.filename));
       } else {
         try {
           const result = await BunnyStreamService.uploadVideo(videoFile.path, videoFile.originalname);
@@ -104,6 +131,7 @@ class EpisodeService {
           }
           updateData.provider_video_id = result.videoId;
           updateData.video_url = result.videoUrl;
+          updateData.transcoding_status = null;
           fs.unlink(videoFile.path, () => {});
         } catch (err) {
           fs.unlink(videoFile.path, () => {});
@@ -113,6 +141,18 @@ class EpisodeService {
     }
 
     await EpisodeRepository.updateById(episodeId, updateData);
+
+    // Fire-and-forget transcoding for local uploads
+    if (localVideoPath) {
+      TranscodingService.transcodeAsync({
+        inputPath: localVideoPath,
+        outputName: localVideoOutputName,
+        onProcessing: () => EpisodeRepository.updateById(episodeId, { transcoding_status: 'processing' }),
+        onComplete: (hlsUrl) => EpisodeRepository.updateById(episodeId, { video_url: hlsUrl, transcoding_status: 'completed' }),
+        onError: () => EpisodeRepository.updateById(episodeId, { transcoding_status: 'failed' }),
+      });
+    }
+
     return EpisodeRepository.findById(episodeId);
   }
 

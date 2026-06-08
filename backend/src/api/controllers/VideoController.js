@@ -32,8 +32,13 @@ class VideoController {
       }
 
       const videoUrl = movie.video_url;
-      if (!videoUrl || !videoUrl.startsWith('/uploads/videos/')) {
+      if (!videoUrl || (!videoUrl.startsWith('/uploads/videos/') && !videoUrl.startsWith('/uploads/hls/'))) {
         return errorResponse(res, MESSAGES.VIDEO_NOT_LOCAL, STATUS_CODES.UNPROCESSABLE_ENTITY);
+      }
+
+      // HLS videos are served statically — return the URL directly
+      if (videoUrl.startsWith('/uploads/hls/')) {
+        return successResponse(res, MESSAGES.VIDEO_TOKEN_ISSUED, { streamUrl: videoUrl, type: 'hls' });
       }
 
       const filename = path.basename(videoUrl);
@@ -60,8 +65,13 @@ class VideoController {
       }
 
       const videoUrl = episode.video_url;
-      if (!videoUrl || !videoUrl.startsWith('/uploads/videos/')) {
+      if (!videoUrl || (!videoUrl.startsWith('/uploads/videos/') && !videoUrl.startsWith('/uploads/hls/'))) {
         return errorResponse(res, MESSAGES.VIDEO_NOT_LOCAL, STATUS_CODES.UNPROCESSABLE_ENTITY);
+      }
+
+      // HLS videos are served statically — return the URL directly
+      if (videoUrl.startsWith('/uploads/hls/')) {
+        return successResponse(res, MESSAGES.VIDEO_TOKEN_ISSUED, { streamUrl: videoUrl, type: 'hls' });
       }
 
       const filename = path.basename(videoUrl);

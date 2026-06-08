@@ -13,6 +13,7 @@ const UserAgeVerification = require('./UserAgeVerification');
 const ParentalControl = require('./ParentalControl');
 const Series = require('./Series');
 const Episode = require('./Episode');
+const UserInteraction = require('./UserInteraction');
 
 // ── Role ↔ User ─────────────────────────────────────────────────────────────
 Role.hasMany(User, { foreignKey: 'role_id', as: 'users' });
@@ -88,6 +89,10 @@ UserAgeVerification.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 User.hasOne(ParentalControl, { foreignKey: 'user_id', as: 'parentalControl', onDelete: 'CASCADE' });
 ParentalControl.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
+// ── User ↔ UserInteraction ───────────────────────────────────────────────────
+User.hasMany(UserInteraction, { foreignKey: 'user_id', as: 'interactions', onDelete: 'CASCADE' });
+UserInteraction.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
 module.exports = {
   sequelize,
   Sequelize,
@@ -104,4 +109,5 @@ module.exports = {
   ParentalControl,
   Series,
   Episode,
+  UserInteraction,
 };

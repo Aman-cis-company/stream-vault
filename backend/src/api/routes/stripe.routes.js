@@ -14,6 +14,7 @@ const { successResponse, errorResponse } = require('../../helpers/responseHelper
 const ROLES = require('../../constants/roles');
 const PaymentRepository = require('../repositories/PaymentRepository');
 const StripeService = require('../services/StripeService');
+const logger = require('../../config/logger');
 
 // ── Public: list active subscription plans ────────────────────────────────────
 router.get('/plans', async (req, res) => {
@@ -56,6 +57,49 @@ router.put('/plans/:id', authenticate, authorize(ROLES.SUPER_ADMIN), async (req,
     return errorResponse(res, err.message || 'Failed to update plan', 500);
   }
 });
+
+// ── Public: return Stripe publishable key for frontend Elements ───────────────
+router.get('/config', (req, res) => {
+  const key = process.env.STRIPE_PUBLISHABLE_KEY;
+  if (!key || key.startsWith('pk_test_REPLACE')) {
+    return errorResponse(res, 'Stripe publishable key not configured', 500);
+  }
+  return successResponse(res, 'Stripe config', { publishableKey: key });
+});
+
+// ── Custom embedded checkout: create incomplete subscription → return client_secret ──
+router.post(
+  '/create-subscription-intent',
+  authenticate,
+  async (req, res) => {
+    try {
+      const { plan_id, billing } = req.body;
+      if (!plan_id) return errorResponse(res, 'plan_id is required', 400);
+      const result = await StripeService.createSubscriptionIntent(req.user, plan_id, billing);
+      return successResponse(res, 'Subscription intent created', result, 201);
+    } catch (err) {
+      logger.error('create-subscription-intent error', { error: err.message });
+      return errorResponse(res, err.message || 'Failed to create subscription intent', err.statusCode || 500);
+    }
+  }
+);
+
+// ── Activate subscription after successful payment ────────────────────────────
+router.post(
+  '/activate-subscription',
+  authenticate,
+  async (req, res) => {
+    try {
+      const { subscription_id } = req.body;
+      if (!subscription_id) return errorResponse(res, 'subscription_id is required', 400);
+      const result = await StripeService.activateSubscription(req.user.id, subscription_id);
+      return successResponse(res, 'Subscription activated', result);
+    } catch (err) {
+      logger.error('activate-subscription error', { error: err.message });
+      return errorResponse(res, err.message || 'Failed to activate subscription', err.statusCode || 500);
+    }
+  }
+);
 
 // IMPORTANT: Webhook must use raw body — mounted BEFORE express.json() via app.js
 // This route receives the raw body via express.raw() applied in app.js

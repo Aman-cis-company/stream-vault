@@ -40,6 +40,11 @@ const Movie = sequelize.define('Movie', {
     type: DataTypes.STRING(500),
     allowNull: true,
   },
+  transcoding_status: {
+    type: DataTypes.ENUM('pending', 'processing', 'completed', 'failed'),
+    allowNull: true,
+    defaultValue: null,
+  },
   duration: {
     type: DataTypes.INTEGER,
     allowNull: true,

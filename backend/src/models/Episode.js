@@ -13,6 +13,7 @@ const Episode = sequelize.define('Episode', {
   provider_name: { type: DataTypes.STRING(50), defaultValue: 'bunny' },
   provider_video_id: { type: DataTypes.STRING(255), allowNull: true },
   video_url: { type: DataTypes.STRING(500), allowNull: true },
+  transcoding_status: { type: DataTypes.ENUM('pending', 'processing', 'completed', 'failed'), allowNull: true, defaultValue: null },
   status: { type: DataTypes.ENUM('published', 'draft', 'archived'), defaultValue: 'draft' },
   release_date: { type: DataTypes.DATEONLY, allowNull: true },
   created_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },

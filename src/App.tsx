@@ -22,6 +22,8 @@ import { AgeVerificationModal } from "./components/streaming/AgeVerificationModa
 import SeriesDetail from "./routes/series.$seriesId";
 import WatchEpisode from "./routes/watch.series.$seriesId.episode.$episodeId";
 import AdminSeries from "./pages/admin/AdminSeries";
+import MyList from "./routes/my-list";
+import Checkout from "./routes/checkout";
 
 export default function App() {
   return (
@@ -38,6 +40,7 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/my-list" element={<MyList />} />
         <Route path="/settings/parental-controls" element={<ParentalControls />} />
         <Route path="/affiliate" element={<Affiliate />} />
         {/* Admin portal */}
@@ -49,6 +52,7 @@ export default function App() {
         <Route path="/series/:seriesId" element={<SeriesDetail />} />
         <Route path="/watch/series/:seriesId/episode/:episodeId" element={<WatchEpisode />} />
         <Route path="/watch/:titleId" element={<Watch />} />
+        <Route path="/checkout" element={<Checkout />} />
         <Route path="/payment/success" element={<PaymentSuccess />} />
         <Route path="/payment/cancel" element={<PaymentCancel />} />
         <Route path="*" element={<NotFound />} />

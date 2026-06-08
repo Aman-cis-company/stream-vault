@@ -16,10 +16,19 @@ class StripeService {
       ? (await SubscriptionRepository.findByUserId(user.id)).find((s) => s.stripe_customer_id)
       : null;
 
+    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+
     if (existingSub && existingSub.stripe_customer_id) {
       try {
         const customer = await stripe.customers.retrieve(existingSub.stripe_customer_id);
-        if (!customer.deleted) return customer;
+        if (!customer.deleted) {
+          // Patch name if missing — required for Stripe India export compliance
+          if (!customer.name && fullName) {
+            await stripe.customers.update(customer.id, { name: fullName });
+            customer.name = fullName;
+          }
+          return customer;
+        }
       } catch (err) {
         logger.warn('Could not retrieve existing Stripe customer', { error: err.message });
       }
@@ -27,7 +36,7 @@ class StripeService {
 
     const customer = await stripe.customers.create({
       email: user.email,
-      name: `${user.first_name} ${user.last_name}`,
+      name: fullName,
       metadata: { user_id: String(user.id) },
     });
 
@@ -59,6 +68,140 @@ class StripeService {
     await plan.update({ stripe_price_id: price.id });
     logger.info('Auto-created Stripe price for plan', { planId: plan.id, priceId: price.id });
     return plan;
+  }
+
+  /**
+   * Create an incomplete Stripe subscription and return the PaymentIntent client_secret.
+   * Used by the custom embedded checkout page — no redirect to stripe.com.
+   */
+  async createSubscriptionIntent(user, planId, billing) {
+    let plan = await SubscriptionPlan.findByPk(planId);
+    if (!plan || plan.status !== 'active') {
+      const err = new Error('Subscription plan not found or inactive');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    plan = await this.ensureStripePriceId(plan);
+    const customer = await this.createOrGetCustomer(user);
+
+    // Required for Stripe India export compliance: customer must have name + address
+    // before the subscription/PaymentIntent is created.
+    if (billing) {
+      const update = {};
+      if (billing.name) update.name = billing.name;
+      if (billing.line1 || billing.city || billing.state || billing.postal_code || billing.country) {
+        update.address = {
+          line1: billing.line1 || '',
+          city: billing.city || '',
+          state: billing.state || '',
+          postal_code: billing.postal_code || '',
+          country: billing.country || 'IN',
+        };
+      }
+      if (Object.keys(update).length > 0) {
+        await stripe.customers.update(customer.id, update);
+        logger.info('Stripe customer updated with billing details', { customerId: customer.id });
+      }
+    }
+
+    const subscription = await stripe.subscriptions.create({
+      customer: customer.id,
+      items: [{ price: plan.stripe_price_id }],
+      payment_behavior: 'default_incomplete',
+      payment_settings: { save_default_payment_method: 'on_subscription' },
+      expand: ['latest_invoice.payment_intent'],
+      metadata: { user_id: String(user.id), plan_id: String(plan.id) },
+    });
+
+    const paymentIntent = subscription.latest_invoice.payment_intent;
+
+    logger.info('Subscription intent created', { subscriptionId: subscription.id, userId: user.id });
+
+    return {
+      clientSecret: paymentIntent.client_secret,
+      subscriptionId: subscription.id,
+      planId: plan.id,
+      planName: plan.name,
+      amount: Number(plan.price),
+      currency: (plan.currency || 'INR').toUpperCase(),
+      billingCycle: plan.billing_cycle,
+    };
+  }
+
+  /**
+   * Activate a subscription after payment confirmation.
+   * Called from the success page with the Stripe subscription ID.
+   * Idempotent — safe to call multiple times.
+   */
+  async activateSubscription(userId, stripeSubscriptionId) {
+    const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId, {
+      expand: ['latest_invoice.payment_intent'],
+    });
+
+    if (!['active', 'trialing', 'incomplete'].includes(subscription.status)) {
+      const err = new Error(`Subscription status is "${subscription.status}" — payment may not have completed.`);
+      err.statusCode = 402;
+      throw err;
+    }
+
+    const planId = parseInt(subscription.metadata?.plan_id, 10);
+    const plan = planId ? await SubscriptionPlan.findByPk(planId) : null;
+
+    const startDate = new Date(subscription.current_period_start * 1000);
+    const endDate = new Date(subscription.current_period_end * 1000);
+
+    let localSub = await SubscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
+    if (!localSub) {
+      localSub = await SubscriptionRepository.create({
+        user_id: userId,
+        plan_id: planId || null,
+        stripe_customer_id: typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id,
+        stripe_subscription_id: stripeSubscriptionId,
+        start_date: startDate,
+        end_date: endDate,
+        status: subscription.status === 'active' ? 'active' : 'pending',
+      });
+    } else {
+      await SubscriptionRepository.updateByStripeSubscriptionId(stripeSubscriptionId, {
+        status: subscription.status === 'active' ? 'active' : 'pending',
+        start_date: startDate,
+        end_date: endDate,
+      });
+      localSub = await SubscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
+    }
+
+    // Record the payment if not already done
+    const pi = subscription.latest_invoice?.payment_intent;
+    const piId = typeof pi === 'string' ? pi : pi?.id;
+    if (piId) {
+      const existing = await PaymentRepository.findByStripePaymentIntentId(piId);
+      if (!existing && subscription.latest_invoice?.amount_paid) {
+        await PaymentRepository.create({
+          user_id: userId,
+          subscription_id: localSub.id,
+          stripe_payment_intent_id: piId,
+          amount: subscription.latest_invoice.amount_paid / 100,
+          currency: (subscription.latest_invoice.currency || 'inr').toUpperCase(),
+          payment_method: 'card',
+          status: 'succeeded',
+          paid_at: new Date(),
+        });
+      }
+    }
+
+    // Send confirmation email
+    if (plan) {
+      const user = await UserRepository.findById(userId);
+      if (user) {
+        EmailService.sendSubscriptionConfirmation(user, plan).catch((e) =>
+          logger.warn('Subscription confirmation email failed', { userId, error: e.message })
+        );
+      }
+    }
+
+    logger.info('Subscription activated', { subscriptionId: stripeSubscriptionId, userId });
+    return { subscription: localSub, planName: plan?.name ?? '' };
   }
 
   /**

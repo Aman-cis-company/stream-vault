@@ -9,7 +9,7 @@ import { TitleCard } from "@/components/streaming/TitleCard";
 import { AgeRatingBadge } from "@/components/streaming/AgeRatingBadge";
 import { ContentWarningModal } from "@/components/streaming/ContentWarningModal";
 import type { Title } from "@/lib/mock-data";
-import { fetchMovieById, fetchMovies, fetchVideoStreamUrl, getMovieProgress, saveMovieProgress } from "@/lib/movies";
+import { fetchMovieById, fetchMovies, fetchVideoStreamUrl, getMovieProgress, saveMovieProgress, fetchInteractionStatus, toggleLike, toggleList } from "@/lib/movies";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -550,6 +550,7 @@ function WatchInner() {
   const [related, setRelated] = useState<Title[]>([]);
   const [inList, setInList] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [interactionLoading, setInteractionLoading] = useState(false);
   const [resolvedVideoUrl, setResolvedVideoUrl] = useState<string | null>(null);
   const [showWarning, setShowWarning] = useState(false);
   const [warningAcknowledged, setWarningAcknowledged] = useState(false);
@@ -565,6 +566,8 @@ function WatchInner() {
     setWarningAcknowledged(false);
     setShowWarning(false);
     setResumeFrom(0);
+    setInList(false);
+    setLiked(false);
     lastSavedRef.current = 0;
     setSavedAt(0);
     fetchMovieById(titleId)
@@ -573,6 +576,9 @@ function WatchInner() {
         if (t) {
           fetchMovies()
             .then((all) => setRelated(all.filter((m) => m.id !== t.id).slice(0, 8)))
+            .catch(() => {});
+          fetchInteractionStatus('movie', titleId)
+            .then((s) => { setInList(s.in_list); setLiked(s.is_liked); })
             .catch(() => {});
 
           if (t.hlsUrl && t.hlsUrl.includes("/uploads/videos/")) {
@@ -764,10 +770,20 @@ function WatchInner() {
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <Button
                 variant="secondary"
+                disabled={interactionLoading}
                 className="bg-white/10 hover:bg-white/20 text-white border-white/10"
-                onClick={() => {
-                  setInList((v) => !v);
-                  toast.success(inList ? "Removed from My List" : "Added to My List");
+                onClick={async () => {
+                  if (!titleId) return;
+                  setInteractionLoading(true);
+                  try {
+                    const next = await toggleList('movie', titleId);
+                    setInList(next);
+                    toast.success(next ? "Added to My List" : "Removed from My List");
+                  } catch {
+                    toast.error("Could not update list");
+                  } finally {
+                    setInteractionLoading(false);
+                  }
                 }}
               >
                 {inList ? (
@@ -779,11 +795,21 @@ function WatchInner() {
               </Button>
 
               <button
-                onClick={() => {
-                  setLiked((v) => !v);
-                  toast.success(liked ? "Removed like" : "Thanks for the feedback!");
+                disabled={interactionLoading}
+                onClick={async () => {
+                  if (!titleId) return;
+                  setInteractionLoading(true);
+                  try {
+                    const next = await toggleLike('movie', titleId);
+                    setLiked(next);
+                    toast.success(next ? "Thanks for the feedback!" : "Like removed");
+                  } catch {
+                    toast.error("Could not update like");
+                  } finally {
+                    setInteractionLoading(false);
+                  }
                 }}
-                className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all ${
+                className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all disabled:opacity-60 ${
                   liked
                     ? "border-primary/50 bg-primary/15 text-primary"
                     : "border-white/15 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"

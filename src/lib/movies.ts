@@ -106,6 +106,49 @@ export async function saveMovieProgress(movieId: string, watchTime: number, dura
   }
 }
 
+// ── Interactions (My List + Like) ────────────────────────────────────────────
+
+export interface InteractionStatus {
+  is_liked: boolean;
+  in_list: boolean;
+}
+
+export interface ListItem {
+  interaction: { content_type: 'movie' | 'series'; content_id: number; is_liked: boolean; in_list: boolean };
+  detail: {
+    id: number;
+    title: string;
+    thumbnail_url: string | null;
+    duration?: number | null;
+    release_date?: string | null;
+    status: string;
+  };
+}
+
+export async function fetchInteractionStatus(contentType: 'movie' | 'series', contentId: string | number): Promise<InteractionStatus> {
+  try {
+    const { data } = await apiClient.get(`/interactions/status?content_type=${contentType}&content_id=${contentId}`);
+    return data.data as InteractionStatus;
+  } catch {
+    return { is_liked: false, in_list: false };
+  }
+}
+
+export async function toggleLike(contentType: 'movie' | 'series', contentId: string | number): Promise<boolean> {
+  const { data } = await apiClient.post('/interactions/toggle-like', { content_type: contentType, content_id: Number(contentId) });
+  return (data.data as { is_liked: boolean }).is_liked;
+}
+
+export async function toggleList(contentType: 'movie' | 'series', contentId: string | number): Promise<boolean> {
+  const { data } = await apiClient.post('/interactions/toggle-list', { content_type: contentType, content_id: Number(contentId) });
+  return (data.data as { in_list: boolean }).in_list;
+}
+
+export async function fetchMyList(): Promise<ListItem[]> {
+  const { data } = await apiClient.get('/interactions/my-list');
+  return data.data.items as ListItem[];
+}
+
 export interface BackendPlan {
   id: number;
   name: string;

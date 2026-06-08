@@ -36,6 +36,7 @@ router.delete('/:id',
 // ── Episode CRUD (nested under series) ───────────────────────────────────────
 router.get('/:seriesId/episodes', EpisodeController.getAll.bind(EpisodeController));
 router.get('/:seriesId/episodes/:episodeId', EpisodeController.getById.bind(EpisodeController));
+router.get('/:seriesId/episodes/:episodeId/transcoding-status', authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.TEAM_MEMBER), EpisodeController.getTranscodingStatus.bind(EpisodeController));
 
 router.post('/:seriesId/episodes',
   authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.TEAM_MEMBER),

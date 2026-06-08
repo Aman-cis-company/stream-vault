@@ -12,6 +12,7 @@ const ageRoutes = require('./age.routes');
 const parentalControlsRoutes = require('./parentalControls.routes');
 const seriesRoutes = require('./series.routes');
 const progressRoutes = require('./progress.routes');
+const interactionRoutes = require('./interaction.routes');
 
 // Health check
 router.get('/health', (req, res) => {
@@ -34,5 +35,6 @@ router.use('/age', ageRoutes);
 router.use('/parental-controls', parentalControlsRoutes);
 router.use('/series', seriesRoutes);
 router.use('/progress', progressRoutes);
+router.use('/interactions', interactionRoutes);
 
 module.exports = router;
