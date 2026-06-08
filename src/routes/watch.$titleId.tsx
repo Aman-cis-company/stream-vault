@@ -9,7 +9,7 @@ import { TitleCard } from "@/components/streaming/TitleCard";
 import { AgeRatingBadge } from "@/components/streaming/AgeRatingBadge";
 import { ContentWarningModal } from "@/components/streaming/ContentWarningModal";
 import type { Title } from "@/lib/mock-data";
-import { fetchMovieById, fetchMovies, fetchVideoStreamUrl } from "@/lib/movies";
+import { fetchMovieById, fetchMovies, fetchVideoStreamUrl, getMovieProgress, saveMovieProgress } from "@/lib/movies";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -73,8 +73,9 @@ function videoSourceType(url: string): "youtube" | "hls" | "direct" | "none" {
 
 // ── YouTube Player ───────────────────────────────────────────────────────────
 
-function YouTubePlayer({ videoId, title }: { videoId: string; title: string }) {
-  const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
+function YouTubePlayer({ videoId, title, resumeFrom = 0 }: { videoId: string; title: string; resumeFrom?: number }) {
+  const startParam = resumeFrom > 5 ? `&start=${Math.floor(resumeFrom)}` : "";
+  const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1${startParam}`;
   return (
     <div className="relative w-full aspect-video bg-black">
       <iframe
@@ -105,15 +106,22 @@ interface NativePlayerProps {
   poster: string;
   title: string;
   durationMin: number;
+  resumeFrom?: number;
+  onProgress?: (currentTime: number, duration: number) => void;
+  onResumeConfirmed?: () => void;
 }
 
-function NativePlayer({ src, poster, title, durationMin }: NativePlayerProps) {
+function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, onProgress, onResumeConfirmed }: NativePlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const hasSeekRef = useRef(false);
+  const resumeFromRef = useRef(resumeFrom);
+  resumeFromRef.current = resumeFrom;
 
+  const [showResumeBanner, setShowResumeBanner] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(durationMin * 60);
@@ -152,6 +160,11 @@ function NativePlayer({ src, poster, title, durationMin }: NativePlayerProps) {
         setBuffering(false);
         const lvls = data.levels.map((l) => (l.height ? `${l.height}p` : "Auto"));
         setQualities(["Auto", ...new Set(lvls)]);
+        if (resumeFromRef.current > 5 && !hasSeekRef.current) {
+          video.currentTime = resumeFromRef.current;
+          hasSeekRef.current = true;
+          setShowResumeBanner(true);
+        }
         tryPlay();
       });
       hls.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) hls.recoverMediaError(); });
@@ -159,7 +172,15 @@ function NativePlayer({ src, poster, title, durationMin }: NativePlayerProps) {
     } else {
       video.src = src;
       video.load();
-      video.addEventListener("loadeddata", () => { setBuffering(false); tryPlay(); }, { once: true });
+      video.addEventListener("loadeddata", () => {
+        setBuffering(false);
+        if (resumeFromRef.current > 5 && !hasSeekRef.current) {
+          video.currentTime = resumeFromRef.current;
+          hasSeekRef.current = true;
+          setShowResumeBanner(true);
+        }
+        tryPlay();
+      }, { once: true });
     }
   }, [src]);
 
@@ -170,7 +191,10 @@ function NativePlayer({ src, poster, title, durationMin }: NativePlayerProps) {
     const on = (e: string, h: () => void) => v.addEventListener(e, h);
     const off = (e: string, h: () => void) => v.removeEventListener(e, h);
 
-    const onTime = () => setCurrentTime(v.currentTime);
+    const onTime = () => {
+      setCurrentTime(v.currentTime);
+      if (isFinite(v.duration)) onProgress?.(v.currentTime, v.duration);
+    };
     const onDur = () => { if (isFinite(v.duration)) setDuration(v.duration); };
     const onPlay = () => setPlaying(true);
     const onPause = () => setPlaying(false);
@@ -284,6 +308,31 @@ function NativePlayer({ src, poster, title, durationMin }: NativePlayerProps) {
           <VolumeX className="size-3.5 text-amber-400" />
           <span className="text-amber-300">Tap to unmute</span>
         </button>
+      )}
+
+      {/* Resume banner */}
+      {showResumeBanner && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 rounded-lg bg-black/85 backdrop-blur-sm px-4 py-2.5 text-sm text-white border border-white/15 shadow-2xl whitespace-nowrap">
+          <span className="text-white/70">Resumed from <span className="text-white font-semibold">{fmtTime(resumeFromRef.current)}</span></span>
+          <button
+            onClick={() => {
+              const v = videoRef.current;
+              if (v) v.currentTime = 0;
+              hasSeekRef.current = false;
+              setShowResumeBanner(false);
+              onResumeConfirmed?.();
+            }}
+            className="text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+          >
+            Start over
+          </button>
+          <button
+            onClick={() => setShowResumeBanner(false)}
+            className="text-white/40 hover:text-white/70 text-base leading-none transition-colors"
+          >
+            ×
+          </button>
+        </div>
       )}
 
       {/* Top badges (fade with controls) */}
@@ -504,9 +553,20 @@ function WatchInner() {
   const [resolvedVideoUrl, setResolvedVideoUrl] = useState<string | null>(null);
   const [showWarning, setShowWarning] = useState(false);
   const [warningAcknowledged, setWarningAcknowledged] = useState(false);
+  const [resumeFrom, setResumeFrom] = useState(0);
+  const [savedAt, setSavedAt] = useState(0);
+  const lastSavedRef = useRef(0);
 
   useEffect(() => {
     if (!titleId) return;
+    // Reset all stale state before loading the new movie
+    setTitle(undefined);
+    setResolvedVideoUrl(null);
+    setWarningAcknowledged(false);
+    setShowWarning(false);
+    setResumeFrom(0);
+    lastSavedRef.current = 0;
+    setSavedAt(0);
     fetchMovieById(titleId)
       .then((t) => {
         setTitle(t);
@@ -525,10 +585,28 @@ function WatchInner() {
           if ((t.is_age_restricted || (t.warning_flags_json && t.warning_flags_json.length > 0)) && user?.age_verified) {
             setShowWarning(true);
           }
+
+          // Load resume position
+          getMovieProgress(titleId)
+            .then((p) => {
+              if (p && p.watch_time > 5 && p.completion_percentage < 95) {
+                setResumeFrom(p.watch_time);
+              }
+            })
+            .catch(() => {});
         }
       })
       .catch(() => setTitle(null));
   }, [titleId, user?.age_verified]);
+
+  const handleProgress = useCallback((currentTime: number, dur: number) => {
+    if (currentTime < 5) return;
+    if (currentTime - lastSavedRef.current >= 10) {
+      lastSavedRef.current = currentTime;
+      setSavedAt(currentTime);
+      saveMovieProgress(titleId!, currentTime, dur);
+    }
+  }, [titleId]);
 
   if (title === undefined) {
     return (
@@ -600,13 +678,20 @@ function WatchInner() {
             </div>
           </div>
         ) : srcType === "youtube" && youtubeId ? (
-          <YouTubePlayer videoId={youtubeId} title={title.name} />
+          <YouTubePlayer videoId={youtubeId} title={title.name} resumeFrom={resumeFrom} />
         ) : (
           <NativePlayer
             src={effectiveVideoUrl}
             poster={title.backdropUrl}
             title={title.name}
             durationMin={title.durationMin}
+            resumeFrom={resumeFrom}
+            onProgress={handleProgress}
+            onResumeConfirmed={() => {
+              lastSavedRef.current = 0;
+              setSavedAt(0);
+              saveMovieProgress(titleId!, 0, title.durationMin * 60);
+            }}
           />
         )}
       </div>
@@ -667,6 +752,11 @@ function WatchInner() {
                   <span className="size-1 rounded-full bg-white/30" />
                   <span>{title.genres.join(" · ")}</span>
                 </>
+              )}
+              {savedAt > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-medium text-primary border border-primary/25">
+                  Saved at {fmtTime(savedAt)}
+                </span>
               )}
             </div>
 

@@ -28,6 +28,33 @@ class WatchProgressRepository {
       where: { user_id: userId, episode_id: episodeId },
     });
   }
+
+  async upsertMovieProgress(userId, movieId, watchTime, completionPct) {
+    const [record, created] = await WatchHistory.findOrCreate({
+      where: { user_id: userId, movie_id: movieId, episode_id: null },
+      defaults: {
+        watch_time: watchTime,
+        completion_percentage: completionPct,
+        last_watched_at: new Date(),
+      },
+    });
+
+    if (!created) {
+      await record.update({
+        watch_time: watchTime,
+        completion_percentage: completionPct,
+        last_watched_at: new Date(),
+      });
+    }
+
+    return record;
+  }
+
+  async getMovieProgress(userId, movieId) {
+    return WatchHistory.findOne({
+      where: { user_id: userId, movie_id: movieId, episode_id: null },
+    });
+  }
 }
 
 module.exports = new WatchProgressRepository();

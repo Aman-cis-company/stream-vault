@@ -43,6 +43,46 @@ class ProgressController {
       return errorResponse(res, 'Failed to retrieve progress', STATUS_CODES.INTERNAL_SERVER_ERROR);
     }
   }
+
+  async saveMovieProgress(req, res) {
+    try {
+      const { movieId } = req.params;
+      const { watch_time, duration } = req.body;
+
+      if (watch_time === undefined || watch_time === null) {
+        return errorResponse(res, 'watch_time is required', STATUS_CODES.UNPROCESSABLE_ENTITY);
+      }
+
+      const watchTimeSec = Math.max(0, Math.floor(Number(watch_time)));
+      const durationSec = duration ? Math.max(1, Math.floor(Number(duration))) : null;
+      const completionPct = durationSec
+        ? Math.min(100, ((watchTimeSec / durationSec) * 100)).toFixed(2)
+        : 0;
+
+      const progress = await WatchProgressRepository.upsertMovieProgress(
+        req.user.id,
+        movieId,
+        watchTimeSec,
+        completionPct
+      );
+
+      return successResponse(res, 'Progress saved', { progress });
+    } catch (err) {
+      logger.error('ProgressController.saveMovieProgress error', { error: err.message });
+      return errorResponse(res, 'Failed to save progress', STATUS_CODES.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async getMovieProgress(req, res) {
+    try {
+      const { movieId } = req.params;
+      const progress = await WatchProgressRepository.getMovieProgress(req.user.id, movieId);
+      return successResponse(res, 'Progress retrieved', { progress: progress ?? null });
+    } catch (err) {
+      logger.error('ProgressController.getMovieProgress error', { error: err.message });
+      return errorResponse(res, 'Failed to retrieve progress', STATUS_CODES.INTERNAL_SERVER_ERROR);
+    }
+  }
 }
 
 module.exports = new ProgressController();

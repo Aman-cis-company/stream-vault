@@ -89,6 +89,23 @@ export async function fetchVideoStreamUrl(movieId: string): Promise<string | nul
   }
 }
 
+export async function getMovieProgress(movieId: string): Promise<{ watch_time: number; completion_percentage: number } | null> {
+  try {
+    const { data } = await apiClient.get(`/progress/movie/${movieId}`);
+    return data.data.progress ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveMovieProgress(movieId: string, watchTime: number, duration: number): Promise<void> {
+  try {
+    await apiClient.put(`/progress/movie/${movieId}`, { watch_time: watchTime, duration });
+  } catch {
+    // non-critical
+  }
+}
+
 export interface BackendPlan {
   id: number;
   name: string;
