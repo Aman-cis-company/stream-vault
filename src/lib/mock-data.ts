@@ -29,6 +29,7 @@ export interface Title {
   is_age_restricted?: boolean;
   minimum_age?: number | null;
   warning_flags_json?: WarningFlag[] | null;
+  transcoding_status?: "pending" | "processing" | "completed" | "failed" | null;
 }
 
 export interface Plan {

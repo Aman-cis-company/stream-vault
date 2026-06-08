@@ -42,6 +42,7 @@ export function mapMovieToTitle(movie: BackendMovie): Title {
     cast: [],
     hlsUrl: movie.video_url ? assetUrl(movie.video_url) : "",
     language: movie.language ?? "English",
+    transcoding_status: movie.transcoding_status ?? null,
     content_rating: movie.content_rating ?? null,
     is_age_restricted: movie.is_age_restricted ?? false,
     minimum_age: movie.minimum_age ?? null,

@@ -141,6 +141,8 @@ function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, onProgr
     const video = videoRef.current;
     if (!video || !src) return;
     setBuffering(true);
+    setQualities(["Auto"]);
+    setActiveQuality("Auto");
 
     const tryPlay = () => {
       video.play().catch(() => {
@@ -167,7 +169,15 @@ function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, onProgr
         }
         tryPlay();
       });
-      hls.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) hls.recoverMediaError(); });
+      hls.on(Hls.Events.ERROR, (_, d) => {
+        if (d.fatal) {
+          if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            hls.startLoad();
+          } else {
+            hls.recoverMediaError();
+          }
+        }
+      });
       return () => { hls.destroy(); hlsRef.current = null; };
     } else {
       video.src = src;
@@ -557,9 +567,53 @@ function WatchInner() {
   const [resumeFrom, setResumeFrom] = useState(0);
   const [savedAt, setSavedAt] = useState(0);
   const lastSavedRef = useRef(0);
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const loadMovie = useCallback((id: string, isPolling = false) => {
+    fetchMovieById(id)
+      .then((t) => {
+        setTitle(t);
+        if (!t) return;
+
+        if (!isPolling) {
+          fetchMovies()
+            .then((all) => setRelated(all.filter((m) => m.id !== t.id).slice(0, 8)))
+            .catch(() => {});
+          fetchInteractionStatus('movie', id)
+            .then((s) => { setInList(s.in_list); setLiked(s.is_liked); })
+            .catch(() => {});
+          if ((t.is_age_restricted || (t.warning_flags_json && t.warning_flags_json.length > 0)) && user?.age_verified) {
+            setShowWarning(true);
+          }
+          getMovieProgress(id)
+            .then((p) => {
+              if (p && p.watch_time > 5 && p.completion_percentage < 95) {
+                setResumeFrom(p.watch_time);
+              }
+            })
+            .catch(() => {});
+        }
+
+        if (t.hlsUrl && t.hlsUrl.includes("/uploads/videos/")) {
+          fetchVideoStreamUrl(id)
+            .then((url) => { if (url) setResolvedVideoUrl(url); })
+            .catch(() => {});
+        } else {
+          setResolvedVideoUrl(null);
+        }
+
+        // Poll every 10 s while transcoding is in progress
+        if (t.transcoding_status === "pending" || t.transcoding_status === "processing") {
+          pollTimerRef.current = setTimeout(() => loadMovie(id, true), 10000);
+        }
+      })
+      .catch(() => { if (!isPolling) setTitle(null); });
+  }, [user?.age_verified]);
 
   useEffect(() => {
     if (!titleId) return;
+    // Cancel any in-flight poll from a previous movie
+    if (pollTimerRef.current) { clearTimeout(pollTimerRef.current); pollTimerRef.current = null; }
     // Reset all stale state before loading the new movie
     setTitle(undefined);
     setResolvedVideoUrl(null);
@@ -570,40 +624,9 @@ function WatchInner() {
     setLiked(false);
     lastSavedRef.current = 0;
     setSavedAt(0);
-    fetchMovieById(titleId)
-      .then((t) => {
-        setTitle(t);
-        if (t) {
-          fetchMovies()
-            .then((all) => setRelated(all.filter((m) => m.id !== t.id).slice(0, 8)))
-            .catch(() => {});
-          fetchInteractionStatus('movie', titleId)
-            .then((s) => { setInList(s.in_list); setLiked(s.is_liked); })
-            .catch(() => {});
-
-          if (t.hlsUrl && t.hlsUrl.includes("/uploads/videos/")) {
-            fetchVideoStreamUrl(titleId)
-              .then((url) => { if (url) setResolvedVideoUrl(url); })
-              .catch(() => {});
-          }
-
-          // Show content warning for age-restricted content
-          if ((t.is_age_restricted || (t.warning_flags_json && t.warning_flags_json.length > 0)) && user?.age_verified) {
-            setShowWarning(true);
-          }
-
-          // Load resume position
-          getMovieProgress(titleId)
-            .then((p) => {
-              if (p && p.watch_time > 5 && p.completion_percentage < 95) {
-                setResumeFrom(p.watch_time);
-              }
-            })
-            .catch(() => {});
-        }
-      })
-      .catch(() => setTitle(null));
-  }, [titleId, user?.age_verified]);
+    loadMovie(titleId);
+    return () => { if (pollTimerRef.current) clearTimeout(pollTimerRef.current); };
+  }, [titleId, loadMovie]);
 
   const handleProgress = useCallback((currentTime: number, dur: number) => {
     if (currentTime < 5) return;
@@ -669,7 +692,23 @@ function WatchInner() {
 
       {/* ── Video Player ── */}
       <div className="w-full bg-black shadow-2xl">
-        {srcType === "none" ? (
+        {(title.transcoding_status === "pending" || title.transcoding_status === "processing") ? (
+          <div className="relative w-full aspect-video bg-black flex flex-col items-center justify-center gap-4">
+            <img
+              src={title.backdropUrl}
+              alt={title.name}
+              className="absolute inset-0 w-full h-full object-cover opacity-20"
+            />
+            <div className="relative z-10 text-center px-4">
+              <div className="size-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
+                <Loader2 className="size-9 text-primary animate-spin" />
+              </div>
+              <p className="text-white font-semibold text-base mb-1">Transcoding in progress</p>
+              <p className="text-white/50 text-sm">Creating 360p / 720p / 1080p versions&hellip;</p>
+              <p className="text-white/30 text-xs mt-3">This page will update automatically when ready.</p>
+            </div>
+          </div>
+        ) : srcType === "none" ? (
           <div className="relative w-full aspect-video bg-black flex flex-col items-center justify-center gap-4">
             <img
               src={title.backdropUrl}
