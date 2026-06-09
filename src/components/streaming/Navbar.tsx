@@ -1,5 +1,5 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
@@ -23,15 +23,33 @@ export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const { mode, setMode } = useTheme();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   const ThemeIcon = mode === "light" ? Sun : mode === "dark" ? Moon : Monitor;
 
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 60);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const isActive = (to: string) => pathname === to || pathname.startsWith(to + "/");
+
   return (
-    <header className="sticky top-0 z-50 border-b border-border/40 glass">
+    <header
+      className={`sticky top-0 z-50 transition-all duration-500 ${
+        scrolled
+          ? "border-b border-border/40 glass shadow-lg"
+          : "border-b border-transparent bg-gradient-to-b from-black/70 via-black/30 to-transparent"
+      }`}
+    >
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6">
-        <Link to="/" className="flex items-center gap-2.5 font-bold shrink-0">
-          <span className="inline-flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-glow-sm">
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-2.5 font-bold shrink-0 group">
+          <span className="inline-flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-glow-sm transition-transform group-hover:scale-110">
             <Film className="size-4" />
           </span>
           <span className="text-lg tracking-tight">
@@ -39,51 +57,90 @@ export function Navbar() {
           </span>
         </Link>
 
+        {/* Desktop nav */}
         <nav className="hidden items-center gap-0.5 md:flex">
           {NAV.map((n) => (
             <Link
               key={n.to}
               to={n.to}
-              className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary/50"
+              className={`relative rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                isActive(n.to)
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+              }`}
             >
               {n.label}
+              {isActive(n.to) && (
+                <span className="absolute inset-x-3 -bottom-px h-[2px] rounded-full bg-primary" />
+              )}
             </Link>
           ))}
           {isAuthenticated && (
             <>
               <Link
                 to="/my-list"
-                className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary/50 inline-flex items-center gap-1.5"
+                className={`relative rounded-md px-3 py-2 text-sm font-medium transition-colors inline-flex items-center gap-1.5 ${
+                  isActive("/my-list")
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                }`}
               >
                 <Bookmark className="size-3.5" />
                 My List
+                {isActive("/my-list") && (
+                  <span className="absolute inset-x-3 -bottom-px h-[2px] rounded-full bg-primary" />
+                )}
               </Link>
               <Link
                 to="/dashboard"
-                className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary/50"
+                className={`relative rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  isActive("/dashboard")
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                }`}
               >
                 Dashboard
+                {isActive("/dashboard") && (
+                  <span className="absolute inset-x-3 -bottom-px h-[2px] rounded-full bg-primary" />
+                )}
               </Link>
             </>
           )}
         </nav>
 
+        {/* Right side actions */}
         <div className="ml-auto flex items-center gap-1">
-          <Button variant="ghost" size="icon" aria-label="Search" asChild className="text-muted-foreground hover:text-foreground">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Search"
+            asChild
+            className="text-muted-foreground hover:text-foreground hover:bg-white/10"
+          >
             <Link to="/library">
               <Search className="size-4.5" />
             </Link>
           </Button>
 
           {isAuthenticated && (
-            <Button variant="ghost" size="icon" aria-label="Notifications" className="text-muted-foreground hover:text-foreground">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Notifications"
+              className="text-muted-foreground hover:text-foreground hover:bg-white/10"
+            >
               <Bell className="size-4.5" />
             </Button>
           )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Theme" className="text-muted-foreground hover:text-foreground">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Theme"
+                className="text-muted-foreground hover:text-foreground hover:bg-white/10"
+              >
                 <ThemeIcon className="size-4.5" />
               </Button>
             </DropdownMenuTrigger>
@@ -104,7 +161,7 @@ export function Navbar() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="ml-1 inline-flex size-9 items-center justify-center rounded-full text-sm font-bold text-white ring-2 ring-border transition hover:ring-primary/60 shadow-card"
+                  className="ml-1 inline-flex size-9 items-center justify-center rounded-full text-sm font-bold text-white ring-2 ring-border/60 transition-all hover:ring-primary/70 hover:scale-105 shadow-card"
                   style={{
                     background: `linear-gradient(135deg, oklch(0.62 0.27 ${user!.avatarHue}), oklch(0.42 0.20 ${(user!.avatarHue + 55) % 360}))`,
                   }}
@@ -149,7 +206,7 @@ export function Navbar() {
             </DropdownMenu>
           ) : (
             <div className="ml-1 hidden items-center gap-2 sm:flex">
-              <Button variant="ghost" size="sm" asChild>
+              <Button variant="ghost" size="sm" asChild className="hover:bg-white/10">
                 <Link to="/login">Sign in</Link>
               </Button>
               <Button size="sm" asChild className="shadow-glow-sm">
@@ -161,7 +218,7 @@ export function Navbar() {
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden text-muted-foreground"
+            className="md:hidden text-muted-foreground hover:bg-white/10"
             aria-label="Menu"
             onClick={() => setOpen((o) => !o)}
           >
@@ -170,6 +227,7 @@ export function Navbar() {
         </div>
       </div>
 
+      {/* Mobile menu */}
       {open && (
         <div className="border-t border-border/40 glass md:hidden">
           <nav className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-3">
@@ -178,7 +236,11 @@ export function Navbar() {
                 key={n.to}
                 to={n.to}
                 onClick={() => setOpen(false)}
-                className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                className={`rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+                  isActive(n.to)
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                }`}
               >
                 {n.label}
               </Link>
@@ -188,14 +250,22 @@ export function Navbar() {
                 <Link
                   to="/my-list"
                   onClick={() => setOpen(false)}
-                  className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors inline-flex items-center gap-2"
+                  className={`rounded-md px-3 py-2.5 text-sm font-medium transition-colors inline-flex items-center gap-2 ${
+                    isActive("/my-list")
+                      ? "bg-primary/15 text-primary"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  }`}
                 >
                   <Bookmark className="size-3.5" /> My List
                 </Link>
                 <Link
                   to="/dashboard"
                   onClick={() => setOpen(false)}
-                  className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                  className={`rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+                    isActive("/dashboard")
+                      ? "bg-primary/15 text-primary"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  }`}
                 >
                   Dashboard
                 </Link>

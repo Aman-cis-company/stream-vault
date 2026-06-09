@@ -68,16 +68,17 @@ export function StatCard({
   trend?: "up" | "down";
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5 shadow-card transition-shadow hover:shadow-card-hover">
-      <div className="flex items-center justify-between">
+    <div className="group relative rounded-2xl border border-border/70 bg-card p-5 shadow-card transition-all duration-300 hover:border-primary/30 hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-10px_rgba(0,0,0,0.5)] overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
+      <div className="relative flex items-center justify-between">
         <span className="text-sm font-medium text-muted-foreground">{label}</span>
-        <span className="inline-flex size-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
+        <span className="inline-flex size-9 items-center justify-center rounded-xl bg-primary/12 text-primary ring-1 ring-primary/20 transition-all group-hover:bg-primary/20 group-hover:ring-primary/35">
           <Icon className="size-4" />
         </span>
       </div>
-      <p className="mt-3 text-2xl font-bold tracking-tight">{value}</p>
+      <p className="relative mt-3 text-2xl font-bold tracking-tight">{value}</p>
       {hint && (
-        <p className={`mt-1 text-xs font-medium ${trend === "down" ? "text-destructive" : "text-success"}`}>
+        <p className={`relative mt-1 text-xs font-medium ${trend === "down" ? "text-destructive" : "text-muted-foreground"}`}>
           {hint}
         </p>
       )}

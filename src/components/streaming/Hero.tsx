@@ -16,6 +16,7 @@ import {
   VolumeX,
   ChevronLeft,
   ChevronRight,
+  Hd,
 } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -64,11 +65,24 @@ function BgVideo({ src, poster, muted }: BgVideoProps) {
     }
 
     if (type === "hls" && Hls.isSupported()) {
-      const hls = new Hls({ enableWorker: true, autoStartLoad: true });
+      const hls = new Hls({
+        enableWorker: true,
+        autoStartLoad: true,
+        // Force highest quality for HD banner playback
+        capLevelToPlayerSize: false,
+        startLevel: -1,
+        maxBufferLength: 30,
+        maxBufferSize: 60 * 1024 * 1024,
+      });
       hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        // Select the highest available quality level for HD playback
+        if (hls.levels && hls.levels.length > 0) {
+          hls.currentLevel = hls.levels.length - 1;
+          hls.loadLevel = hls.levels.length - 1;
+        }
         video.play().catch(() => {});
       });
       hls.on(Hls.Events.ERROR, (_, d) => {
@@ -123,12 +137,12 @@ function ThumbCard({ title, active, progress, onClick }: ThumbCardProps) {
   return (
     <button
       onClick={onClick}
-      className={`group relative shrink-0 overflow-hidden rounded-xl transition-all duration-300 ${
+      className={`group relative shrink-0 overflow-hidden rounded-lg transition-all duration-300 ${
         active
-          ? "ring-2 ring-primary shadow-[0_0_20px_rgba(192,57,43,0.5)] scale-105"
-          : "opacity-60 hover:opacity-90 hover:scale-[1.03]"
+          ? "ring-2 ring-primary shadow-[0_0_18px_rgba(192,57,43,0.55)] scale-[1.07] opacity-100"
+          : "opacity-55 hover:opacity-85 hover:scale-[1.04]"
       }`}
-      style={{ width: "clamp(90px, 12vw, 140px)", aspectRatio: "2/3" }}
+      style={{ width: "clamp(72px, 9vw, 110px)", aspectRatio: "2/3" }}
     >
       <img
         src={title.posterUrl}
@@ -136,17 +150,17 @@ function ThumbCard({ title, active, progress, onClick }: ThumbCardProps) {
         className="absolute inset-0 w-full h-full object-cover"
         onError={(e) => {
           (e.target as HTMLImageElement).src =
-            `https://picsum.photos/seed/${title.id}/140/210`;
+            `https://picsum.photos/seed/${title.id}/110/165`;
         }}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
-      <div className="absolute inset-x-0 bottom-0 p-2">
-        <p className="text-[10px] font-semibold text-white leading-tight line-clamp-2 drop-shadow">
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 p-1.5">
+        <p className="text-[9px] font-semibold text-white leading-tight line-clamp-2 drop-shadow">
           {title.name}
         </p>
       </div>
       {active && (
-        <div className="absolute inset-x-0 bottom-0 h-[3px] bg-white/20">
+        <div className="absolute inset-x-0 bottom-0 h-[3px] bg-white/15">
           <div
             className="h-full bg-primary transition-none"
             style={{ width: `${progress}%` }}
@@ -162,7 +176,6 @@ function ThumbCard({ title, active, progress, onClick }: ThumbCardProps) {
 const ROTATE_MS = 7000;
 const FALLBACK_MOVIES: Title[] = [];
 
-// Cache resolved URLs so we never call fetchVideoStreamUrl twice for the same movie
 const resolvedUrlCache = new Map<string, string>();
 
 export function Hero() {
@@ -171,15 +184,14 @@ export function Hero() {
   const [videoBgMuted, setVideoBgMuted] = useState(true);
   const [progress, setProgress] = useState(0);
   const [resolvedVideoUrl, setResolvedVideoUrl] = useState<string>("");
+  const [contentKey, setContentKey] = useState(0);
 
   const progressRef = useRef(0);
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number | null>(null);
   const pausedRef = useRef(false);
-  // Track which movie ID we last fetched a URL for — prevents duplicate calls
   const lastFetchedId = useRef<string>("");
 
-  // Fetch real movies from backend
   useEffect(() => {
     apiClient
       .get("/movies?status=published&limit=8")
@@ -203,40 +215,34 @@ export function Hero() {
   const safeIdx = movies.length > 0 ? Math.min(activeIdx, movies.length - 1) : 0;
   const current = movies[safeIdx];
 
-  // Resolve stream URL — only when the movie ID actually changes, with cache
   useEffect(() => {
     if (!current?.id || !current?.hlsUrl) {
       setResolvedVideoUrl("");
       return;
     }
 
-    // Same movie — don't refetch
     if (lastFetchedId.current === current.id) return;
     lastFetchedId.current = current.id;
 
-    // Already cached — use immediately, no request needed
     if (resolvedUrlCache.has(current.id)) {
       setResolvedVideoUrl(resolvedUrlCache.get(current.id)!);
       return;
     }
 
-    // Clear stale URL while we fetch
     setResolvedVideoUrl("");
 
     let cancelled = false;
 
     if (current.hlsUrl.includes("/uploads/videos/")) {
-      // Local video — fetch signed stream URL (same as WatchInner)
       fetchVideoStreamUrl(current.id)
         .then((url) => {
           if (!cancelled && url) {
-            resolvedUrlCache.set(current.id, url); // cache it
+            resolvedUrlCache.set(current.id, url);
             setResolvedVideoUrl(url);
           }
         })
         .catch(() => {});
     } else {
-      // Bunny Stream / CDN / external HLS — use directly, no fetch needed
       resolvedUrlCache.set(current.id, current.hlsUrl);
       setResolvedVideoUrl(current.hlsUrl);
     }
@@ -244,14 +250,14 @@ export function Hero() {
     return () => {
       cancelled = true;
     };
-  }, [current?.id]); // ← only current.id, NOT current.hlsUrl — prevents re-runs on re-renders
+  }, [current?.id]);
 
-  // Auto-rotation ticker
   const startTicker = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     startRef.current = null;
     progressRef.current = 0;
     setProgress(0);
+    setContentKey((k) => k + 1);
 
     const tick = (ts: number) => {
       if (pausedRef.current) {
@@ -294,12 +300,11 @@ export function Hero() {
     videoType(effectiveVideoUrl) !== "none" &&
     videoType(effectiveVideoUrl) !== "youtube";
 
-  // Nothing to show until the API responds
   if (!current) {
     return (
       <section
-        className="relative -mt-16 w-full overflow-hidden bg-[#0a0a0f]"
-        style={{ height: "clamp(520px, 78vh, 820px)" }}
+        className="relative -mt-16 w-full overflow-hidden bg-[#080810]"
+        style={{ height: "clamp(560px, 82vh, 900px)" }}
       />
     );
   }
@@ -307,20 +312,20 @@ export function Hero() {
   return (
     <section
       className="relative -mt-16 w-full overflow-hidden"
-      style={{ height: "clamp(520px, 78vh, 820px)" }}
+      style={{ height: "clamp(560px, 82vh, 900px)" }}
       onMouseEnter={() => { pausedRef.current = true; }}
       onMouseLeave={() => { pausedRef.current = false; }}
     >
-      {/* Background poster */}
+      {/* Background poster with smooth crossfade */}
       <img
         key={`poster-${current.id}`}
         src={current.backdropUrl || current.posterUrl}
         alt={current.name}
-        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
+        className="absolute inset-0 w-full h-full object-cover animate-fade-in"
         style={{ zIndex: 0 }}
       />
 
-      {/* Video overlay — only when URL is resolved */}
+      {/* HD Video overlay */}
       {hasVideo && (
         <BgVideo
           key={`video-${current.id}`}
@@ -330,42 +335,65 @@ export function Hero() {
         />
       )}
 
-      {/* Gradients */}
+      {/* Cinematic gradient layers */}
       <div
         className="pointer-events-none absolute inset-0 z-10"
         style={{
           background:
-            "linear-gradient(to right, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.15) 100%)",
+            "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.60) 45%, rgba(0,0,0,0.10) 100%)",
         }}
       />
       <div
         className="pointer-events-none absolute inset-0 z-10"
         style={{
           background:
-            "linear-gradient(to top, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.3) 40%, transparent 70%)",
+            "linear-gradient(to top, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.40) 35%, transparent 65%)",
         }}
+      />
+      {/* Subtle top fade for navbar blend */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 z-10 h-36"
+        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 100%)" }}
       />
 
-      {/* Content */}
+      {/* HD / Video quality badge */}
+      {hasVideo && (
+        <div className="absolute top-20 right-6 z-30 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/40 px-2.5 py-1 backdrop-blur-sm">
+          <Hd className="size-3.5 text-white/80" />
+          <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">Live</span>
+          <span className="size-1.5 rounded-full bg-primary animate-glow-pulse" />
+        </div>
+      )}
+
+      {/* Main content */}
       <div className="relative z-20 mx-auto flex h-full max-w-7xl flex-col justify-between px-4 pb-6 pt-24 sm:px-6">
-        <div className="flex flex-1 flex-col justify-center max-w-xl mt-4">
-          {/* Badges */}
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/15 px-3 py-1 text-xs font-semibold text-primary backdrop-blur-sm">
+
+        {/* Hero text + actions */}
+        <div
+          key={`content-${contentKey}`}
+          className="flex flex-1 flex-col justify-center max-w-2xl mt-4 animate-hero-in"
+        >
+          {/* Badges row */}
+          <div className="flex flex-wrap items-center gap-2 mb-5">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/50 bg-primary/20 px-3 py-1 text-xs font-bold text-primary backdrop-blur-sm shadow-[0_0_12px_rgba(192,57,43,0.3)]">
               ✦ Featured
             </span>
             {current.newRelease && (
-              <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-[10px]">
-                NEW
+              <Badge className="bg-amber-500/25 text-amber-300 border-amber-500/40 text-[10px] font-bold uppercase tracking-wide">
+                New Release
+              </Badge>
+            )}
+            {current.trending && (
+              <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/30 text-[10px] font-bold uppercase tracking-wide">
+                Trending
               </Badge>
             )}
           </div>
 
           {/* Title */}
           <h1
-            key={`title-${current.id}`}
-            className="text-4xl font-extrabold leading-none tracking-tight text-white sm:text-5xl lg:text-6xl drop-shadow-lg"
-            style={{ textShadow: "0 2px 20px rgba(0,0,0,0.6)" }}
+            className="text-4xl font-extrabold leading-none tracking-tight text-white sm:text-5xl lg:text-[3.75rem] drop-shadow-2xl"
+            style={{ textShadow: "0 2px 30px rgba(0,0,0,0.75)" }}
           >
             {current.name}
           </h1>
@@ -373,24 +401,24 @@ export function Hero() {
           {/* Meta row */}
           <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
             {current.rating > 0 && (
-              <span className="inline-flex items-center gap-1 font-bold text-amber-400">
+              <span className="inline-flex items-center gap-1 font-bold text-amber-400 drop-shadow">
                 <Star className="size-3.5 fill-current" /> {current.rating}
               </span>
             )}
-            <span className="text-white/50">{current.year}</span>
+            <span className="text-white/55 font-medium">{current.year}</span>
             {current.durationMin > 0 && (
-              <span className="inline-flex items-center gap-1 text-white/50">
+              <span className="inline-flex items-center gap-1 text-white/55">
                 <Clock className="size-3 shrink-0" /> {current.durationMin}m
               </span>
             )}
             <Badge
               variant="secondary"
-              className="bg-white/10 text-white/70 border-white/10 font-normal text-[10px]"
+              className="bg-white/10 text-white/70 border-white/15 font-normal text-[10px] backdrop-blur-sm"
             >
               {current.maturity}
             </Badge>
             {current.genres.length > 0 && (
-              <span className="text-white/40 text-xs">
+              <span className="text-white/45 text-xs">
                 {current.genres.join(" · ")}
               </span>
             )}
@@ -398,10 +426,7 @@ export function Hero() {
 
           {/* Synopsis */}
           {current.synopsis && (
-            <p
-              key={`synopsis-${current.id}`}
-              className="mt-4 max-w-lg text-sm leading-relaxed text-white/75 line-clamp-3 sm:text-base"
-            >
+            <p className="mt-4 max-w-lg text-sm leading-relaxed text-white/80 line-clamp-3 sm:text-base">
               {current.synopsis}
             </p>
           )}
@@ -409,26 +434,26 @@ export function Hero() {
           {/* Cast */}
           {current.cast.length > 0 && (
             <p className="mt-2 text-xs text-white/40">
-              <span className="text-white/50 font-medium">Starring: </span>
+              <span className="text-white/55 font-medium">Starring: </span>
               {current.cast.slice(0, 3).join(", ")}
             </p>
           )}
 
           {/* Action buttons */}
-          <div className="mt-6 flex flex-wrap items-center gap-3">
+          <div className="mt-7 flex flex-wrap items-center gap-3">
             <Button
               size="lg"
-              className="bg-primary hover:bg-primary/90 text-white shadow-[0_0_30px_rgba(192,57,43,0.45)] font-semibold gap-2 px-7"
+              className="bg-white text-black hover:bg-white/90 font-bold gap-2 px-7 shadow-xl text-base"
               asChild
             >
               <Link to={`/watch/${current.id}`}>
-                <Play className="size-5 fill-current" /> Play Now
+                <Play className="size-5 fill-black" /> Play
               </Link>
             </Button>
             <Button
               size="lg"
               variant="ghost"
-              className="bg-white/10 hover:bg-white/20 text-white border border-white/15 backdrop-blur-sm gap-2 px-7"
+              className="bg-white/15 hover:bg-white/25 text-white border border-white/20 backdrop-blur-md gap-2 px-7 font-semibold text-base"
               asChild
             >
               <Link to={`/watch/${current.id}`}>
@@ -436,15 +461,15 @@ export function Hero() {
               </Link>
             </Button>
 
-            {/* Sound toggle — only when video is playing */}
+            {/* Sound toggle */}
             {hasVideo && (
               <button
                 onClick={() => setVideoBgMuted((v) => !v)}
-                className="flex size-10 items-center justify-center rounded-full border border-white/20 bg-black/30 backdrop-blur-sm text-white hover:bg-white/10 transition-colors"
+                className="flex size-11 items-center justify-center rounded-full border border-white/25 bg-black/35 backdrop-blur-sm text-white hover:bg-white/15 transition-colors ml-1"
                 aria-label={videoBgMuted ? "Unmute" : "Mute"}
               >
                 {videoBgMuted ? (
-                  <VolumeX className="size-4 text-white/70" />
+                  <VolumeX className="size-4 text-white/65" />
                 ) : (
                   <Volume2 className="size-4 text-white" />
                 )}
@@ -453,41 +478,64 @@ export function Hero() {
           </div>
         </div>
 
-        {/* Bottom: movie selector */}
+        {/* Bottom bar — thumbnails + nav controls */}
         {movies.length > 1 && (
-          <div className="flex items-end gap-3">
-            <button
-              onClick={goPrev}
-              className="hidden sm:flex size-9 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/30 backdrop-blur-sm text-white hover:bg-white/10 transition-colors mb-1"
-              aria-label="Previous"
-            >
-              <ChevronLeft className="size-4" />
-            </button>
+          <div className="flex items-end justify-between gap-3">
+            {/* Thumbnail strip */}
+            <div className="hidden sm:flex items-end gap-2 overflow-x-auto scrollbar-none pb-1">
+              {movies.map((m, idx) => (
+                <ThumbCard
+                  key={m.id}
+                  title={m}
+                  active={idx === activeIdx}
+                  progress={idx === activeIdx ? progress : 0}
+                  onClick={() => goTo(idx)}
+                />
+              ))}
+            </div>
 
-            <button
-              onClick={goNext}
-              className="hidden sm:flex size-9 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/30 backdrop-blur-sm text-white hover:bg-white/10 transition-colors mb-1"
-              aria-label="Next"
-            >
-              <ChevronRight className="size-4" />
-            </button>
-
-            {/* Dot indicators (mobile) */}
-            <div className="flex sm:hidden items-center gap-1 pb-1 ml-auto">
-              {movies.slice(0, 4).map((_, idx) => (
+            {/* Mobile dot indicators */}
+            <div className="flex sm:hidden items-center gap-1.5 pb-1">
+              {movies.slice(0, 6).map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => goTo(idx)}
-                  className={`rounded-full transition-all ${
+                  className={`rounded-full transition-all duration-300 ${
                     idx === activeIdx
-                      ? "w-5 h-1.5 bg-primary"
-                      : "size-1.5 bg-white/30"
+                      ? "w-6 h-2 bg-primary shadow-[0_0_8px_rgba(192,57,43,0.7)]"
+                      : "size-2 bg-white/30 hover:bg-white/50"
                   }`}
                 />
               ))}
             </div>
+
+            {/* Nav arrows */}
+            <div className="flex items-center gap-2 shrink-0 pb-1">
+              <button
+                onClick={goPrev}
+                className="flex size-10 items-center justify-center rounded-full border border-white/20 bg-black/35 backdrop-blur-sm text-white hover:bg-white/15 transition-all hover:scale-105"
+                aria-label="Previous"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+              <button
+                onClick={goNext}
+                className="flex size-10 items-center justify-center rounded-full border border-white/20 bg-black/35 backdrop-blur-sm text-white hover:bg-white/15 transition-all hover:scale-105"
+                aria-label="Next"
+              >
+                <ChevronRight className="size-4" />
+              </button>
+            </div>
           </div>
         )}
+      </div>
+
+      {/* Bottom progress bar */}
+      <div className="absolute inset-x-0 bottom-0 z-30 h-[2px] bg-white/8">
+        <div
+          className="h-full bg-primary transition-none"
+          style={{ width: `${progress}%` }}
+        />
       </div>
     </section>
   );
