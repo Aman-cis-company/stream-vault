@@ -3,6 +3,9 @@ uploads
 dist
 .codex
 .env
+backend/.env
+**/.env.local
+**/.env.production
 package-lock.json
 package.json
 PERFORMANCE_CHANGES
