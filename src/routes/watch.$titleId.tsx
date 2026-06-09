@@ -664,8 +664,8 @@ function WatchInner() {
   const youtubeId = srcType === "youtube" ? extractYouTubeId(effectiveVideoUrl) : null;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
-      {/* Content warning modal for age-restricted content */}
+    <div className="min-h-screen bg-[oklch(0.06_0.010_258)]">
+      {/* Content warning modal */}
       {title && showWarning && !warningAcknowledged && (
         <ContentWarningModal
           open
@@ -679,15 +679,15 @@ function WatchInner() {
       )}
 
       {/* Top nav bar */}
-      <div className="sticky top-0 z-40 flex items-center gap-3 px-4 py-3 bg-gradient-to-b from-black/80 to-transparent backdrop-blur-sm">
+      <div className="sticky top-0 z-40 flex items-center gap-4 px-4 py-3.5 bg-gradient-to-b from-black/90 via-black/60 to-transparent backdrop-blur-md border-b border-white/5">
         <button
           onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-1.5 text-white/70 hover:text-white transition-colors text-sm"
+          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-white/65 hover:text-white hover:bg-white/10 transition-all text-sm font-medium"
         >
           <ArrowLeft className="size-4" /> Back
         </button>
-        <span className="text-white/30">·</span>
-        <span className="text-white/70 text-sm truncate">{title.name}</span>
+        <div className="h-4 w-px bg-white/15" />
+        <span className="text-white/55 text-sm font-medium truncate">{title.name}</span>
       </div>
 
       {/* ── Video Player ── */}
@@ -742,75 +742,76 @@ function WatchInner() {
       </div>
 
       {/* ── Metadata section ── */}
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-6 lg:flex-row lg:gap-10">
+      <div className="mx-auto max-w-7xl px-4 pt-8 pb-16 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-8 lg:flex-row lg:gap-12">
           {/* Left: info */}
           <div className="flex-1 min-w-0">
             {/* Badges */}
-            <div className="flex flex-wrap items-center gap-2 mb-3">
+            <div className="flex flex-wrap items-center gap-2 mb-4">
               {title.newRelease && (
-                <Badge className="bg-primary text-primary-foreground text-[10px] px-2 py-0.5">
-                  NEW
-                </Badge>
+                <span className="inline-flex items-center rounded-full bg-primary/20 border border-primary/40 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-primary">
+                  New Release
+                </span>
               )}
               {title.trending && (
-                <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-2 py-0.5">
-                  🔥 TRENDING
-                </Badge>
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/35 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-400">
+                  🔥 Trending
+                </span>
               )}
               {title.content_rating ? (
                 <AgeRatingBadge rating={title.content_rating} />
               ) : (
-                <Badge variant="outline" className="text-[10px] border-white/20 text-white/60">
+                <span className="inline-flex items-center rounded border border-white/15 px-1.5 py-0.5 text-[10px] font-medium text-white/50">
                   {title.maturity}
-                </Badge>
+                </span>
               )}
               {title.rating > 0 && (
-                <span className="inline-flex items-center gap-1 text-amber-400 text-sm font-semibold">
+                <span className="inline-flex items-center gap-1 text-amber-400 text-sm font-bold">
                   <Star className="size-3.5 fill-current" /> {title.rating}
                 </span>
               )}
             </div>
 
             {/* Title */}
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-white leading-tight">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-[-0.02em] text-white leading-tight">
               {title.name}
             </h1>
 
             {/* Meta row */}
-            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-white/50">
-              <span>{title.year}</span>
+            <div className="mt-3 flex flex-wrap items-center gap-2.5 text-sm text-white/45">
+              <span className="font-medium">{title.year}</span>
               {title.durationMin > 0 && (
                 <>
-                  <span className="size-1 rounded-full bg-white/30" />
+                  <span className="size-1 rounded-full bg-white/25" />
                   <span>{title.durationMin} min</span>
                 </>
               )}
               {title.language && (
                 <>
-                  <span className="size-1 rounded-full bg-white/30" />
+                  <span className="size-1 rounded-full bg-white/25" />
                   <span>{title.language}</span>
                 </>
               )}
               {title.genres.length > 0 && (
                 <>
-                  <span className="size-1 rounded-full bg-white/30" />
-                  <span>{title.genres.join(" · ")}</span>
+                  <span className="size-1 rounded-full bg-white/25" />
+                  <span className="text-white/55">{title.genres.join(" · ")}</span>
                 </>
               )}
               {savedAt > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-medium text-primary border border-primary/25">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 border border-primary/25 px-3 py-0.5 text-xs font-semibold text-primary ml-1">
+                  <span className="size-1.5 rounded-full bg-primary animate-glow-pulse" />
                   Saved at {fmtTime(savedAt)}
                 </span>
               )}
             </div>
 
             {/* Action buttons */}
-            <div className="mt-5 flex flex-wrap items-center gap-3">
+            <div className="mt-6 flex flex-wrap items-center gap-2.5">
               <Button
                 variant="secondary"
                 disabled={interactionLoading}
-                className="bg-white/10 hover:bg-white/20 text-white border-white/10"
+                className="bg-white/10 hover:bg-white/18 text-white border border-white/12 rounded-xl h-10 px-5 font-semibold backdrop-blur-sm"
                 onClick={async () => {
                   if (!titleId) return;
                   setInteractionLoading(true);
@@ -825,11 +826,7 @@ function WatchInner() {
                   }
                 }}
               >
-                {inList ? (
-                  <Check className="mr-2 size-4 text-primary" />
-                ) : (
-                  <Plus className="mr-2 size-4" />
-                )}
+                {inList ? <Check className="mr-1.5 size-4 text-success" /> : <Plus className="mr-1.5 size-4" />}
                 {inList ? "In My List" : "My List"}
               </Button>
 
@@ -848,14 +845,14 @@ function WatchInner() {
                     setInteractionLoading(false);
                   }
                 }}
-                className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all disabled:opacity-60 ${
+                className={`inline-flex items-center gap-2 rounded-xl border h-10 px-5 text-sm font-semibold transition-all disabled:opacity-60 ${
                   liked
-                    ? "border-primary/50 bg-primary/15 text-primary"
-                    : "border-white/15 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+                    ? "border-primary/40 bg-primary/15 text-primary"
+                    : "border-white/12 bg-white/8 text-white/65 hover:bg-white/15 hover:text-white"
                 }`}
               >
                 <ThumbsUp className={`size-4 ${liked ? "fill-current" : ""}`} />
-                Like
+                {liked ? "Liked" : "Like"}
               </button>
 
               <button
@@ -863,7 +860,7 @@ function WatchInner() {
                   navigator.clipboard?.writeText(window.location.href);
                   toast.success("Link copied to clipboard!");
                 }}
-                className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white/70 transition-all hover:bg-white/10 hover:text-white"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/12 bg-white/8 h-10 px-5 text-sm font-semibold text-white/65 transition-all hover:bg-white/15 hover:text-white"
               >
                 <Share2 className="size-4" />
                 Share
@@ -872,71 +869,60 @@ function WatchInner() {
 
             {/* Synopsis */}
             {title.synopsis && (
-              <p className="mt-6 leading-relaxed text-white/70 max-w-2xl text-sm sm:text-base">
+              <p className="mt-6 leading-relaxed text-white/65 max-w-2xl text-sm sm:text-base">
                 {title.synopsis}
               </p>
             )}
 
             {/* Cast & Director */}
             {(title.director || title.cast?.length > 0) && (
-              <div className="mt-6 grid gap-3 text-sm sm:grid-cols-2 max-w-lg">
+              <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:gap-8">
                 {title.director && (
                   <div>
-                    <span className="text-white/40 text-xs uppercase tracking-wider font-medium">
-                      Director
-                    </span>
-                    <p className="mt-1 text-white/80 font-medium">{title.director}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/35 mb-1.5">Director</p>
+                    <p className="text-sm font-semibold text-white/80">{title.director}</p>
                   </div>
                 )}
                 {title.cast?.length > 0 && (
                   <div>
-                    <span className="text-white/40 text-xs uppercase tracking-wider font-medium">
-                      Starring
-                    </span>
-                    <p className="mt-1 text-white/80 font-medium">{title.cast.join(", ")}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/35 mb-1.5">Starring</p>
+                    <p className="text-sm font-semibold text-white/80">{title.cast.join(", ")}</p>
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          {/* Right: thumbnail card */}
-          <div className="hidden xl:block w-56 shrink-0">
-            <img
-              src={title.posterUrl}
-              alt={title.name}
-              className="w-full rounded-xl object-cover shadow-2xl ring-1 ring-white/10"
-            />
+          {/* Right: poster card */}
+          <div className="hidden xl:block w-52 shrink-0">
+            <div className="relative">
+              <div className="absolute -inset-2 rounded-2xl bg-gradient-to-br from-primary/20 via-transparent to-transparent blur-xl" />
+              <img
+                src={title.posterUrl}
+                alt={title.name}
+                className="relative w-full rounded-2xl object-cover shadow-[0_20px_60px_-10px_rgba(0,0,0,0.9)] ring-1 ring-white/10"
+              />
+            </div>
           </div>
         </div>
 
         {/* ── More Like This ── */}
         {related.length > 0 && (
-          <div className="mt-12">
+          <div className="mt-14">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-xl font-bold text-white">More Like This</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-white/50 hover:text-white"
-                asChild
-              >
-                <Link to="/browse">
-                  See all <ChevronRight className="ml-1 size-4" />
+              <h2 className="text-xl font-extrabold text-white tracking-tight">More Like This</h2>
+              <Button variant="ghost" size="sm" className="text-white/45 hover:text-white rounded-lg" asChild>
+                <Link to="/browse" className="flex items-center gap-1">
+                  See all <ChevronRight className="size-4" />
                 </Link>
               </Button>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-              {related.map((t) => (
-                <TitleCard key={t.id} title={t} fullWidth />
-              ))}
+              {related.map((t) => <TitleCard key={t.id} title={t} fullWidth />)}
             </div>
           </div>
         )}
       </div>
-
-      {/* Bottom spacing */}
-      <div className="h-16" />
     </div>
   );
 }

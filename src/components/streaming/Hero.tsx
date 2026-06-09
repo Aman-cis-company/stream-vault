@@ -68,26 +68,44 @@ function BgVideo({ src, poster, muted }: BgVideoProps) {
       const hls = new Hls({
         enableWorker: true,
         autoStartLoad: true,
-        // Force highest quality for HD banner playback
-        capLevelToPlayerSize: false,
-        startLevel: -1,
-        maxBufferLength: 30,
-        maxBufferSize: 60 * 1024 * 1024,
+        capLevelToPlayerSize: false,       // never cap to player size
+        startLevel: -1,                    // overridden immediately in MANIFEST_PARSED
+        maxBufferLength: 60,               // buffer up to 60s ahead
+        maxBufferSize: 120 * 1024 * 1024,  // 120 MB buffer for HD
+        maxMaxBufferLength: 120,
+        // Assume 8 Mbps bandwidth so ABR picks highest tier immediately
+        abrEwmaDefaultEstimate: 8_000_000,
+        testBandwidth: false,              // skip initial bandwidth test
       });
       hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(video);
+
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        // Select the highest available quality level for HD playback
         if (hls.levels && hls.levels.length > 0) {
-          hls.currentLevel = hls.levels.length - 1;
-          hls.loadLevel = hls.levels.length - 1;
+          const top = hls.levels.length - 1;
+          hls.currentLevel = top;   // lock current segment fetch
+          hls.loadLevel = top;      // lock loader
+          hls.nextLevel = top;      // lock next switch
         }
         video.play().catch(() => {});
       });
+
+      // Prevent any automatic quality downgrade after startup
+      hls.on(Hls.Events.LEVEL_SWITCHING, (_, data) => {
+        if (hls.levels && data.level < hls.levels.length - 1) {
+          hls.nextLevel = hls.levels.length - 1;
+        }
+      });
+
       hls.on(Hls.Events.ERROR, (_, d) => {
         if (d.fatal) hls.recoverMediaError();
       });
+    } else if (type === "hls" && video.canPlayType("application/vnd.apple.mpegurl")) {
+      // Native HLS (Safari) — browser manages quality; just play
+      video.src = src;
+      video.load();
+      video.play().catch(() => {});
     } else if (type === "direct") {
       video.src = src;
       video.load();

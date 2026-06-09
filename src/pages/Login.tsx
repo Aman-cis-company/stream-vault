@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
 
 const schema = z.object({
   email: z.string().trim().email("Enter a valid email").max(255),
@@ -24,7 +24,13 @@ export default function Login() {
   const navigate = useNavigate();
   const [showPw, setShowPw] = useState(false);
 
-  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<FormValues>({
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { email: "", password: "", remember: true },
   });
@@ -43,45 +49,99 @@ export default function Login() {
   };
 
   return (
-    <AuthLayout title="Sign in" subtitle="Continue to your StreamVault account.">
+    <AuthLayout title="Welcome back" subtitle="Sign in to your StreamVault account.">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" placeholder="you@example.com" autoComplete="email" {...register("email")} />
-          {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+        {/* Email */}
+        <div className="space-y-1.5">
+          <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-white/50">
+            Email address
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            autoComplete="email"
+            className="h-11 rounded-xl border-white/10 bg-white/6 text-white placeholder:text-white/30 focus:border-primary/60 focus:bg-white/8"
+            {...register("email")}
+          />
+          {errors.email && (
+            <p className="text-xs text-destructive mt-1">{errors.email.message}</p>
+          )}
         </div>
 
-        <div className="space-y-2">
+        {/* Password */}
+        <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
-            <Link to="/forgot-password" className="text-xs text-primary hover:underline">Forgot password?</Link>
+            <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-white/50">
+              Password
+            </Label>
+            <Link
+              to="/forgot-password"
+              className="text-xs text-primary hover:text-primary/80 font-semibold transition-colors"
+            >
+              Forgot password?
+            </Link>
           </div>
           <div className="relative">
-            <Input id="password" type={showPw ? "text" : "password"} placeholder="••••••••" autoComplete="current-password" className="pr-10" {...register("password")} />
-            <button type="button" onClick={() => setShowPw((s) => !s)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label="Toggle password">
+            <Input
+              id="password"
+              type={showPw ? "text" : "password"}
+              placeholder="••••••••"
+              autoComplete="current-password"
+              className="h-11 rounded-xl border-white/10 bg-white/6 text-white placeholder:text-white/30 focus:border-primary/60 focus:bg-white/8 pr-11"
+              {...register("password")}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPw((s) => !s)}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+              aria-label="Toggle password"
+            >
               {showPw ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
             </button>
           </div>
-          {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+          {errors.password && (
+            <p className="text-xs text-destructive mt-1">{errors.password.message}</p>
+          )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <Checkbox id="remember" checked={watch("remember")} onCheckedChange={(v) => setValue("remember", Boolean(v))} />
-          <Label htmlFor="remember" className="text-sm font-normal text-muted-foreground">Remember me for 30 days</Label>
+        {/* Remember me */}
+        <div className="flex items-center gap-2.5">
+          <Checkbox
+            id="remember"
+            checked={watch("remember")}
+            onCheckedChange={(v) => setValue("remember", Boolean(v))}
+            className="border-white/20 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+          />
+          <Label htmlFor="remember" className="text-sm font-normal text-white/45 cursor-pointer">
+            Remember me for 30 days
+          </Label>
         </div>
 
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting && <Loader2 className="mr-2 size-4 animate-spin" />}
-          Sign in
+        {/* Submit */}
+        <Button
+          type="submit"
+          className="w-full h-11 rounded-xl font-bold text-sm shadow-glow-sm mt-2"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <Loader2 className="mr-2 size-4 animate-spin" />
+          ) : (
+            <ArrowRight className="mr-2 size-4" />
+          )}
+          {isSubmitting ? "Signing in…" : "Sign in"}
         </Button>
-
       </form>
 
-      <p className="mt-6 text-center text-sm text-muted-foreground">
-        New to StreamVault?{" "}
-        <Link to="/signup" className="font-semibold text-primary hover:underline">Create an account</Link>
-      </p>
+      {/* Sign up link */}
+      <div className="mt-8 text-center">
+        <p className="text-sm text-white/40">
+          New to StreamVault?{" "}
+          <Link to="/signup" className="font-bold text-primary hover:text-primary/80 transition-colors">
+            Create an account
+          </Link>
+        </p>
+      </div>
     </AuthLayout>
   );
 }

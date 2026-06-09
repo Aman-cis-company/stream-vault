@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Smartphone, Monitor, ShieldCheck, Loader2 } from "lucide-react";
+import { Smartphone, Monitor, ShieldCheck, Loader2, User, Lock, Laptop } from "lucide-react";
 
 export default function ProfilePage() {
   return (
@@ -20,8 +20,9 @@ export default function ProfilePage() {
 }
 
 const DEVICES = [
-  { name: "MacBook Pro", loc: "San Francisco, US", icon: Monitor, current: true },
+  { name: "MacBook Pro", loc: "San Francisco, US", icon: Laptop, current: true },
   { name: "iPhone 15", loc: "San Francisco, US", icon: Smartphone, current: false },
+  { name: "Windows PC", loc: "Mumbai, IN", icon: Monitor, current: false },
 ];
 
 function Profile() {
@@ -85,88 +86,143 @@ function Profile() {
     }
   };
 
+  const initials = (firstName || user?.name || "U").charAt(0).toUpperCase();
+  const hue = user?.avatarHue ?? 20;
+
   return (
     <DashboardLayout title="Profile & Security">
-      <div className="space-y-6">
-        <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="font-semibold">Account information</h2>
-          <div className="mt-4 flex items-center gap-4">
-            <span
-              className="inline-flex size-16 items-center justify-center rounded-full text-2xl font-semibold text-white"
-              style={{
-                background: `linear-gradient(135deg, oklch(0.6 0.2 ${user?.avatarHue ?? 20}), oklch(0.4 0.15 ${((user?.avatarHue ?? 20) + 60) % 360}))`,
-              }}
-            >
-              {(firstName || user?.name || "U").charAt(0).toUpperCase()}
-            </span>
+      <div className="space-y-6 max-w-2xl">
+
+        {/* Account info card */}
+        <div className="rounded-2xl border border-border/60 bg-card shadow-card overflow-hidden">
+          {/* Card header */}
+          <div className="flex items-center gap-3 border-b border-border/60 px-6 py-4">
+            <div className="inline-flex size-8 items-center justify-center rounded-xl bg-primary/15 text-primary">
+              <User className="size-4" />
+            </div>
+            <h2 className="font-extrabold tracking-tight">Account Information</h2>
           </div>
-          <form className="mt-6 grid gap-4 sm:grid-cols-2" onSubmit={handleSaveProfile}>
-            <div className="space-y-2">
-              <Label htmlFor="first_name">First name</Label>
-              <Input
-                id="first_name"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="last_name">Last name</Label>
-              <Input
-                id="last_name"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} disabled />
-            </div>
-            <div className="sm:col-span-2">
-              <Button type="submit" disabled={savingProfile}>
-                {savingProfile && <Loader2 className="mr-2 size-4 animate-spin" />}
-                Save changes
-              </Button>
-            </div>
-          </form>
-        </div>
 
-        <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="font-semibold">Change password</h2>
-          <form className="mt-4 grid max-w-md gap-4" onSubmit={handleChangePassword}>
-            <div className="space-y-2">
-              <Label htmlFor="cur">Current password</Label>
-              <Input
-                id="cur"
-                type="password"
-                placeholder="••••••••"
-                value={currentPw}
-                onChange={(e) => setCurrentPw(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new">New password</Label>
-              <Input
-                id="new"
-                type="password"
-                placeholder="••••••••"
-                value={newPw}
-                onChange={(e) => setNewPw(e.target.value)}
-              />
-            </div>
-            <Button type="submit" className="w-fit" disabled={savingPw}>
-              {savingPw && <Loader2 className="mr-2 size-4 animate-spin" />}
-              Update password
-            </Button>
-          </form>
-        </div>
-
-        <div className="rounded-xl border border-border bg-card p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <ShieldCheck className="size-5 text-success" />
+          <div className="p-6">
+            {/* Avatar */}
+            <div className="flex items-center gap-4 mb-6">
+              <div
+                className="inline-flex size-16 items-center justify-center rounded-2xl text-2xl font-extrabold text-white shadow-[0_8px_24px_-4px_rgba(0,0,0,0.4)] ring-2 ring-white/10"
+                style={{
+                  background: `linear-gradient(135deg, oklch(0.6 0.22 ${hue}), oklch(0.42 0.18 ${(hue + 60) % 360}))`,
+                }}
+              >
+                {initials}
+              </div>
               <div>
-                <h2 className="font-semibold">Two-Factor Authentication</h2>
-                <p className="text-sm text-muted-foreground">
+                <p className="font-extrabold text-base">{firstName} {lastName}</p>
+                <p className="text-sm text-muted-foreground mt-0.5">{email}</p>
+                <Badge className="mt-1.5 bg-primary/15 text-primary border-primary/30 text-[10px] font-bold uppercase tracking-wider">
+                  {user?.role ?? "Subscriber"}
+                </Badge>
+              </div>
+            </div>
+
+            <form className="grid gap-4 sm:grid-cols-2" onSubmit={handleSaveProfile}>
+              <div className="space-y-1.5">
+                <Label htmlFor="first_name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  First name
+                </Label>
+                <Input
+                  id="first_name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="h-10 rounded-xl"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="last_name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  Last name
+                </Label>
+                <Input
+                  id="last_name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="h-10 rounded-xl"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  Email
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  disabled
+                  className="h-10 rounded-xl opacity-50 cursor-not-allowed"
+                />
+                <p className="text-[11px] text-muted-foreground">Contact support to change your email.</p>
+              </div>
+              <div className="sm:col-span-2">
+                <Button type="submit" disabled={savingProfile} className="h-10 rounded-xl font-bold">
+                  {savingProfile && <Loader2 className="mr-2 size-4 animate-spin" />}
+                  Save changes
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        {/* Change password */}
+        <div className="rounded-2xl border border-border/60 bg-card shadow-card overflow-hidden">
+          <div className="flex items-center gap-3 border-b border-border/60 px-6 py-4">
+            <div className="inline-flex size-8 items-center justify-center rounded-xl bg-warning/15 text-warning">
+              <Lock className="size-4" />
+            </div>
+            <h2 className="font-extrabold tracking-tight">Change Password</h2>
+          </div>
+          <div className="p-6">
+            <form className="grid gap-4 max-w-sm" onSubmit={handleChangePassword}>
+              <div className="space-y-1.5">
+                <Label htmlFor="cur" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  Current password
+                </Label>
+                <Input
+                  id="cur"
+                  type="password"
+                  placeholder="••••••••"
+                  value={currentPw}
+                  onChange={(e) => setCurrentPw(e.target.value)}
+                  className="h-10 rounded-xl"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="new" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  New password
+                </Label>
+                <Input
+                  id="new"
+                  type="password"
+                  placeholder="••••••••"
+                  value={newPw}
+                  onChange={(e) => setNewPw(e.target.value)}
+                  className="h-10 rounded-xl"
+                />
+              </div>
+              <Button type="submit" className="w-fit h-10 rounded-xl font-bold" disabled={savingPw}>
+                {savingPw && <Loader2 className="mr-2 size-4 animate-spin" />}
+                Update password
+              </Button>
+            </form>
+          </div>
+        </div>
+
+        {/* 2FA */}
+        <div className="rounded-2xl border border-border/60 bg-card shadow-card p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="inline-flex size-10 items-center justify-center rounded-xl bg-success/15 text-success ring-1 ring-success/20">
+                <ShieldCheck className="size-5" />
+              </div>
+              <div>
+                <h2 className="font-extrabold tracking-tight">Two-Factor Authentication</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">
                   Add an extra layer of security to your account.
                 </p>
               </div>
@@ -177,28 +233,39 @@ function Profile() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="font-semibold">Device management</h2>
-          <div className="mt-4 space-y-3">
+        {/* Device management */}
+        <div className="rounded-2xl border border-border/60 bg-card shadow-card overflow-hidden">
+          <div className="flex items-center gap-3 border-b border-border/60 px-6 py-4">
+            <div className="inline-flex size-8 items-center justify-center rounded-xl bg-cyan-500/15 text-cyan-400">
+              <Laptop className="size-4" />
+            </div>
+            <h2 className="font-extrabold tracking-tight">Device Management</h2>
+          </div>
+          <div className="divide-y divide-border/40">
             {DEVICES.map((d) => (
               <div
                 key={d.name}
-                className="flex items-center justify-between rounded-lg border border-border/60 p-3"
+                className="flex items-center justify-between px-6 py-4 hover:bg-secondary/20 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <d.icon className="size-5 text-muted-foreground" />
+                  <div className="inline-flex size-9 items-center justify-center rounded-xl bg-secondary/60">
+                    <d.icon className="size-4 text-muted-foreground" />
+                  </div>
                   <div>
-                    <p className="text-sm font-medium">{d.name}</p>
-                    <p className="text-xs text-muted-foreground">{d.loc}</p>
+                    <p className="text-sm font-semibold">{d.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{d.loc}</p>
                   </div>
                 </div>
                 {d.current ? (
-                  <Badge className="bg-success text-success-foreground">This device</Badge>
+                  <Badge className="bg-success/15 text-success border-success/30 text-[10px] font-bold uppercase tracking-wider">
+                    This device
+                  </Badge>
                 ) : (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => toast.success("Device signed out")}
+                    className="rounded-lg text-xs font-semibold text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                   >
                     Sign out
                   </Button>

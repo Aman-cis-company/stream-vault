@@ -126,17 +126,20 @@ function PlansPage() {
     <DashboardLayout title="Subscription Plans">
       <div className="space-y-6">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" asChild>
+          <Button variant="ghost" size="sm" asChild className="rounded-lg">
             <Link to="/admin">
               <ArrowLeft className="mr-1 size-4" /> Back to Dashboard
             </Link>
           </Button>
         </div>
 
-        <div className="rounded-xl border border-border bg-card">
-          <div className="border-b border-border px-6 py-4 flex items-center justify-between">
+        <div className="rounded-2xl border border-border/60 bg-card shadow-card overflow-hidden">
+          <div className="flex items-start gap-4 border-b border-border/60 px-6 py-4">
+            <div className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400 mt-0.5">
+              <CreditCard className="size-4.5" />
+            </div>
             <div>
-              <p className="font-semibold">Subscription Plans</p>
+              <h2 className="font-extrabold tracking-tight">Subscription Plans</h2>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Set the Stripe Price ID for each plan to enable payments. Leave blank to auto-create via Stripe API on first checkout.
               </p>
@@ -151,20 +154,20 @@ function PlansPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border text-left text-xs text-muted-foreground uppercase tracking-wide">
-                    <th className="px-6 py-3 font-medium">Plan</th>
-                    <th className="px-6 py-3 font-medium">Price</th>
-                    <th className="px-6 py-3 font-medium">Billing</th>
-                    <th className="px-6 py-3 font-medium">Stripe Price ID</th>
-                    <th className="px-6 py-3 font-medium">Status</th>
-                    <th className="px-6 py-3 text-right font-medium">Actions</th>
+                  <tr className="border-b border-border/60 text-left">
+                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Plan</th>
+                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Price</th>
+                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Billing</th>
+                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Stripe Price ID</th>
+                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Status</th>
+                    <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-border/40">
                   {plans.map((plan) => (
                     <tr
                       key={plan.id}
-                      className="border-b border-border/50 last:border-0 hover:bg-secondary/30 transition-colors"
+                      className="hover:bg-secondary/20 transition-colors"
                     >
                       <td className="px-6 py-4">
                         <p className="font-medium">{plan.name}</p>
@@ -225,21 +228,29 @@ function PlansPage() {
           )}
         </div>
 
-        <div className="rounded-xl border border-border bg-card/50 p-5 text-sm text-muted-foreground space-y-2">
-          <p className="font-medium text-foreground">How Stripe Price IDs work</p>
-          <ol className="list-decimal list-inside space-y-1 text-xs leading-relaxed">
+        <div className="rounded-2xl border border-border/60 bg-card/50 p-5 text-sm text-muted-foreground space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="size-1.5 rounded-full bg-primary" />
+            <p className="font-extrabold text-foreground text-sm">How Stripe Price IDs work</p>
+          </div>
+          <ol className="list-decimal list-inside space-y-2 text-xs leading-relaxed pl-2">
             <li>Go to your <strong className="text-foreground">Stripe Dashboard → Products</strong> and create a product for each plan.</li>
             <li>Under each product, add a recurring price matching the plan's amount and billing cycle.</li>
-            <li>Copy the <strong className="text-foreground">Price ID</strong> (starts with <code className="font-mono">price_</code>) and paste it above.</li>
+            <li>Copy the <strong className="text-foreground">Price ID</strong> (starts with <code className="font-mono bg-secondary/60 px-1.5 py-0.5 rounded text-[11px]">price_</code>) and paste it above.</li>
             <li><strong className="text-foreground">Or</strong> leave it blank — the system will auto-create a product and price in Stripe on the first checkout attempt.</li>
           </ol>
         </div>
       </div>
 
       <Dialog open={!!editing} onOpenChange={(o) => !saving && !o && setEditing(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg rounded-2xl border-border/60 bg-[oklch(0.11_0.016_258)]">
           <DialogHeader>
-            <DialogTitle>Edit Plan — {editing?.name}</DialogTitle>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="inline-flex size-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+                <CreditCard className="size-4.5" />
+              </div>
+              <DialogTitle className="font-extrabold">Edit Plan — {editing?.name}</DialogTitle>
+            </div>
           </DialogHeader>
 
           <div className="space-y-4 py-2">

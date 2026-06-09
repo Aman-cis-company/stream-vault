@@ -43,6 +43,7 @@ import {
   Link2,
   HardDrive,
   CloudUpload,
+  Film,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -284,7 +285,7 @@ function MoviesPage() {
     <DashboardLayout title="Movie / Show Management">
       <div className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <Button variant="ghost" size="sm" asChild>
+          <Button variant="ghost" size="sm" asChild className="rounded-lg w-fit">
             <Link to="/admin">
               <ArrowLeft className="mr-1 size-4" /> Back to Dashboard
             </Link>
@@ -296,20 +297,23 @@ function MoviesPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search movies…"
-                className="pl-9"
+                className="pl-9 h-10 rounded-xl"
               />
             </div>
-            <Button onClick={openAdd}>
+            <Button onClick={openAdd} className="h-10 rounded-xl font-bold shadow-glow-sm">
               <Plus className="mr-1.5 size-4" /> Add Movie
             </Button>
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card">
-          <div className="border-b border-border px-6 py-4">
-            <p className="text-sm text-muted-foreground">
-              {filtered.length} title{filtered.length !== 1 ? "s" : ""}
-            </p>
+        <div className="rounded-2xl border border-border/60 bg-card shadow-card overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border/60 px-6 py-4">
+            <div>
+              <h2 className="font-extrabold tracking-tight">Content Library</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {filtered.length} title{filtered.length !== 1 ? "s" : ""} · {items.filter((m) => m.status === "published").length} published
+              </p>
+            </div>
           </div>
           {loading ? (
             <div className="flex items-center justify-center py-16">
@@ -429,9 +433,14 @@ function MoviesPage() {
 
       {/* Add / Edit Dialog */}
       <Dialog open={open} onOpenChange={(o) => !saving && setOpen(o)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border-border/60 bg-[oklch(0.11_0.016_258)]">
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit Movie" : "Add Movie / Show"}</DialogTitle>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="inline-flex size-9 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                <Film className="size-4.5" />
+              </div>
+              <DialogTitle className="text-lg font-extrabold">{editing ? "Edit Movie" : "Add Movie / Show"}</DialogTitle>
+            </div>
           </DialogHeader>
 
           <div className="space-y-5 py-2">
@@ -776,19 +785,20 @@ function MoviesPage() {
         open={!!deleteTarget}
         onOpenChange={(o) => !deleting && !o && setDeleteTarget(null)}
       >
-        <DialogContent>
+        <DialogContent className="max-w-md rounded-2xl border-border/60 bg-[oklch(0.11_0.016_258)]">
           <DialogHeader>
-            <DialogTitle>Delete Movie</DialogTitle>
+            <DialogTitle className="font-extrabold">Delete Movie</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Permanently delete <strong>"{deleteTarget?.title}"</strong>? This
-            cannot be undone.
-          </p>
+          <div className="rounded-xl border border-destructive/20 bg-destructive/8 p-4 text-sm text-muted-foreground">
+            Permanently delete <strong className="text-foreground">"{deleteTarget?.title}"</strong>?
+            This action cannot be undone and will remove all associated data.
+          </div>
           <DialogFooter>
             <Button
               variant="ghost"
               onClick={() => setDeleteTarget(null)}
               disabled={deleting}
+              className="rounded-xl"
             >
               Cancel
             </Button>
@@ -796,9 +806,10 @@ function MoviesPage() {
               variant="destructive"
               onClick={handleDelete}
               disabled={deleting}
+              className="rounded-xl font-bold"
             >
               {deleting && <Loader2 className="mr-2 size-4 animate-spin" />}
-              Delete
+              Delete Permanently
             </Button>
           </DialogFooter>
         </DialogContent>
