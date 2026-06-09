@@ -4,22 +4,27 @@ import { Protected } from "@/components/streaming/Protected";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { affiliatePerf } from "@/lib/mock-data";
-import { MousePointerClick, UserPlus, Wallet, Percent, Copy, Loader2 } from "lucide-react";
-import { BarChart, Bar, ResponsiveContainer, XAxis, Tooltip, CartesianGrid } from "recharts";
+import { MousePointerClick, UserPlus, Wallet, TrendingUp, Copy, Loader2, CheckCircle2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 
-interface Payment {
+interface AffiliateStats {
+  totalClicks: number;
+  totalReferrals: number;
+  confirmedReferrals: number;
+  totalEarnings: number;
+  pendingEarnings: number;
+  recentConversions: Conversion[];
+}
+
+interface Conversion {
   id: number;
-  amount: number;
-  currency: string;
-  status: string;
-  paid_at: string | null;
-  createdAt: string;
-  subscription?: { plan?: { name: string; billing_cycle: string } };
-  stripe_payment_intent_id?: string;
+  referredUser: { name: string; email: string; joinedAt: string } | null;
+  planName: string | null;
+  commissionAmount: number;
+  status: "pending" | "confirmed" | "paid";
+  date: string;
 }
 
 export default function AffiliatePage() {
@@ -32,29 +37,36 @@ export default function AffiliatePage() {
 
 function Affiliate() {
   const { user } = useAuth();
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const [code, setCode] = useState<string>("");
+  const [stats, setStats] = useState<AffiliateStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const referralCode = user
-    ? `${user.name.toLowerCase().replace(/\s+/g, "-")}-${String(user.id ?? "").slice(-4) || "user"}`
-    : "user";
-  const referralLink = `${window.location.origin}/signup?ref=${referralCode}`;
-
-  const copy = () => {
-    navigator.clipboard?.writeText(referralLink);
-    toast.success("Referral link copied");
-  };
+  const referralLink = code ? `${window.location.origin}/signup?ref=${code}` : "";
 
   useEffect(() => {
-    api
-      .get("/stripe/my-payments?limit=50")
-      .then(({ data }) => setPayments(data.data.payments ?? []))
+    Promise.all([
+      api.get("/affiliate/code"),
+      api.get("/affiliate/stats"),
+    ])
+      .then(([codeRes, statsRes]) => {
+        setCode(codeRes.data.data.code);
+        setStats(statsRes.data.data);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  const succeededPayments = payments.filter((p) => p.status === "succeeded");
-  const totalEarnings = succeededPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+  const copy = () => {
+    if (!referralLink) return;
+    navigator.clipboard?.writeText(referralLink);
+    toast.success("Referral link copied!");
+  };
+
+  const statusBadge = (status: Conversion["status"]) => {
+    if (status === "confirmed" || status === "paid")
+      return <Badge className="bg-success/20 text-success border-success/30 text-[10px]">Confirmed</Badge>;
+    return <Badge variant="outline" className="border-yellow-500/40 text-yellow-500 text-[10px]">Pending</Badge>;
+  };
 
   return (
     <DashboardLayout title="Affiliate Program">
@@ -62,141 +74,146 @@ function Affiliate() {
         {/* Referral link */}
         <div className="rounded-xl border border-border bg-card p-6">
           <h2 className="font-semibold">Your referral link</h2>
-          <p className="text-xs text-muted-foreground mt-1 mb-3">
-            Share this link to earn rewards when friends subscribe.
+          <p className="text-xs text-muted-foreground mt-1 mb-4">
+            Share this link to earn {(10).toFixed(0)}% commission when friends subscribe. Commission is credited automatically on their first payment.
           </p>
-          <div className="flex gap-2">
-            <Input readOnly value={referralLink} className="font-mono text-sm" />
-            <Button onClick={copy}>
-              <Copy className="mr-1 size-4" /> Copy
-            </Button>
-          </div>
+          {loading ? (
+            <div className="flex items-center gap-2 h-10">
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Generating your code...</span>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Input readOnly value={referralLink} className="font-mono text-sm" />
+              <Button onClick={copy}>
+                <Copy className="mr-1.5 size-4" /> Copy
+              </Button>
+            </div>
+          )}
+          {code && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Your code: <span className="font-mono text-foreground font-medium">{code}</span>
+            </p>
+          )}
         </div>
 
         {/* Stats */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            label="Total Payments"
-            value={String(succeededPayments.length)}
-            hint="Successful transactions"
-            icon={MousePointerClick}
-          />
-          <StatCard
-            label="Active Plan"
-            value={succeededPayments[0]?.subscription?.plan?.name ?? "—"}
-            hint={succeededPayments[0]?.subscription?.plan?.billing_cycle ?? ""}
-            icon={UserPlus}
-          />
-          <StatCard
-            label="Total Spent"
-            value={totalEarnings > 0 ? `₹${totalEarnings.toLocaleString("en-IN")}` : "₹0"}
-            hint="All time"
-            icon={Wallet}
-          />
-          <StatCard
-            label="Last Payment"
-            value={
-              succeededPayments[0]?.paid_at
-                ? new Date(succeededPayments[0].paid_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
-                : "—"
-            }
-            hint="Most recent"
-            icon={Percent}
-          />
+          {loading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-border bg-card p-5 animate-pulse h-24" />
+            ))
+          ) : (
+            <>
+              <StatCard
+                label="Link Clicks"
+                value={String(stats?.totalClicks ?? 0)}
+                hint="Times your link was visited"
+                icon={MousePointerClick}
+              />
+              <StatCard
+                label="Referrals"
+                value={`${stats?.confirmedReferrals ?? 0} / ${stats?.totalReferrals ?? 0}`}
+                hint="Confirmed / Total sign-ups"
+                icon={UserPlus}
+              />
+              <StatCard
+                label="Total Earned"
+                value={stats && stats.totalEarnings > 0 ? `₹${Number(stats.totalEarnings).toLocaleString("en-IN")}` : "₹0"}
+                hint="Confirmed commissions"
+                icon={Wallet}
+              />
+              <StatCard
+                label="Pending"
+                value={stats && stats.pendingEarnings > 0 ? `₹${Number(stats.pendingEarnings).toLocaleString("en-IN")}` : "₹0"}
+                hint="Awaiting first payment"
+                icon={TrendingUp}
+              />
+            </>
+          )}
         </div>
 
-        {/* Weekly performance (static chart — affiliate tracking not yet implemented) */}
+        {/* How it works */}
         <div className="rounded-xl border border-border bg-card p-6">
-          <div className="flex items-center justify-between mb-1">
-            <h2 className="font-semibold">Weekly performance</h2>
-            <Badge variant="outline" className="text-xs text-muted-foreground">Sample data</Badge>
-          </div>
-          <p className="text-xs text-muted-foreground mb-4">
-            Affiliate click &amp; referral tracking coming soon.
-          </p>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={affiliatePerf}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.28 0.012 270)" vertical={false} />
-                <XAxis dataKey="day" stroke="oklch(0.68 0.012 270)" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip
-                  cursor={{ fill: "oklch(0.26 0.014 270)" }}
-                  contentStyle={{ background: "oklch(0.2 0.014 270)", border: "1px solid oklch(0.28 0.012 270)", borderRadius: 12, color: "white" }}
-                />
-                <Bar dataKey="clicks" fill="oklch(0.58 0.22 18)" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="revenue" fill="oklch(0.7 0.16 155)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <h2 className="font-semibold mb-4">How it works</h2>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {[
+              { step: "1", title: "Share your link", desc: "Copy your unique referral link and share it on social media, blogs, or with friends." },
+              { step: "2", title: "Friend signs up", desc: "When someone clicks your link and creates an account, they're attributed to you automatically." },
+              { step: "3", title: "Earn commission", desc: "Once they complete their first payment, you earn 10% commission credited to your account." },
+            ].map((item) => (
+              <div key={item.step} className="flex gap-3">
+                <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-bold">{item.step}</span>
+                <div>
+                  <p className="font-medium text-sm">{item.title}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Payment history */}
+        {/* Recent conversions */}
         <div className="rounded-xl border border-border bg-card p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold">Payment History</h2>
-            <Badge variant="outline" className="text-xs text-muted-foreground">
-              {succeededPayments.length} transaction{succeededPayments.length !== 1 ? "s" : ""}
-            </Badge>
+            <h2 className="font-semibold">Recent Referrals</h2>
+            {stats && (
+              <Badge variant="outline" className="text-xs text-muted-foreground">
+                {stats.totalReferrals} total
+              </Badge>
+            )}
           </div>
 
           {loading ? (
             <div className="flex items-center justify-center py-10">
               <Loader2 className="size-5 animate-spin text-muted-foreground" />
             </div>
-          ) : payments.length === 0 ? (
-            <p className="text-center text-sm text-muted-foreground py-8">
-              No payments yet. Subscribe to a plan to get started.
-            </p>
+          ) : !stats || stats.recentConversions.length === 0 ? (
+            <div className="text-center py-10 space-y-2">
+              <UserPlus className="size-8 mx-auto text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">No referrals yet. Share your link to get started!</p>
+            </div>
           ) : (
             <div className="space-y-3">
-              {payments.map((p) => (
+              {stats.recentConversions.map((c) => (
                 <div
-                  key={p.id}
+                  key={c.id}
                   className="flex items-center justify-between border-b border-border/60 pb-3 last:border-0 last:pb-0"
                 >
-                  <div>
-                    <p className="text-sm font-medium">
-                      {p.subscription?.plan?.name ?? "Subscription"}
-                      {p.subscription?.plan?.billing_cycle
-                        ? ` · ${p.subscription.plan.billing_cycle}`
-                        : ""}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {p.paid_at
-                        ? new Date(p.paid_at).toLocaleDateString("en-IN", {
-                            day: "numeric",
-                            month: "long",
-                            year: "numeric",
-                          })
-                        : new Date(p.createdAt).toLocaleDateString("en-IN", {
-                            day: "numeric",
-                            month: "long",
-                            year: "numeric",
-                          })}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex size-8 items-center justify-center rounded-full bg-secondary text-xs font-medium">
+                      {c.referredUser?.name.charAt(0).toUpperCase() ?? "?"}
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium">{c.referredUser?.name ?? "Anonymous"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Joined {new Date(c.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                        {c.planName ? ` · ${c.planName}` : ""}
+                      </p>
+                    </div>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold">
-                      {p.currency === "INR" ? "₹" : p.currency}
-                      {Number(p.amount).toLocaleString("en-IN")}
+                      {c.commissionAmount > 0 ? `₹${Number(c.commissionAmount).toLocaleString("en-IN")}` : "—"}
                     </p>
-                    <Badge
-                      variant="outline"
-                      className={
-                        p.status === "succeeded"
-                          ? "border-success/40 text-success text-xs"
-                          : p.status === "failed"
-                          ? "border-destructive/40 text-destructive text-xs"
-                          : "border-warning/40 text-warning text-xs"
-                      }
-                    >
-                      {p.status === "succeeded" ? "Paid" : p.status}
-                    </Badge>
+                    {statusBadge(c.status)}
                   </div>
                 </div>
               ))}
             </div>
           )}
+        </div>
+
+        {/* Payout info */}
+        <div className="rounded-xl border border-border bg-card/50 p-5 flex gap-3">
+          <CheckCircle2 className="size-5 shrink-0 mt-0.5 text-primary" />
+          <div>
+            <p className="font-medium text-sm">Commission rate: 10% per confirmed referral</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Commission is automatically confirmed when a referred user completes their first subscription payment.
+              Payouts are processed at the end of each month. Contact support to set up your payout details.
+            </p>
+          </div>
         </div>
       </div>
     </DashboardLayout>

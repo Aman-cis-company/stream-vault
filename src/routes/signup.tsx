@@ -1,5 +1,5 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, Gift } from "lucide-react";
+import { api } from "@/lib/api";
 
 
 const schema = z.object({
@@ -40,7 +41,18 @@ const COLORS = ["bg-destructive", "bg-destructive", "bg-warning", "bg-warning", 
 export default function SignupPage() {
   const { register: registerUser } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [showPw, setShowPw] = useState(false);
+  const refCode = searchParams.get("ref") ?? localStorage.getItem("sv.ref_code") ?? "";
+
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) {
+      localStorage.setItem("sv.ref_code", ref);
+      // Track the click on the referral code
+      api.post("/affiliate/track", { code: ref }).catch(() => {});
+    }
+  }, [searchParams]);
 
   const {
     register,
@@ -59,12 +71,15 @@ export default function SignupPage() {
   const onSubmit = async (values: FormValues) => {
     try {
       const [first_name, ...rest] = values.name.trim().split(" ");
+      const storedRef = localStorage.getItem("sv.ref_code") ?? refCode;
       await registerUser({
         first_name,
         last_name: rest.join(" ") || first_name,
         email: values.email,
         password: values.password,
+        ...(storedRef ? { ref_code: storedRef } : {}),
       });
+      localStorage.removeItem("sv.ref_code");
       toast.success("Account created!", { description: "Welcome to StreamVault!" });
       navigate("/pricing");
     } catch (err: unknown) {
@@ -77,6 +92,12 @@ export default function SignupPage() {
 
   return (
     <AuthLayout title="Create your account" subtitle="Start your StreamVault experience today.">
+      {refCode && (
+        <div className="mb-5 flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3">
+          <Gift className="size-4 shrink-0 text-primary" />
+          <p className="text-sm text-primary">You were referred by a friend — sign up to unlock your referral bonus!</p>
+        </div>
+      )}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
         <div className="space-y-2">
           <Label htmlFor="name">Full name</Label>

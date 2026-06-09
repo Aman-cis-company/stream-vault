@@ -14,6 +14,9 @@ const ParentalControl = require('./ParentalControl');
 const Series = require('./Series');
 const Episode = require('./Episode');
 const UserInteraction = require('./UserInteraction');
+const AffiliateCode = require('./AffiliateCode');
+const ReferralConversion = require('./ReferralConversion');
+const ContentComplianceRecord = require('./ContentComplianceRecord');
 
 // ── Role ↔ User ─────────────────────────────────────────────────────────────
 Role.hasMany(User, { foreignKey: 'role_id', as: 'users' });
@@ -93,6 +96,28 @@ ParentalControl.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 User.hasMany(UserInteraction, { foreignKey: 'user_id', as: 'interactions', onDelete: 'CASCADE' });
 UserInteraction.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
+// ── User ↔ AffiliateCode ─────────────────────────────────────────────────────
+User.hasOne(AffiliateCode, { foreignKey: 'user_id', as: 'affiliateCode', onDelete: 'CASCADE' });
+AffiliateCode.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+// ── AffiliateCode ↔ ReferralConversion ──────────────────────────────────────
+AffiliateCode.hasMany(ReferralConversion, { foreignKey: 'affiliate_code_id', as: 'conversions', onDelete: 'CASCADE' });
+ReferralConversion.belongsTo(AffiliateCode, { foreignKey: 'affiliate_code_id', as: 'affiliateCode' });
+
+// ── User ↔ ReferralConversion (referred user) ────────────────────────────────
+User.hasOne(ReferralConversion, { foreignKey: 'referred_user_id', as: 'referralConversion', onDelete: 'CASCADE' });
+ReferralConversion.belongsTo(User, { foreignKey: 'referred_user_id', as: 'referredUser' });
+
+// ── Payment ↔ ReferralConversion ─────────────────────────────────────────────
+Payment.hasOne(ReferralConversion, { foreignKey: 'payment_id', as: 'referralConversion' });
+ReferralConversion.belongsTo(Payment, { foreignKey: 'payment_id', as: 'payment' });
+
+// ── Movie / Episode ↔ ContentComplianceRecord ────────────────────────────────
+Movie.hasMany(ContentComplianceRecord, { foreignKey: 'movie_id', as: 'complianceRecords', onDelete: 'SET NULL' });
+ContentComplianceRecord.belongsTo(Movie, { foreignKey: 'movie_id', as: 'movie' });
+Episode.hasMany(ContentComplianceRecord, { foreignKey: 'episode_id', as: 'complianceRecords', onDelete: 'SET NULL' });
+ContentComplianceRecord.belongsTo(Episode, { foreignKey: 'episode_id', as: 'episode' });
+
 module.exports = {
   sequelize,
   Sequelize,
@@ -110,4 +135,7 @@ module.exports = {
   Series,
   Episode,
   UserInteraction,
+  AffiliateCode,
+  ReferralConversion,
+  ContentComplianceRecord,
 };

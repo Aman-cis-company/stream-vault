@@ -2,9 +2,24 @@ const stripe = require('../../config/stripe');
 const SubscriptionRepository = require('../repositories/SubscriptionRepository');
 const PaymentRepository = require('../repositories/PaymentRepository');
 const UserRepository = require('../repositories/UserRepository');
-const { SubscriptionPlan } = require('../../models');
+const { SubscriptionPlan, ReferralConversion } = require('../../models');
 const EmailService = require('./EmailService');
 const logger = require('../../config/logger');
+
+async function confirmReferralCommission(userId, paymentAmount) {
+  try {
+    const conversion = await ReferralConversion.findOne({
+      where: { referred_user_id: userId, status: 'pending' },
+    });
+    if (conversion) {
+      const commission = (parseFloat(paymentAmount) * parseFloat(conversion.commission_rate)).toFixed(2);
+      await conversion.update({ commission_amount: commission, status: 'confirmed' });
+      logger.info('Referral commission confirmed', { userId, commission });
+    }
+  } catch (e) {
+    logger.warn('confirmReferralCommission error', { error: e.message });
+  }
+}
 
 class StripeService {
   /**
@@ -455,6 +470,7 @@ class StripeService {
           paid_at: new Date(),
         });
         logger.info('Payment recorded from checkout.session.completed', { userId, planId });
+        confirmReferralCommission(userId, session.amount_total / 100);
       }
 
       if (plan) {

@@ -14,6 +14,8 @@ const seriesRoutes = require('./series.routes');
 const progressRoutes = require('./progress.routes');
 const interactionRoutes = require('./interaction.routes');
 const userRoutes = require('./user.routes');
+const affiliateRoutes = require('./affiliate.routes');
+const complianceRoutes = require('./compliance.routes');
 
 // Health check
 router.get('/health', (req, res) => {
@@ -38,5 +40,7 @@ router.use('/series', seriesRoutes);
 router.use('/progress', progressRoutes);
 router.use('/interactions', interactionRoutes);
 router.use('/user', userRoutes);
+router.use('/affiliate', affiliateRoutes);
+router.use('/compliance', complianceRoutes);
 
 module.exports = router;

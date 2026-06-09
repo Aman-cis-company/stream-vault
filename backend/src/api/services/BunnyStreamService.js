@@ -1,4 +1,5 @@
 const axios = require('axios');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const bunnyConfig = require('../../config/bunnyStream');
@@ -9,11 +10,15 @@ class BunnyStreamService {
     this.apiKey = bunnyConfig.apiKey;
     this.libraryId = bunnyConfig.libraryId;
     this.hostname = bunnyConfig.hostname;
+    this.tokenKey = bunnyConfig.tokenKey;   // Pull Zone token auth key for signed CDN URLs
     // Bunny Stream API base: https://video.bunnycdn.com/library/{LIBRARY_ID}
     this.baseUrl = bunnyConfig.baseUrl;
 
     if (!this.apiKey || !this.libraryId) {
       logger.warn('BunnyStreamService: BUNNY_API_KEY or BUNNY_LIBRARY_ID not set — video uploads disabled');
+    }
+    if (!this.tokenKey) {
+      logger.warn('BunnyStreamService: BUNNY_TOKEN_KEY not set — CDN stream URLs will be unsigned (unprotected)');
     }
 
     this.client = axios.create({
@@ -137,14 +142,38 @@ class BunnyStreamService {
   }
 
   /**
-   * Build the HLS playlist URL for a video.
+   * Build a token-authenticated HLS playlist URL.
+   * If BUNNY_TOKEN_KEY is set the URL is signed with a 4-hour expiry so only
+   * authenticated viewers can access the CDN stream.
+   *
+   * BunnyCDN token auth format (Pull Zone / Stream):
+   *   token = base64url( SHA-256( TOKEN_KEY + url_path + expiry ) )
+   *   url   = https://hostname/videoId/playlist.m3u8?token=TOKEN&expires=EXPIRY
    */
-  generatePlaybackUrl(videoId) {
+  generatePlaybackUrl(videoId, ttlSeconds = 4 * 60 * 60) {
     if (!this.hostname) {
       logger.warn('BunnyStream: BUNNY_HOSTNAME not set — playback URLs will be empty');
       return '';
     }
-    return `https://${this.hostname}/${videoId}/playlist.m3u8`;
+
+    const basePath = `/${videoId}/playlist.m3u8`;
+
+    if (!this.tokenKey) {
+      // No token key configured — return plain URL (CDN stream unprotected)
+      return `https://${this.hostname}${basePath}`;
+    }
+
+    const expiry = Math.floor(Date.now() / 1000) + ttlSeconds;
+    const hashInput = this.tokenKey + basePath + expiry;
+    const token = crypto
+      .createHash('sha256')
+      .update(hashInput)
+      .digest('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+
+    return `https://${this.hostname}${basePath}?token=${token}&expires=${expiry}`;
   }
 
   /**

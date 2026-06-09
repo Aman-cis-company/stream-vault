@@ -1,7 +1,8 @@
 const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
 const UserRepository = require('../repositories/UserRepository');
-const { RefreshToken, Role } = require('../../models');
+const { RefreshToken, Role, AffiliateCode, ReferralConversion } = require('../../models');
+const COMMISSION_RATE = parseFloat(process.env.AFFILIATE_COMMISSION_RATE || '0.10');
 const {
   generateAccessToken,
   generateRefreshToken,
@@ -18,7 +19,7 @@ class AuthService {
    * Register a new subscriber.
    */
   async register(data) {
-    const { first_name, last_name, email, password, phone } = data;
+    const { first_name, last_name, email, password, phone, ref_code } = data;
 
     // Check for existing email
     const existing = await UserRepository.findByEmail(email);
@@ -50,6 +51,26 @@ class AuthService {
     EmailService.sendWelcomeEmail(user).catch((e) =>
       logger.warn('Welcome email failed', { userId: user.id, error: e.message })
     );
+
+    // Process referral attribution (non-blocking, never fails the registration)
+    if (ref_code) {
+      (async () => {
+        try {
+          const affiliateCode = await AffiliateCode.findOne({ where: { code: ref_code } });
+          if (affiliateCode && affiliateCode.user_id !== user.id) {
+            await ReferralConversion.create({
+              affiliate_code_id: affiliateCode.id,
+              referred_user_id: user.id,
+              commission_rate: COMMISSION_RATE,
+              status: 'pending',
+            });
+            logger.info('Referral conversion created', { ref_code, referredUserId: user.id });
+          }
+        } catch (e) {
+          logger.warn('Referral tracking failed', { ref_code, error: e.message });
+        }
+      })();
+    }
 
     const safeUser = await UserRepository.findById(user.id);
     return safeUser;

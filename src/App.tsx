@@ -24,6 +24,7 @@ import WatchEpisode from "./routes/watch.series.$seriesId.episode.$episodeId";
 import AdminSeries from "./pages/admin/AdminSeries";
 import MyList from "./routes/my-list";
 import Checkout from "./routes/checkout";
+import RecordKeeping from "./routes/record-keeping";
 
 export default function App() {
   return (
@@ -55,6 +56,7 @@ export default function App() {
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/payment/success" element={<PaymentSuccess />} />
         <Route path="/payment/cancel" element={<PaymentCancel />} />
+        <Route path="/record-keeping" element={<RecordKeeping />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>

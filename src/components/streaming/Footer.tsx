@@ -106,7 +106,7 @@ export function Footer() {
             <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
               <a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a>
               <a href="#" className="hover:text-foreground transition-colors">Terms of Service</a>
-              <a href="#" className="hover:text-foreground transition-colors">18 U.S.C. § 2257</a>
+              <Link to="/record-keeping" className="hover:text-foreground transition-colors">18 U.S.C. § 2257</Link>
               <a href="#" className="hover:text-foreground transition-colors">Help Center</a>
             </div>
           </div>
