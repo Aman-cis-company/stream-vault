@@ -1,5 +1,6 @@
 node_modules/
 .env
+.zip
 logs/*.log
 uploads/thumbnails/*
 !uploads/thumbnails/.gitkeep

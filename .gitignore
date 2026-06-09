@@ -3,6 +3,7 @@ uploads
 dist
 .codex
 .env
+.zip
 backend/.env
 **/.env.local
 **/.env.production
