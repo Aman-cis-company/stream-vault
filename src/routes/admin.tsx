@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { DashboardLayout, StatCard } from "@/components/layouts/DashboardLayout";
@@ -10,7 +10,8 @@ import { apiClient } from "@/services/api";
 import type { AppDispatch, RootState } from "@/store";
 import { fetchCategories } from "@/store/slices/categoriesSlice";
 import { fetchMoviesThunk } from "@/store/slices/moviesSlice";
-import { useState } from "react";
+import { useSocketEvent } from "@/hooks/useSocket";
+import { SOCKET_EVENTS } from "@/lib/socket";
 import {
   DollarSign,
   Users,
@@ -117,14 +118,26 @@ function Admin() {
   const [payments, setPayments] = useState<AdminPayment[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
 
-  useEffect(() => {
-    dispatch(fetchCategories());
-    dispatch(fetchMoviesThunk());
-
+  const loadStats = useCallback(() => {
     apiClient
       .get("/dashboard/stats")
       .then(({ data }) => setStats(data.data.stats))
       .catch(() => {});
+  }, []);
+
+  const loadPayments = useCallback(() => {
+    setPaymentsLoading(true);
+    apiClient
+      .get("/dashboard/payments?limit=50")
+      .then(({ data }) => setPayments(data.data.payments ?? []))
+      .catch(() => {})
+      .finally(() => setPaymentsLoading(false));
+  }, []);
+
+  useEffect(() => {
+    dispatch(fetchCategories());
+    dispatch(fetchMoviesThunk());
+    loadStats();
 
     apiClient
       .get("/dashboard/revenue")
@@ -133,13 +146,28 @@ function Admin() {
       })
       .catch(() => {});
 
-    setPaymentsLoading(true);
-    apiClient
-      .get("/dashboard/payments?limit=50")
-      .then(({ data }) => setPayments(data.data.payments ?? []))
-      .catch(() => {})
-      .finally(() => setPaymentsLoading(false));
-  }, [dispatch]);
+    loadPayments();
+  }, [dispatch, loadStats, loadPayments]);
+
+  // ── Real-time: refresh stats on any relevant event ─────────────────────────
+  useSocketEvent(SOCKET_EVENTS.DASHBOARD_STATS_UPDATED, loadStats);
+  useSocketEvent(SOCKET_EVENTS.PAYMENT_COMPLETED, () => {
+    loadStats();
+    loadPayments();
+  });
+  useSocketEvent(SOCKET_EVENTS.SUBSCRIPTION_CREATED, loadStats);
+  useSocketEvent(SOCKET_EVENTS.SUBSCRIPTION_CANCELLED, loadStats);
+  useSocketEvent(SOCKET_EVENTS.MOVIE_CREATED, () => {
+    dispatch(fetchMoviesThunk());
+    loadStats();
+  });
+  useSocketEvent(SOCKET_EVENTS.MOVIE_DELETED, () => {
+    dispatch(fetchMoviesThunk());
+    loadStats();
+  });
+  useSocketEvent(SOCKET_EVENTS.SERIES_CREATED, () => dispatch(fetchMoviesThunk()));
+  useSocketEvent(SOCKET_EVENTS.USER_APPROVED, loadStats);
+  useSocketEvent(SOCKET_EVENTS.USER_BLOCKED, loadStats);
 
   const formatRevenue = (amount: number) => {
     if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;

@@ -2,9 +2,11 @@ const stripe = require('../../config/stripe');
 const SubscriptionRepository = require('../repositories/SubscriptionRepository');
 const PaymentRepository = require('../repositories/PaymentRepository');
 const UserRepository = require('../repositories/UserRepository');
-const { SubscriptionPlan, ReferralConversion } = require('../../models');
+const { SubscriptionPlan, ReferralConversion, AffiliateCode } = require('../../models');
 const EmailService = require('./EmailService');
 const logger = require('../../config/logger');
+const socketServer = require('../../socket');
+const EVENTS = require('../../socket/events');
 
 async function confirmReferralCommission(userId, paymentAmount) {
   try {
@@ -15,6 +17,18 @@ async function confirmReferralCommission(userId, paymentAmount) {
       const commission = (parseFloat(paymentAmount) * parseFloat(conversion.commission_rate)).toFixed(2);
       await conversion.update({ commission_amount: commission, status: 'confirmed' });
       logger.info('Referral commission confirmed', { userId, commission });
+
+      // Notify the affiliate whose code was used
+      const affiliateCode = await AffiliateCode.findByPk(conversion.affiliate_code_id);
+      if (affiliateCode) {
+        socketServer.emitToAffiliate(affiliateCode.user_id, EVENTS.AFFILIATE_COMMISSION_GENERATED, {
+          conversionId: conversion.id,
+          referredUserId: userId,
+          commission: parseFloat(commission),
+          status: 'confirmed',
+        });
+        socketServer.emitToAffiliate(affiliateCode.user_id, EVENTS.AFFILIATE_STATS_UPDATED, { refresh: true });
+      }
     }
   } catch (e) {
     logger.warn('confirmReferralCommission error', { error: e.message });
@@ -482,9 +496,21 @@ class StripeService {
         }
       }
 
+      // Real-time: notify the subscriber and admins
+      socketServer.emitToUser(userId, EVENTS.SUBSCRIPTION_CREATED, {
+        planId,
+        planName: plan?.name ?? '',
+        endDate: endDate.toISOString(),
+      });
+      socketServer.emitToUser(userId, EVENTS.PAYMENT_COMPLETED, {
+        amount: (session.amount_total ?? 0) / 100,
+        currency: (session.currency ?? 'INR').toUpperCase(),
+        planName: plan?.name ?? '',
+      });
+      socketServer.pushDashboardStats({ refresh: true });
+
       logger.info('Checkout completed, subscription activated', { userId, planId });
     } catch (err) {
-      console.log("-------------error-------------",err);
       logger.error('_handleCheckoutCompleted error', { error: err.message });
     }
   }
@@ -513,9 +539,14 @@ class StripeService {
 
   async _handleSubscriptionDeleted(subscription) {
     try {
+      const localSub = await SubscriptionRepository.findByStripeSubscriptionId(subscription.id);
       await SubscriptionRepository.updateByStripeSubscriptionId(subscription.id, {
         status: 'cancelled',
       });
+      if (localSub?.user_id) {
+        socketServer.emitToUser(localSub.user_id, EVENTS.SUBSCRIPTION_CANCELLED, { subscriptionId: subscription.id });
+        socketServer.pushDashboardStats({ refresh: true });
+      }
       logger.info('Subscription deleted/cancelled', { subscriptionId: subscription.id });
     } catch (err) {
       logger.error('_handleSubscriptionDeleted error', { error: err.message });

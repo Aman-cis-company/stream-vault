@@ -25,7 +25,7 @@ function transcodeQuality(inputPath, qualityDir, quality) {
       .videoBitrate(quality.videoBitrate)
       .audioBitrate(quality.audioBitrate)
       .outputOptions([
-        '-hls_time 6',
+        '-hls_time 6',      // it split videos every 6 seconds
         '-hls_playlist_type vod',
         `-hls_segment_filename ${path.join(qualityDir, 'seg_%03d.ts')}`,
       ])

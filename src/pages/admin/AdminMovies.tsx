@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Protected } from "@/components/streaming/Protected";
@@ -46,6 +46,8 @@ import {
   Film,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useSocketEvent } from "@/hooks/useSocket";
+import { SOCKET_EVENTS } from "@/lib/socket";
 
 export default function AdminMovies() {
   return (
@@ -109,7 +111,6 @@ function MoviesPage() {
   const dispatch = useDispatch<AppDispatch>();
   const { items, loading } = useSelector((s: RootState) => s.movies);
   const { items: categories } = useSelector((s: RootState) => s.categories);
-  console.log('categories: ', categories);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<BackendMovie | null>(null);
@@ -124,10 +125,19 @@ function MoviesPage() {
   const thumbRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
 
+  const refresh = useCallback(() => {
+    dispatch(fetchMoviesThunk());
+  }, [dispatch]);
+
   useEffect(() => {
     dispatch(fetchMoviesThunk());
     dispatch(fetchCategories());
   }, [dispatch]);
+
+  // Real-time: refresh when another admin modifies movies
+  useSocketEvent(SOCKET_EVENTS.MOVIE_CREATED, refresh);
+  useSocketEvent(SOCKET_EVENTS.MOVIE_UPDATED, refresh);
+  useSocketEvent(SOCKET_EVENTS.MOVIE_DELETED, refresh);
 
   const filtered = items.filter((m) =>
     m.title.toLowerCase().includes(search.toLowerCase())

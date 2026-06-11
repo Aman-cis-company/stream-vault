@@ -13,5 +13,6 @@ router.get('/subscribers', ...adminOnly, DashboardController.getSubscribers.bind
 router.get('/movies', ...adminOnly, DashboardController.getMovies.bind(DashboardController));
 router.get('/payments', ...adminOnly, DashboardController.getPayments.bind(DashboardController));
 router.get('/users', ...adminOnly, DashboardController.getUsers.bind(DashboardController));
+router.patch('/users/:id/status', ...adminOnly, DashboardController.updateUserStatus.bind(DashboardController));
 
 module.exports = router;

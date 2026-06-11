@@ -3,11 +3,15 @@ const { successResponse, errorResponse } = require('../../helpers/responseHelper
 const MESSAGES = require('../../constants/messages');
 const STATUS_CODES = require('../../constants/statusCodes');
 const logger = require('../../config/logger');
+const socketServer = require('../../socket');
+const EVENTS = require('../../socket/events');
 
 class MovieController {
   async create(req, res) {
     try {
       const movie = await MovieService.create(req.body, req.files, req.user.id);
+      socketServer.broadcast(EVENTS.MOVIE_CREATED, { movie });
+      socketServer.emitToAdmins(EVENTS.DASHBOARD_STATS_UPDATED, { refresh: true });
       return successResponse(res, MESSAGES.MOVIE_CREATED, { movie }, STATUS_CODES.CREATED);
     } catch (err) {
       logger.error('MovieController.create error', { error: err.message });
@@ -41,6 +45,16 @@ class MovieController {
   async update(req, res) {
     try {
       const movie = await MovieService.update(req.params.id, req.body, req.files, req.user.id);
+
+      const prevStatus = req.body._prevStatus; // optionally passed by client
+      const newStatus = movie.status;
+      if (prevStatus && prevStatus !== newStatus) {
+        const event = newStatus === 'published' ? EVENTS.CONTENT_PUBLISHED : EVENTS.CONTENT_UNPUBLISHED;
+        socketServer.broadcast(event, { type: 'movie', id: movie.id, title: movie.title });
+      } else {
+        socketServer.broadcast(EVENTS.MOVIE_UPDATED, { movie });
+      }
+
       return successResponse(res, MESSAGES.MOVIE_UPDATED, { movie });
     } catch (err) {
       logger.error('MovieController.update error', { error: err.message });
@@ -54,6 +68,8 @@ class MovieController {
   async delete(req, res) {
     try {
       await MovieService.delete(req.params.id);
+      socketServer.broadcast(EVENTS.MOVIE_DELETED, { id: req.params.id });
+      socketServer.emitToAdmins(EVENTS.DASHBOARD_STATS_UPDATED, { refresh: true });
       return successResponse(res, MESSAGES.MOVIE_DELETED);
     } catch (err) {
       logger.error('MovieController.delete error', { error: err.message });

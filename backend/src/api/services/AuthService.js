@@ -3,6 +3,8 @@ const { Op } = require('sequelize');
 const UserRepository = require('../repositories/UserRepository');
 const { RefreshToken, Role, AffiliateCode, ReferralConversion } = require('../../models');
 const COMMISSION_RATE = parseFloat(process.env.AFFILIATE_COMMISSION_RATE || '0.10');
+const socketServer = require('../../socket');
+const EVENTS = require('../../socket/events');
 const {
   generateAccessToken,
   generateRefreshToken,
@@ -65,6 +67,14 @@ class AuthService {
               status: 'pending',
             });
             logger.info('Referral conversion created', { ref_code, referredUserId: user.id });
+
+            // Notify the affiliate that a new referral signed up
+            socketServer.emitToAffiliate(affiliateCode.user_id, EVENTS.AFFILIATE_REFERRAL_NEW, {
+              referredUserId: user.id,
+              status: 'pending',
+            });
+            socketServer.emitToAffiliate(affiliateCode.user_id, EVENTS.AFFILIATE_STATS_UPDATED, { refresh: true });
+            socketServer.pushDashboardStats({ refresh: true });
           }
         } catch (e) {
           logger.warn('Referral tracking failed', { ref_code, error: e.message });

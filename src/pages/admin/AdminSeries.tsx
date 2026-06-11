@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
+import { useSocketEvent } from "@/hooks/useSocket";
+import { SOCKET_EVENTS } from "@/lib/socket";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Protected } from "@/components/streaming/Protected";
 import type { AppDispatch, RootState } from "@/store";
@@ -405,10 +407,19 @@ function SeriesPage() {
   const [managingSeries, setManagingSeries] = useState<BackendSeries | null>(null);
   const thumbRef = useRef<HTMLInputElement>(null);
 
+  const refreshSeries = useCallback(() => {
+    dispatch(fetchSeriesThunk());
+  }, [dispatch]);
+
   useEffect(() => {
     dispatch(fetchSeriesThunk());
     dispatch(fetchCategories());
   }, [dispatch]);
+
+  // Real-time: refresh when series changes
+  useSocketEvent(SOCKET_EVENTS.SERIES_CREATED, refreshSeries);
+  useSocketEvent(SOCKET_EVENTS.SERIES_UPDATED, refreshSeries);
+  useSocketEvent(SOCKET_EVENTS.SERIES_DELETED, refreshSeries);
 
   const filtered = items.filter((s) => s.title.toLowerCase().includes(search.toLowerCase()));
 

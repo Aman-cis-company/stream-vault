@@ -7,6 +7,8 @@ const MESSAGES = require('../../constants/messages');
 const STATUS_CODES = require('../../constants/statusCodes');
 const ROLES = require('../../constants/roles');
 const logger = require('../../config/logger');
+const socketServer = require('../../socket');
+const EVENTS = require('../../socket/events');
 
 class DashboardController {
   async getStats(req, res) {
@@ -99,6 +101,32 @@ class DashboardController {
       return successResponse(res, 'Users fetched', { users: rows, total: count });
     } catch (err) {
       logger.error('DashboardController.getUsers error', { error: err.message });
+      return errorResponse(res, MESSAGES.INTERNAL_ERROR, STATUS_CODES.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async updateUserStatus(req, res) {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!['active', 'inactive', 'banned'].includes(status)) {
+        return errorResponse(res, 'Invalid status', STATUS_CODES.BAD_REQUEST);
+      }
+
+      const user = await UserRepository.findById(id);
+      if (!user) return errorResponse(res, 'User not found', STATUS_CODES.NOT_FOUND);
+
+      await user.update({ status });
+
+      const event = status === 'active' ? EVENTS.USER_APPROVED : EVENTS.USER_BLOCKED;
+      socketServer.emitToUser(Number(id), event, { status });
+      socketServer.emitToAdmins(event, { userId: Number(id), status });
+      socketServer.pushDashboardStats({ refresh: true });
+
+      return successResponse(res, 'User status updated', { user });
+    } catch (err) {
+      logger.error('DashboardController.updateUserStatus error', { error: err.message });
       return errorResponse(res, MESSAGES.INTERNAL_ERROR, STATUS_CODES.INTERNAL_SERVER_ERROR);
     }
   }

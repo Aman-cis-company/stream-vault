@@ -4,7 +4,6 @@ import { useAuth, type Role } from "@/lib/auth";
 
 export function Protected({ children, roles }: { children: ReactNode; roles?: Role[] }) {
   const { user, isAuthenticated } = useAuth();
-  console.log('user: ', user);
   const navigate = useNavigate();
 
   useEffect(() => {

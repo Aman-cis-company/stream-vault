@@ -13,7 +13,7 @@ type Status = "loading" | "done" | "error";
 const NEXT_STEPS = [
   { icon: Mail, text: "Confirmation email sent to your inbox" },
   { icon: Tv2, text: "Stream on up to 2 devices simultaneously" },
-  { icon: Download, text: "Download titles for offline viewing" },
+  // { icon: Download, text: "Download titles for offline viewing" },
   { icon: Sparkles, text: "Access all exclusive StreamVault originals" },
 ];
 

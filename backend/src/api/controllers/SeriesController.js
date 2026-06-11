@@ -3,11 +3,15 @@ const { successResponse, errorResponse } = require('../../helpers/responseHelper
 const MESSAGES = require('../../constants/messages');
 const STATUS_CODES = require('../../constants/statusCodes');
 const logger = require('../../config/logger');
+const socketServer = require('../../socket');
+const EVENTS = require('../../socket/events');
 
 class SeriesController {
   async create(req, res) {
     try {
       const series = await SeriesService.create(req.body, req.files, req.user.id);
+      socketServer.broadcast(EVENTS.SERIES_CREATED, { series });
+      socketServer.emitToAdmins(EVENTS.DASHBOARD_STATS_UPDATED, { refresh: true });
       return successResponse(res, MESSAGES.SERIES_CREATED, { series }, STATUS_CODES.CREATED);
     } catch (err) {
       logger.error('SeriesController.create error', { error: err.message });
@@ -39,6 +43,16 @@ class SeriesController {
   async update(req, res) {
     try {
       const series = await SeriesService.update(req.params.id, req.body, req.files, req.user.id);
+
+      const newStatus = series.status;
+      const prevStatus = req.body._prevStatus;
+      if (prevStatus && prevStatus !== newStatus) {
+        const event = newStatus === 'published' ? EVENTS.CONTENT_PUBLISHED : EVENTS.CONTENT_UNPUBLISHED;
+        socketServer.broadcast(event, { type: 'series', id: series.id, title: series.title });
+      } else {
+        socketServer.broadcast(EVENTS.SERIES_UPDATED, { series });
+      }
+
       return successResponse(res, MESSAGES.SERIES_UPDATED, { series });
     } catch (err) {
       logger.error('SeriesController.update error', { error: err.message });
@@ -50,6 +64,8 @@ class SeriesController {
   async delete(req, res) {
     try {
       await SeriesService.delete(req.params.id);
+      socketServer.broadcast(EVENTS.SERIES_DELETED, { id: req.params.id });
+      socketServer.emitToAdmins(EVENTS.DASHBOARD_STATS_UPDATED, { refresh: true });
       return successResponse(res, MESSAGES.SERIES_DELETED);
     } catch (err) {
       logger.error('SeriesController.delete error', { error: err.message });

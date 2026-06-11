@@ -4,7 +4,9 @@ const crypto = require('crypto');
 const authenticate = require('../middlewares/authenticate');
 const { AffiliateCode, ReferralConversion, User, Payment, UserSubscription, SubscriptionPlan } = require('../../models');
 const { successResponse, errorResponse } = require('../../helpers/responseHelper');
-const { fn, col, Op } = require('sequelize');
+const { fn, col } = require('sequelize');
+const socketServer = require('../../socket');
+const EVENTS = require('../../socket/events');
 
 const COMMISSION_RATE = parseFloat(process.env.AFFILIATE_COMMISSION_RATE || '0.10');
 
@@ -13,7 +15,7 @@ function generateCode(userId) {
   return `sv-${String(userId).padStart(3, '0')}${rand}`;
 }
 
-// GET /api/v1/affiliate/code — get or auto-create the user's affiliate code
+// GET /api/v1/affiliate/code
 router.get('/code', authenticate, async (req, res) => {
   try {
     let record = await AffiliateCode.findOne({ where: { user_id: req.user.id } });
@@ -35,7 +37,7 @@ router.get('/code', authenticate, async (req, res) => {
   }
 });
 
-// GET /api/v1/affiliate/stats — real affiliate stats for the authenticated user
+// GET /api/v1/affiliate/stats
 router.get('/stats', authenticate, async (req, res) => {
   try {
     const affiliateCode = await AffiliateCode.findOne({ where: { user_id: req.user.id } });
@@ -59,7 +61,12 @@ router.get('/stats', authenticate, async (req, res) => {
             model: Payment,
             as: 'payment',
             required: false,
-            include: [{ model: UserSubscription, as: 'subscription', required: false, include: [{ model: SubscriptionPlan, as: 'plan', attributes: ['name'] }] }],
+            include: [{
+              model: UserSubscription,
+              as: 'subscription',
+              required: false,
+              include: [{ model: SubscriptionPlan, as: 'plan', attributes: ['name'] }],
+            }],
           },
         ],
         order: [['created_at', 'DESC']],
@@ -77,8 +84,9 @@ router.get('/stats', authenticate, async (req, res) => {
       }),
     ]);
 
-    let totalEarnings = 0, pendingEarnings = 0, confirmedReferrals = 0, totalReferrals = conversions.length;
+    let totalEarnings = 0, pendingEarnings = 0, confirmedReferrals = 0, totalReferrals = 0;
     earningsResult.forEach((r) => {
+      totalReferrals += parseInt(r.count) || 0;
       if (r.status === 'confirmed' || r.status === 'paid') {
         totalEarnings += parseFloat(r.total) || 0;
         confirmedReferrals += parseInt(r.count) || 0;
@@ -111,7 +119,7 @@ router.get('/stats', authenticate, async (req, res) => {
   }
 });
 
-// POST /api/v1/affiliate/track — public: increment click counter for a code
+// POST /api/v1/affiliate/track — public
 router.post('/track', async (req, res) => {
   try {
     const { code } = req.body;
@@ -119,6 +127,13 @@ router.post('/track', async (req, res) => {
     const record = await AffiliateCode.findOne({ where: { code } });
     if (!record) return errorResponse(res, 'Affiliate code not found', 404);
     await record.increment('total_clicks');
+
+    // Notify affiliate of click in real time
+    socketServer.emitToAffiliate(record.user_id, EVENTS.AFFILIATE_STATS_UPDATED, {
+      field: 'totalClicks',
+      value: record.total_clicks + 1,
+    });
+
     return successResponse(res, 'Click tracked');
   } catch (err) {
     return errorResponse(res, 'Failed to track click', 500);

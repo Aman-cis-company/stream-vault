@@ -5,6 +5,7 @@ import { Provider } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
 import { ThemeProvider } from "./lib/theme";
 import { AuthProvider } from "./lib/auth";
+import { SocketProvider } from "./components/streaming/SocketProvider";
 import { Toaster } from "./components/ui/sonner";
 import { store, persistor } from "./store";
 import App from "./App";
@@ -29,8 +30,10 @@ createRoot(document.getElementById("root")!).render(
         <BrowserRouter>
           <ThemeProvider>
             <AuthProvider>
-              <App />
-              <Toaster position="top-right" richColors />
+              <SocketProvider>
+                <App />
+                <Toaster position="top-right" richColors />
+              </SocketProvider>
             </AuthProvider>
           </ThemeProvider>
         </BrowserRouter>

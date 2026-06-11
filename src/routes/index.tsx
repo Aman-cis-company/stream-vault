@@ -27,10 +27,12 @@ import {
   ArrowRight,
   Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import apiClient from "@/services/api";
 import { mapMovieToTitle } from "@/lib/movies";
 import { BackendMovie } from "@/store/slices/moviesSlice";
+import { useSocketEvent } from "@/hooks/useSocket";
+import { SOCKET_EVENTS } from "@/lib/socket";
 
 
 const FEATURES = [
@@ -80,35 +82,36 @@ export default function Landing() {
   const [moviesByCategory, setMoviesByCategory] = useState<Record<number, Title[]>>({});
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-      async function load() {
-        try {
-          const [movRes] = await Promise.all([
-            apiClient.get("/movies?status=published&limit=100"),
-          ]);
-
-          const movies: BackendMovie[] = movRes.data.data.movies ?? [];
-          const byCat: Record<number, Title[]> = {};
-          const rest: Title[] = [];
-  
-          movies.forEach((m) => {
-            const mapped = mapMovieToTitle(m);
-            if (m.category_id) {
-              if (!byCat[m.category_id]) byCat[m.category_id] = [];
-              byCat[m.category_id].push(mapped);
-            } else {
-              rest.push(mapped);
-            }
-          });
-          setMoviesByCategory(byCat);
-        } catch {
-          // show empty state on API failure
-        } finally {
-          setLoading(false);
+  const load = useCallback(async () => {
+    try {
+      const movRes = await apiClient.get("/movies?status=published&limit=100");
+      const movies: BackendMovie[] = movRes.data.data.movies ?? [];
+      const byCat: Record<number, Title[]> = {};
+      movies.forEach((m) => {
+        const mapped = mapMovieToTitle(m);
+        if (m.category_id) {
+          if (!byCat[m.category_id]) byCat[m.category_id] = [];
+          byCat[m.category_id].push(mapped);
         }
-      }
-      load();
-    }, []);
+      });
+      setMoviesByCategory(byCat);
+    } catch {
+      // show empty state on API failure
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Real-time: re-fetch when movies change
+  useSocketEvent(SOCKET_EVENTS.MOVIE_CREATED, load);
+  useSocketEvent(SOCKET_EVENTS.MOVIE_UPDATED, load);
+  useSocketEvent(SOCKET_EVENTS.MOVIE_DELETED, load);
+  useSocketEvent(SOCKET_EVENTS.CONTENT_PUBLISHED, load);
+  useSocketEvent(SOCKET_EVENTS.CONTENT_UNPUBLISHED, load);
 
   return (
     <MainLayout flush>

@@ -18,6 +18,8 @@ import type { BackendSeries } from "@/lib/series";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, SearchX, Loader2, Play, Tv2 } from "lucide-react";
+import { useSocketEvent } from "@/hooks/useSocket";
+import { SOCKET_EVENTS } from "@/lib/socket";
 const PAGE = 12;
 
 // ── Series Card ──────────────────────────────────────────────────────────────
@@ -106,27 +108,38 @@ export default function Library() {
   const [visible, setVisible] = useState(PAGE);
   const sentinel = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const [catRes, movRes, serRes] = await Promise.all([
-          apiClient.get("/categories?status=active&limit=50"),
-          apiClient.get("/movies?status=published&limit=200"),
-          fetchSeriesList({ status: "published", limit: 200 }).catch(() => [] as BackendSeries[]),
-        ]);
-        setCategories(catRes.data.data.categories ?? []);
-        setAllTitles(
-          (movRes.data.data.movies as BackendMovie[]).map(mapMovieToTitle)
-        );
-        setAllSeries(Array.isArray(serRes) ? serRes : []);
-      } catch {
-        // empty state
-      } finally {
-        setLoading(false);
-      }
+  const load = useCallback(async () => {
+    try {
+      const [catRes, movRes, serRes] = await Promise.all([
+        apiClient.get("/categories?status=active&limit=50"),
+        apiClient.get("/movies?status=published&limit=200"),
+        fetchSeriesList({ status: "published", limit: 200 }).catch(() => [] as BackendSeries[]),
+      ]);
+      setCategories(catRes.data.data.categories ?? []);
+      setAllTitles(
+        (movRes.data.data.movies as BackendMovie[]).map(mapMovieToTitle)
+      );
+      setAllSeries(Array.isArray(serRes) ? serRes : []);
+    } catch {
+      // empty state
+    } finally {
+      setLoading(false);
     }
-    load();
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Real-time: re-fetch when any movie or series changes
+  useSocketEvent(SOCKET_EVENTS.MOVIE_CREATED, load);
+  useSocketEvent(SOCKET_EVENTS.MOVIE_UPDATED, load);
+  useSocketEvent(SOCKET_EVENTS.MOVIE_DELETED, load);
+  useSocketEvent(SOCKET_EVENTS.SERIES_CREATED, load);
+  useSocketEvent(SOCKET_EVENTS.SERIES_UPDATED, load);
+  useSocketEvent(SOCKET_EVENTS.SERIES_DELETED, load);
+  useSocketEvent(SOCKET_EVENTS.CONTENT_PUBLISHED, load);
+  useSocketEvent(SOCKET_EVENTS.CONTENT_UNPUBLISHED, load);
 
   const movieResults = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -259,7 +272,7 @@ export default function Library() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-8">
               {contentType === "movies"
                 ? (shown as Title[]).map((t) => (
                     <TitleCard key={t.id} title={t} fullWidth />

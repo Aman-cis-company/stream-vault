@@ -1,60 +1,56 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { Hero } from "@/components/streaming/Hero";
-import { TitleRow } from "@/components/streaming/TitleRow";
-import { AgeRatingBadge } from "@/components/streaming/AgeRatingBadge";
+import { ContentRow, SeriesContentRow } from "@/components/streaming/TitleRow";
 import { apiClient } from "@/services/api";
 import { mapMovieToTitle } from "@/lib/movies";
-import { fetchSeriesList, seriesThumbnail, type BackendSeries } from "@/lib/series";
+import { fetchSeriesList } from "@/lib/series";
 import type { Title } from "@/lib/mock-data";
 import type { BackendMovie } from "@/store/slices/moviesSlice";
+import type { BackendSeries } from "@/lib/series";
 import type { Category } from "@/store/slices/categoriesSlice";
-import { Loader2, Play, Tv } from "lucide-react";
+import { useSocketEvent } from "@/hooks/useSocket";
+import { SOCKET_EVENTS } from "@/lib/socket";
+import { Loader2 } from "lucide-react";
 
-// ── Series Card ───────────────────────────────────────────────────────────────
+// ── Empty state ───────────────────────────────────────────────────────────────
 
-function SeriesCard({ s }: { s: BackendSeries }) {
+function EmptyState() {
   return (
-    <Link to={`/series/${s.id}`} className="group relative shrink-0 overflow-hidden rounded-xl bg-card ring-1 ring-border transition-all duration-200 hover:ring-primary/50 hover:shadow-lg" style={{ width: "clamp(160px, 18vw, 220px)" }}>
-      <div className="relative" style={{ aspectRatio: "2/3" }}>
-        <img src={seriesThumbnail(s)} alt={s.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" onError={(e) => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/s${s.id}/220/330`; }} />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
-        {/* Play overlay */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="size-12 rounded-full bg-white/20 backdrop-blur flex items-center justify-center ring-1 ring-white/30">
-            <Play className="size-5 fill-white text-white ml-0.5" />
-          </div>
-        </div>
-        {/* Badges */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1">
-          <span className="inline-flex items-center gap-1 rounded-md bg-black/70 backdrop-blur-sm px-1.5 py-0.5 text-[9px] font-semibold text-sky-300 border border-sky-500/25">
-            <Tv className="size-2.5" /> SERIES
-          </span>
-          {s.content_rating && <AgeRatingBadge rating={s.content_rating} className="text-[9px]" />}
-        </div>
-        <div className="absolute bottom-0 inset-x-0 p-2">
-          <p className="text-xs font-semibold text-white leading-tight line-clamp-2 drop-shadow">{s.title}</p>
-          <p className="text-[10px] text-white/60 mt-0.5">{s.total_seasons} Season{s.total_seasons !== 1 ? "s" : ""}</p>
-        </div>
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 py-28 text-center mx-4 sm:mx-10 lg:mx-14">
+      <div className="size-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
+        <Loader2 className="size-7 text-white/20" />
       </div>
-    </Link>
-  );
-}
-
-function SeriesRow({ heading, seriesList }: { heading: string; seriesList: BackendSeries[] }) {
-  if (!seriesList.length) return null;
-  return (
-    <div>
-      <h2 className="mb-3 text-lg font-semibold tracking-tight">{heading}</h2>
-      <div className="flex gap-3 overflow-x-auto scrollbar-none pb-2">
-        {seriesList.map((s) => <SeriesCard key={s.id} s={s} />)}
-      </div>
+      <p className="text-lg font-semibold text-white/60">No content available yet</p>
+      <p className="mt-1 text-sm text-white/30">Check back soon — new titles are being added.</p>
     </div>
   );
 }
 
-// ── Main Browse ───────────────────────────────────────────────────────────────
+// ── Skeleton rows (while loading) ─────────────────────────────────────────────
+
+function SkeletonRows() {
+  const LABELS = ["Trending Now", "Web Series", "Action", "Drama", "Comedy"];
+  return (
+    <div className="space-y-2 pt-6">
+      {LABELS.map((label) => (
+        <ContentRow key={label} heading={label} titles={[]} loading />
+      ))}
+    </div>
+  );
+}
+
+// ── Section divider ───────────────────────────────────────────────────────────
+
+function SectionDivider() {
+  return (
+    <div className="relative mx-4 sm:mx-10 lg:mx-14 my-1">
+      <div className="h-px bg-gradient-to-r from-transparent via-white/6 to-transparent" />
+    </div>
+  );
+}
+
+// ── Browse page ───────────────────────────────────────────────────────────────
 
 export default function Browse() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -63,63 +59,159 @@ export default function Browse() {
   const [seriesList, setSeriesList] = useState<BackendSeries[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const [catRes, movRes, seriesData] = await Promise.all([
-          apiClient.get("/categories?status=active&limit=50"),
-          apiClient.get("/movies?status=published&limit=100"),
-          fetchSeriesList({ status: "published", limit: 50 }),
-        ]);
+  const load = useCallback(async () => {
+    try {
+      const [catRes, movRes, seriesData] = await Promise.all([
+        apiClient.get("/categories?status=active&limit=50"),
+        apiClient.get("/movies?status=published&limit=100"),
+        fetchSeriesList({ status: "published", limit: 50 }),
+      ]);
 
-        const cats: Category[] = catRes.data.data.categories ?? [];
-        const movies: BackendMovie[] = movRes.data.data.movies ?? [];
-        setCategories(cats);
-        setSeriesList(seriesData);
+      const cats: Category[] = catRes.data.data.categories ?? [];
+      const movies: BackendMovie[] = movRes.data.data.movies ?? [];
+      setCategories(cats);
+      setSeriesList(seriesData);
 
-        const byCat: Record<number, Title[]> = {};
-        const rest: Title[] = [];
-        movies.forEach((m) => {
-          const mapped = mapMovieToTitle(m);
-          if (m.category_id) { if (!byCat[m.category_id]) byCat[m.category_id] = []; byCat[m.category_id].push(mapped); }
-          else rest.push(mapped);
-        });
-        setMoviesByCategory(byCat);
-        setExtras(rest);
-      } catch {
-      } finally {
-        setLoading(false);
-      }
+      const byCat: Record<number, Title[]> = {};
+      const rest: Title[] = [];
+      movies.forEach((m) => {
+        const mapped = mapMovieToTitle(m);
+        if (m.category_id) {
+          if (!byCat[m.category_id]) byCat[m.category_id] = [];
+          byCat[m.category_id].push(mapped);
+        } else {
+          rest.push(mapped);
+        }
+      });
+      setMoviesByCategory(byCat);
+      setExtras(rest);
+    } catch {
+      // silent — empty state
+    } finally {
+      setLoading(false);
     }
-    load();
   }, []);
 
-  const hasContent = categories.some((c) => (moviesByCategory[c.id]?.length ?? 0) > 0) || extras.length > 0 || seriesList.length > 0;
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Real-time: re-fetch when content changes in admin
+  useSocketEvent(SOCKET_EVENTS.MOVIE_CREATED, load);
+  useSocketEvent(SOCKET_EVENTS.MOVIE_UPDATED, load);
+  useSocketEvent(SOCKET_EVENTS.MOVIE_DELETED, load);
+  useSocketEvent(SOCKET_EVENTS.SERIES_CREATED, load);
+  useSocketEvent(SOCKET_EVENTS.SERIES_UPDATED, load);
+  useSocketEvent(SOCKET_EVENTS.SERIES_DELETED, load);
+  useSocketEvent(SOCKET_EVENTS.CONTENT_PUBLISHED, load);
+  useSocketEvent(SOCKET_EVENTS.CONTENT_UNPUBLISHED, load);
+
+  // Derived: trending/new-release rows from all movies
+  const allMovies = Object.values(moviesByCategory).flat().concat(extras);
+  const trendingMovies = allMovies.filter((t) => t.trending);
+  const newReleaseMovies = allMovies.filter((t) => t.newRelease);
+
+  const hasCategoryContent = categories.some(
+    (c) => (moviesByCategory[c.id]?.length ?? 0) > 0
+  );
+  const hasContent = hasCategoryContent || extras.length > 0 || seriesList.length > 0;
 
   return (
     <MainLayout flush>
+      {/* ── Hero ── */}
       <Hero />
-      <div className="mx-auto max-w-7xl space-y-10 px-4 py-10 sm:px-6">
+
+      {/* ── Content area — full viewport width ── */}
+      <div className="relative w-full bg-background pb-20">
+
+        {/* Top gradient bleed from Hero into content */}
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-12 z-10"
+          style={{
+            background:
+              "linear-gradient(to bottom, var(--background) 0%, transparent 100%)",
+          }}
+        />
+
         {loading ? (
-          <div className="flex items-center justify-center py-24"><Loader2 className="size-8 animate-spin text-muted-foreground" /></div>
+          <SkeletonRows />
         ) : !hasContent ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-24 text-center">
-            <p className="text-lg font-semibold">No content available yet</p>
-            <p className="mt-1 text-sm text-muted-foreground">Check back soon — new titles are being added.</p>
+          <div className="pt-12">
+            <EmptyState />
           </div>
         ) : (
-          <>
-            {/* Web Series row */}
-            {seriesList.length > 0 && <SeriesRow heading="Web Series" seriesList={seriesList} />}
+          <div className="pt-6 space-y-1">
 
-            {/* Movies by category */}
-            {categories.map((cat) => {
+            {/* ── Trending Now ── */}
+            {trendingMovies.length > 0 && (
+              <>
+                <ContentRow
+                  heading="Trending Now"
+                  titles={trendingMovies}
+                  badge="trending"
+                  seeAllHref="/library"
+                />
+                <SectionDivider />
+              </>
+            )}
+
+            {/* ── Web Series ── */}
+            {seriesList.length > 0 && (
+              <>
+                <SeriesContentRow
+                  heading="Web Series"
+                  series={seriesList}
+                  badge="series"
+                  seeAllHref="/library"
+                />
+                <SectionDivider />
+              </>
+            )}
+
+            {/* ── New Releases ── */}
+            {newReleaseMovies.length > 0 && (
+              <>
+                <ContentRow
+                  heading="New Releases"
+                  titles={newReleaseMovies}
+                  badge="new"
+                  seeAllHref="/library"
+                />
+                <SectionDivider />
+              </>
+            )}
+
+            {/* ── Movies by category ── */}
+            {categories.map((cat, idx) => {
               const titles = moviesByCategory[cat.id] ?? [];
               if (!titles.length) return null;
-              return <TitleRow key={cat.id} heading={cat.name} titles={titles} />;
+              return (
+                <div key={cat.id}>
+                  <ContentRow
+                    heading={cat.name}
+                    titles={titles}
+                    seeAllHref="/library"
+                  />
+                  {idx < categories.length - 1 && <SectionDivider />}
+                </div>
+              );
             })}
-            {extras.length > 0 && <TitleRow heading="Other Titles" titles={extras} />}
-          </>
+
+            {/* ── Uncategorised ── */}
+            {extras.length > 0 && (
+              <>
+                <SectionDivider />
+                <ContentRow
+                  heading="More Titles"
+                  titles={extras}
+                  seeAllHref="/library"
+                />
+              </>
+            )}
+
+            {/* Bottom breathing room */}
+            <div className="h-8" />
+          </div>
         )}
       </div>
     </MainLayout>

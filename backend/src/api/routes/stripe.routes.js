@@ -146,8 +146,6 @@ router.get('/my-payments', authenticate, async (req, res) => {
 router.post('/fulfill-checkout', authenticate, async (req, res) => {
   try {
     const { session_id } = req.body;
-    console.log('--------------session_id:------------', session_id);
-
     if (!session_id) return errorResponse(res, 'session_id is required', 400);
     const result = await StripeService.fulfillCheckout(session_id);
     return successResponse(res, 'Checkout fulfilled', result);

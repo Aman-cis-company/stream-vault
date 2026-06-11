@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { DashboardLayout, StatCard } from "@/components/layouts/DashboardLayout";
 import { Protected } from "@/components/streaming/Protected";
@@ -7,6 +7,8 @@ import { TitleCard } from "@/components/streaming/TitleCard";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { fetchMovies } from "@/lib/movies";
+import { useSocketEvent } from "@/hooks/useSocket";
+import { SOCKET_EVENTS } from "@/lib/socket";
 import type { Title } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -68,19 +70,7 @@ function Dashboard() {
   const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>([]);
   const [loadingStats, setLoadingStats] = useState(true);
 
-  useEffect(() => {
-    fetchMovies({ status: "published", limit: 10 })
-      .then(setRecommended)
-      .catch(() => {});
-
-    api.get("/stripe/subscription-status")
-      .then(({ data }) => setSubscription(data.data.subscription))
-      .catch(() => {});
-
-    api.get("/stripe/my-payments?limit=10")
-      .then(({ data }) => setPayments(data.data.payments ?? []))
-      .catch(() => {});
-
+  const loadStats = useCallback(() => {
     Promise.all([
       api.get("/user/stats"),
       api.get("/user/watch-activity"),
@@ -94,6 +84,51 @@ function Dashboard() {
       .catch(() => {})
       .finally(() => setLoadingStats(false));
   }, []);
+
+  const loadSubscription = useCallback(() => {
+    api.get("/stripe/subscription-status")
+      .then(({ data }) => setSubscription(data.data.subscription))
+      .catch(() => {});
+
+    api.get("/stripe/my-payments?limit=10")
+      .then(({ data }) => setPayments(data.data.payments ?? []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetchMovies({ status: "published", limit: 10 })
+      .then(setRecommended)
+      .catch(() => {});
+    loadSubscription();
+    loadStats();
+  }, [loadStats, loadSubscription]);
+
+  // ── Real-time: subscription events ────────────────────────────────────────
+  useSocketEvent(SOCKET_EVENTS.SUBSCRIPTION_CREATED, () => {
+    loadSubscription();
+    loadStats();
+  });
+  useSocketEvent(SOCKET_EVENTS.SUBSCRIPTION_CANCELLED, () => {
+    loadSubscription();
+    loadStats();
+  });
+  useSocketEvent(SOCKET_EVENTS.SUBSCRIPTION_RENEWED, () => {
+    loadSubscription();
+    loadStats();
+  });
+
+  // ── Real-time: payment events ─────────────────────────────────────────────
+  useSocketEvent(SOCKET_EVENTS.PAYMENT_COMPLETED, () => {
+    loadSubscription();
+    loadStats();
+  });
+
+  // ── Real-time: content added ──────────────────────────────────────────────
+  useSocketEvent(SOCKET_EVENTS.MOVIE_CREATED, () => {
+    fetchMovies({ status: "published", limit: 10 })
+      .then(setRecommended)
+      .catch(() => {});
+  });
 
   const planName = subscription?.plan?.name ?? user?.plan ?? "Standard";
   const renewDate = subscription?.end_date
