@@ -253,7 +253,11 @@ class AuthService {
    * Update profile.
    */
   async updateProfile(userId, data) {
-    await UserRepository.updateById(userId, data);
+    console.log('data: ', data);
+    console.log('userId: ', userId);
+    // Hash password
+    const hashed = await bcrypt.hash(data.password, 12);
+    await UserRepository.updateById(userId, { ...data, password: hashed });
     return UserRepository.findById(userId);
   }
 }

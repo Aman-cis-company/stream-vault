@@ -25,6 +25,7 @@ import AdminSeries from "./pages/admin/AdminSeries";
 import MyList from "./routes/my-list";
 import Checkout from "./routes/checkout";
 import RecordKeeping from "./routes/record-keeping";
+import ResetPasswordPage from "./routes/reset-password";
 
 export default function App() {
   return (
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/my-list" element={<MyList />} />

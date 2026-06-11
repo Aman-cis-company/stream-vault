@@ -3,7 +3,7 @@ const nodemailer = require('nodemailer');
 const logger = require('./logger');
 
 const transporter = nodemailer.createTransport({
-  host: process.env.MAIL_HOST || 'smtp.gmail.com',
+  host: process.env.MAIL_HOST || 'smtp.ethereal.email',
   port: parseInt(process.env.MAIL_PORT, 10) || 587,
   secure: parseInt(process.env.MAIL_PORT, 10) === 465,
   auth: {

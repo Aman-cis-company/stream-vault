@@ -384,7 +384,7 @@ export function Hero() {
       )}
 
       {/* Main content */}
-      <div className="relative z-20 flex h-full max-w-full flex-col justify-between px-8 pb-6 pt-24 sm:px-6">
+      <div className="relative z-20 flex h-full max-w-full flex-col justify-between px-8 pb-6 pt-24 sm:px-8">
 
         {/* Hero text + actions */}
         <div

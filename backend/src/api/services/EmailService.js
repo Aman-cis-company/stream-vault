@@ -1,3 +1,4 @@
+const nodemailer = require('nodemailer');
 const transporter = require('../../config/mail');
 const logger = require('../../config/logger');
 
@@ -6,14 +7,12 @@ const FROM = process.env.MAIL_FROM || 'StreamVault <noreply@streamvault.com>';
 class EmailService {
   async sendMail({ to, subject, html, text }) {
     try {
-      const info = await transporter.sendMail({
-        from: FROM,
-        to,
-        subject,
-        html,
-        text,
-      });
+      const info = await transporter.sendMail({ from: FROM, to, subject, html, text });
       logger.info('Email sent', { to, subject, messageId: info.messageId });
+
+      const previewUrl = nodemailer.getTestMessageUrl(info);
+      if (previewUrl) logger.info(`📬 Preview: ${previewUrl}`);
+
       return info;
     } catch (err) {
       logger.error('Failed to send email', { to, subject, error: err.message });
@@ -40,9 +39,7 @@ class EmailService {
         <p>This link expires in <strong>1 hour</strong>.</p>
         <p>If you did not request this, you can safely ignore this email.</p>
         <hr style="border: 1px solid #eee; margin: 30px 0;">
-        <p style="color: #999; font-size: 12px;">
-          StreamVault &mdash; Your ultimate streaming destination
-        </p>
+        <p style="color: #999; font-size: 12px;">StreamVault &mdash; Your ultimate streaming destination</p>
       </div>
     `;
 
@@ -60,7 +57,6 @@ class EmailService {
         <h2 style="color: #e50914;">Welcome to StreamVault!</h2>
         <p>Hello ${user.first_name},</p>
         <p>Your account has been created successfully. Start exploring thousands of movies and shows.</p>
-        <p>Ready to dive in? Choose a subscription plan that suits you.</p>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/plans"
              style="background-color: #e50914; color: white; padding: 14px 28px;
@@ -107,7 +103,6 @@ class EmailService {
         <h2 style="color: #e50914;">Payment Failed</h2>
         <p>Hello ${user.first_name},</p>
         <p>We were unable to process your payment for the <strong>${planName}</strong> plan.</p>
-        <p>Please update your payment details to continue enjoying StreamVault.</p>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/billing"
              style="background-color: #e50914; color: white; padding: 14px 28px;

@@ -8,8 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Loader2, MailCheck, ArrowRight, ArrowLeft } from "lucide-react";
+import { forgotPassword } from "@/lib/utils";
 
-const schema = z.object({ email: z.string().trim().email("Enter a valid email").max(255) });
+const schema = z.object({
+  email: z.string().trim().email("Enter a valid email").max(255),
+});
 type FormValues = z.infer<typeof schema>;
 
 export default function ForgotPasswordPage() {
@@ -19,15 +22,26 @@ export default function ForgotPasswordPage() {
     handleSubmit,
     getValues,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { email: "" } });
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { email: "" },
+  });
 
-  const onSubmit = async () => {
-    await new Promise((r) => setTimeout(r, 700));
-    setSent(true);
+  const onSubmit = async (data: FormValues) => {
+    try {
+      await forgotPassword(data.email);
+    } catch {
+      // Silently ignore — backend always returns success to prevent user enumeration
+    } finally {
+      setSent(true); // Always show success UI regardless of outcome
+    }
   };
 
   return (
-    <AuthLayout title="Reset your password" subtitle="We'll email you a secure reset link valid for 15 minutes.">
+    <AuthLayout
+      title="Reset your password"
+      subtitle="We'll email you a secure reset link valid for 15 minutes."
+    >
       {sent ? (
         <div className="rounded-2xl border border-success/25 bg-success/8 p-8 text-center space-y-4">
           <div className="mx-auto inline-flex size-16 items-center justify-center rounded-full bg-success/15 ring-1 ring-success/25 text-success">
@@ -37,11 +51,16 @@ export default function ForgotPasswordPage() {
             <h2 className="font-extrabold text-lg">Check your inbox</h2>
             <p className="mt-1.5 text-sm text-white/50 leading-relaxed">
               We sent a reset link to{" "}
-              <strong className="text-white font-semibold">{getValues("email")}</strong>.
-              Check spam if you don't see it within a few minutes.
+              <strong className="text-white font-semibold">
+                {getValues("email")}
+              </strong>
+              . Check spam if you don't see it within a few minutes.
             </p>
           </div>
-          <Button className="w-full h-11 rounded-xl font-bold shadow-glow-sm" asChild>
+          <Button
+            className="w-full h-11 rounded-xl font-bold shadow-glow-sm"
+            asChild
+          >
             <Link to="/login" className="flex items-center gap-2">
               <ArrowLeft className="size-4" />
               Back to sign in
@@ -49,9 +68,16 @@ export default function ForgotPasswordPage() {
           </Button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="space-y-5"
+          noValidate
+        >
           <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-white/50">
+            <Label
+              htmlFor="email"
+              className="text-xs font-semibold uppercase tracking-wider text-white/50"
+            >
               Email address
             </Label>
             <Input
@@ -62,7 +88,9 @@ export default function ForgotPasswordPage() {
               className="h-11 rounded-xl border-white/10 bg-white/6 text-white placeholder:text-white/30 focus:border-primary/60 focus:bg-white/8"
               {...register("email")}
             />
-            {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+            {errors.email && (
+              <p className="text-xs text-destructive">{errors.email.message}</p>
+            )}
           </div>
 
           <Button
@@ -81,7 +109,10 @@ export default function ForgotPasswordPage() {
           <div className="text-center">
             <p className="text-sm text-white/40">
               Remembered it?{" "}
-              <Link to="/login" className="font-bold text-primary hover:text-primary/80 transition-colors">
+              <Link
+                to="/login"
+                className="font-bold text-primary hover:text-primary/80 transition-colors"
+              >
                 Sign in
               </Link>
             </p>

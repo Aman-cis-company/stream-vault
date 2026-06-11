@@ -47,6 +47,8 @@ const updateProfileSchema = Joi.object({
   last_name: Joi.string().min(2).max(100).optional().label('Last name'),
   phone: Joi.string().pattern(/^\+?[0-9]{7,15}$/).optional().allow('', null).label('Phone'),
   avatar: Joi.string().uri().optional().allow('', null).label('Avatar'),
+  current_password: Joi.string().optional(),        // ← allow it through
+  password: Joi.string().min(8).max(128).optional(),
 });
 
 /**
