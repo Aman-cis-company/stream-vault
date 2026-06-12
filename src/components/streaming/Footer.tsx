@@ -69,7 +69,7 @@ export function Footer() {
     <footer className="mt-24 border-t border-white/6">
       {/* Newsletter strip */}
       <div className="border-b border-white/6 bg-card/20">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="flex flex-col gap-5 px-4 py-10 sm:flex-row sm:items-center sm:justify-between md:px-8 lg:px-12">
           <div>
             <p className="text-base font-bold">Stay in the loop</p>
             <p className="mt-1 text-sm text-muted-foreground">New releases, curated picks, and platform news.</p>
@@ -91,7 +91,7 @@ export function Footer() {
 
       {/* Main footer */}
       <div className="bg-card/10">
-        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-10 px-4 py-14 md:grid-cols-2 lg:grid-cols-5 md:px-8 lg:px-12">
           {/* Brand column */}
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-2.5 group w-fit">
@@ -157,8 +157,8 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-white/5 px-4 py-5 sm:px-6">
-          <div className="mx-auto flex max-w-7xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="border-t border-white/5 py-5">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between md:px-8 lg:px-12">
             <p className="text-xs text-muted-foreground/60">
               © {new Date().getFullYear()} StreamVault, Inc. All rights reserved. Prices shown in Indian Rupees (₹).
             </p>

@@ -259,8 +259,8 @@ function Admin() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.22 0.016 258)" vertical={false} />
-                  <XAxis dataKey="month" stroke="oklch(0.45 0.010 258)" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="oklch(0.45 0.010 258)" fontSize={11} tickLine={false} axisLine={false} width={52}
+                  <XAxis dataKey="month" stroke="oklch(0.68 0.012 258)" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis stroke="oklch(0.68 0.012 258)" fontSize={11} tickLine={false} axisLine={false} width={52}
                     tickFormatter={(v) => `₹${(v / 100000).toFixed(1)}L`} />
                   <Tooltip
                     contentStyle={{
@@ -297,7 +297,7 @@ function Admin() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={revenueData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.22 0.016 258)" vertical={false} />
-                  <XAxis dataKey="month" stroke="oklch(0.45 0.010 258)" fontSize={11} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="month" stroke="oklch(0.68 0.012 258)" fontSize={11} tickLine={false} axisLine={false} />
                   <Tooltip
                     cursor={{ fill: "oklch(0.18 0.014 258)" }}
                     contentStyle={{

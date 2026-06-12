@@ -115,7 +115,7 @@ export function Navbar() {
             : "bg-gradient-to-b from-black/75 via-black/35 to-transparent border-b border-transparent"
         }`}
       >
-        <div className="mx-auto flex h-[66px] max-w-7xl items-center gap-6 px-4 sm:px-6">
+        <div className="flex h-[66px] w-full items-center gap-6 px-4 md:px-8 lg:px-12">
 
           {/* ── Logo ── */}
           <Link to="/" className="flex items-center gap-2.5 shrink-0 group" aria-label="StreamVault home">
@@ -226,7 +226,7 @@ export function Navbar() {
                 aria-label="Notifications"
                 className="relative size-9 flex items-center justify-center rounded-xl text-white/45 hover:text-white hover:bg-white/[0.08] transition-all duration-200"
               >
-                <Bell className="size-4" />
+                <Bell className="size-5" />
                 <span className="absolute top-2 right-2 size-1.5 rounded-full bg-primary shadow-[0_0_0_2px_rgba(0,0,0,0.5)]" />
               </button>
             )}
@@ -238,7 +238,7 @@ export function Navbar() {
                   aria-label="Theme"
                   className="size-9 flex items-center justify-center rounded-xl text-white/45 hover:text-white hover:bg-white/[0.08] transition-all duration-200"
                 >
-                  <ThemeIcon className="size-4" />
+                  <ThemeIcon className="size-5" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-36 rounded-xl">
