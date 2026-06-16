@@ -31,7 +31,7 @@ class MovieRepository {
     return Movie.destroy({ where: { id } });
   }
 
-  async findAll({ limit, offset, search, categoryId, isFeatured, status }) {
+  async findAll({ limit, offset, search, categoryId, isFeatured, status, userControls }) {
     const where = {};
     if (search) {
       where[Op.or] = [
@@ -43,8 +43,20 @@ class MovieRepository {
     if (isFeatured !== undefined && isFeatured !== null) where.is_featured = isFeatured;
     if (status) where.status = status;
 
+    const { getParentalQueryFilters } = require('../../helpers/parentalFilter');
+    const parentalFilters = getParentalQueryFilters(userControls);
+    const mergedWhere = { ...where };
+    if (parentalFilters.is_age_restricted !== undefined) {
+      mergedWhere.is_age_restricted = parentalFilters.is_age_restricted;
+    }
+    if (parentalFilters[Op.and]) {
+      mergedWhere[Op.and] = mergedWhere[Op.and]
+        ? [...mergedWhere[Op.and], ...parentalFilters[Op.and]]
+        : parentalFilters[Op.and];
+    }
+
     return Movie.findAndCountAll({
-      where,
+      where: mergedWhere,
       limit,
       offset,
       include: [

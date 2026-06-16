@@ -225,17 +225,32 @@ class MovieService {
     await MovieRepository.deleteById(id);
   }
 
-  async getById(id) {
+  async getById(id, userControls = null) {
     const movie = await MovieRepository.findById(id);
     if (!movie) {
       const err = new Error('Movie not found');
       err.statusCode = 404;
       throw err;
     }
+
+    if (userControls) {
+      const { isRatingBlocked } = require('../../helpers/parentalFilter');
+      if (userControls.hide_restricted_content && movie.is_age_restricted) {
+        const err = new Error('Access denied due to parental control settings.');
+        err.statusCode = 403;
+        throw err;
+      }
+      if (userControls.max_rating && isRatingBlocked(movie.content_rating, userControls.max_rating)) {
+        const err = new Error('Access denied due to parental control settings.');
+        err.statusCode = 403;
+        throw err;
+      }
+    }
+
     return movie;
   }
 
-  async getAll(query) {
+  async getAll(query, userControls = null) {
     const { page, limit, offset } = getPagination(query);
     const { search, category_id, is_featured, status } = query;
 
@@ -250,6 +265,7 @@ class MovieService {
       categoryId: category_id,
       isFeatured,
       status,
+      userControls,
     });
 
     return {

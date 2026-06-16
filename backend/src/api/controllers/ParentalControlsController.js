@@ -27,19 +27,21 @@ class ParentalControlsController {
       const { pin_enabled, pin, current_pin, hide_restricted_content, max_rating } = req.body;
       const existing = await ParentalControl.scope('withPin').findOne({ where: { user_id: req.user.id } });
 
+      // If PIN is currently enabled, require and verify the current PIN for any updates
+      if (existing && existing.pin_enabled && existing.pin_hash) {
+        if (!current_pin) {
+          return errorResponse(res, 'Current PIN is required to modify parental controls.', STATUS_CODES.UNPROCESSABLE_ENTITY);
+        }
+        const valid = await bcrypt.compare(String(current_pin), existing.pin_hash);
+        if (!valid) {
+          return errorResponse(res, MESSAGES.PARENTAL_CONTROLS_PIN_INVALID, STATUS_CODES.FORBIDDEN);
+        }
+      }
+
       let pinHash = existing?.pin_hash ?? null;
 
-      // Changing PIN
+      // Setting or changing PIN
       if (pin_enabled && pin) {
-        if (existing?.pin_enabled && existing?.pin_hash) {
-          if (!current_pin) {
-            return errorResponse(res, 'Current PIN is required to change PIN.', STATUS_CODES.UNPROCESSABLE_ENTITY);
-          }
-          const valid = await bcrypt.compare(String(current_pin), existing.pin_hash);
-          if (!valid) {
-            return errorResponse(res, MESSAGES.PARENTAL_CONTROLS_PIN_INVALID, STATUS_CODES.FORBIDDEN);
-          }
-        }
         pinHash = await bcrypt.hash(String(pin), 10);
       }
 

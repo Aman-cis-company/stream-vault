@@ -5,6 +5,7 @@ const EpisodeController = require('../controllers/EpisodeController');
 const authenticate = require('../middlewares/authenticate');
 const authorize = require('../middlewares/authorize');
 const { uploadMovieFiles, handleMulterError } = require('../middlewares/upload');
+const tryAuthenticate = require('../middlewares/tryAuthenticate');
 const ROLES = require('../../constants/roles');
 
 const uploadFields = uploadMovieFiles.fields([
@@ -13,8 +14,8 @@ const uploadFields = uploadMovieFiles.fields([
 ]);
 
 // ── Series CRUD ───────────────────────────────────────────────────────────────
-router.get('/', SeriesController.getAll.bind(SeriesController));
-router.get('/:id', SeriesController.getById.bind(SeriesController));
+router.get('/', tryAuthenticate, SeriesController.getAll.bind(SeriesController));
+router.get('/:id', tryAuthenticate, SeriesController.getById.bind(SeriesController));
 
 router.post('/',
   authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.TEAM_MEMBER),
@@ -34,8 +35,8 @@ router.delete('/:id',
 );
 
 // ── Episode CRUD (nested under series) ───────────────────────────────────────
-router.get('/:seriesId/episodes', EpisodeController.getAll.bind(EpisodeController));
-router.get('/:seriesId/episodes/:episodeId', EpisodeController.getById.bind(EpisodeController));
+router.get('/:seriesId/episodes', tryAuthenticate, EpisodeController.getAll.bind(EpisodeController));
+router.get('/:seriesId/episodes/:episodeId', tryAuthenticate, EpisodeController.getById.bind(EpisodeController));
 router.get('/:seriesId/episodes/:episodeId/transcoding-status', authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.TEAM_MEMBER), EpisodeController.getTranscodingStatus.bind(EpisodeController));
 
 router.post('/:seriesId/episodes',

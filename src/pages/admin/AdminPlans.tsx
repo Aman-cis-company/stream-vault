@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Pencil, Loader2, ArrowLeft, CheckCircle2, XCircle } from "lucide-react";
+import { Pencil, Loader2, ArrowLeft, CheckCircle2, XCircle, CreditCard } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function AdminPlans() {

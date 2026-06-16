@@ -21,7 +21,12 @@ class MovieController {
 
   async getAll(req, res) {
     try {
-      const { movies, meta } = await MovieService.getAll(req.query);
+      let userControls = null;
+      if (req.user) {
+        const { ParentalControl } = require('../../models');
+        userControls = await ParentalControl.findOne({ where: { user_id: req.user.id } });
+      }
+      const { movies, meta } = await MovieService.getAll(req.query, userControls);
       return successResponse(res, MESSAGES.MOVIES_FETCHED, { movies }, STATUS_CODES.OK, meta);
     } catch (err) {
       logger.error('MovieController.getAll error', { error: err.message });
@@ -31,12 +36,20 @@ class MovieController {
 
   async getById(req, res) {
     try {
-      const movie = await MovieService.getById(req.params.id);
+      let userControls = null;
+      if (req.user) {
+        const { ParentalControl } = require('../../models');
+        userControls = await ParentalControl.findOne({ where: { user_id: req.user.id } });
+      }
+      const movie = await MovieService.getById(req.params.id, userControls);
       return successResponse(res, MESSAGES.MOVIE_FETCHED, { movie });
     } catch (err) {
       logger.error('MovieController.getById error', { error: err.message });
       if (err.statusCode === 404) {
         return errorResponse(res, MESSAGES.MOVIE_NOT_FOUND, STATUS_CODES.NOT_FOUND);
+      }
+      if (err.statusCode === 403) {
+        return errorResponse(res, err.message || 'Access denied due to parental control restrictions.', STATUS_CODES.FORBIDDEN);
       }
       return errorResponse(res, MESSAGES.INTERNAL_ERROR, STATUS_CODES.INTERNAL_SERVER_ERROR);
     }

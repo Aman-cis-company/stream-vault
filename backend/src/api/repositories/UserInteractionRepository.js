@@ -41,15 +41,22 @@ class UserInteractionRepository {
 
     const [movies, seriesList] = await Promise.all([
       movieIds.length
-        ? Movie.findAll({ where: { id: { [Op.in]: movieIds } }, attributes: ['id', 'title', 'thumbnail_url', 'duration', 'release_date', 'status'] })
+        ? Movie.findAll({ where: { id: { [Op.in]: movieIds } }, attributes: ['id', 'title', 'thumbnail_url', 'duration', 'release_date', 'status', 'is_age_restricted', 'content_rating'] })
         : [],
       seriesIds.length
-        ? Series.findAll({ where: { id: { [Op.in]: seriesIds } }, attributes: ['id', 'title', 'thumbnail_url', 'release_date', 'status'] })
+        ? Series.findAll({ where: { id: { [Op.in]: seriesIds } }, attributes: ['id', 'title', 'thumbnail_url', 'release_date', 'status', 'is_age_restricted', 'content_rating'] })
         : [],
     ]);
 
-    const movieMap = Object.fromEntries(movies.map((m) => [m.id, m]));
-    const seriesMap = Object.fromEntries(seriesList.map((s) => [s.id, s]));
+    const { ParentalControl } = require('../../models');
+    const { filterContentByParentalControls } = require('../../helpers/parentalFilter');
+    const controls = await ParentalControl.findOne({ where: { user_id: userId } });
+
+    const filteredMovies = filterContentByParentalControls(movies, controls);
+    const filteredSeriesList = filterContentByParentalControls(seriesList, controls);
+
+    const movieMap = Object.fromEntries(filteredMovies.map((m) => [m.id, m]));
+    const seriesMap = Object.fromEntries(filteredSeriesList.map((s) => [s.id, s]));
 
     return rows.map((r) => {
       const detail = r.content_type === 'movie' ? movieMap[r.content_id] : seriesMap[r.content_id];
@@ -68,15 +75,22 @@ class UserInteractionRepository {
 
     const [movies, seriesList] = await Promise.all([
       movieIds.length
-        ? Movie.findAll({ where: { id: { [Op.in]: movieIds } }, attributes: ['id', 'title', 'thumbnail_url', 'duration', 'release_date', 'status'] })
+        ? Movie.findAll({ where: { id: { [Op.in]: movieIds } }, attributes: ['id', 'title', 'thumbnail_url', 'duration', 'release_date', 'status', 'is_age_restricted', 'content_rating'] })
         : [],
       seriesIds.length
-        ? Series.findAll({ where: { id: { [Op.in]: seriesIds } }, attributes: ['id', 'title', 'thumbnail_url', 'release_date', 'status'] })
+        ? Series.findAll({ where: { id: { [Op.in]: seriesIds } }, attributes: ['id', 'title', 'thumbnail_url', 'release_date', 'status', 'is_age_restricted', 'content_rating'] })
         : [],
     ]);
 
-    const movieMap = Object.fromEntries(movies.map((m) => [m.id, m]));
-    const seriesMap = Object.fromEntries(seriesList.map((s) => [s.id, s]));
+    const { ParentalControl } = require('../../models');
+    const { filterContentByParentalControls } = require('../../helpers/parentalFilter');
+    const controls = await ParentalControl.findOne({ where: { user_id: userId } });
+
+    const filteredMovies = filterContentByParentalControls(movies, controls);
+    const filteredSeriesList = filterContentByParentalControls(seriesList, controls);
+
+    const movieMap = Object.fromEntries(filteredMovies.map((m) => [m.id, m]));
+    const seriesMap = Object.fromEntries(filteredSeriesList.map((s) => [s.id, s]));
 
     return rows.map((r) => {
       const detail = r.content_type === 'movie' ? movieMap[r.content_id] : seriesMap[r.content_id];

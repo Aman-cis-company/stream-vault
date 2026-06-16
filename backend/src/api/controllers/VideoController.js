@@ -31,6 +31,19 @@ class VideoController {
         return errorResponse(res, MESSAGES.MOVIE_NOT_FOUND, STATUS_CODES.NOT_FOUND);
       }
 
+      // Enforce parental controls
+      const { ParentalControl } = require('../../models');
+      const { isRatingBlocked } = require('../../helpers/parentalFilter');
+      const controls = await ParentalControl.findOne({ where: { user_id: req.user.id } });
+      if (controls) {
+        if (controls.hide_restricted_content && movie.is_age_restricted) {
+          return errorResponse(res, 'Access denied due to parental control settings.', STATUS_CODES.FORBIDDEN);
+        }
+        if (controls.max_rating && isRatingBlocked(movie.content_rating, controls.max_rating)) {
+          return errorResponse(res, 'Access denied due to parental control settings.', STATUS_CODES.FORBIDDEN);
+        }
+      }
+
       const videoUrl = movie.video_url;
       if (!videoUrl || (!videoUrl.startsWith('/uploads/videos/') && !videoUrl.startsWith('/uploads/hls/'))) {
         return errorResponse(res, MESSAGES.VIDEO_NOT_LOCAL, STATUS_CODES.UNPROCESSABLE_ENTITY);
@@ -62,6 +75,22 @@ class VideoController {
       const episode = await EpisodeRepository.findById(req.params.episodeId);
       if (!episode) {
         return errorResponse(res, 'Episode not found', STATUS_CODES.NOT_FOUND);
+      }
+
+      // Enforce parental controls on parent series
+      const { ParentalControl, Series } = require('../../models');
+      const { isRatingBlocked } = require('../../helpers/parentalFilter');
+      const series = await Series.findByPk(episode.series_id);
+      if (series) {
+        const controls = await ParentalControl.findOne({ where: { user_id: req.user.id } });
+        if (controls) {
+          if (controls.hide_restricted_content && series.is_age_restricted) {
+            return errorResponse(res, 'Access denied due to parental control settings.', STATUS_CODES.FORBIDDEN);
+          }
+          if (controls.max_rating && isRatingBlocked(series.content_rating, controls.max_rating)) {
+            return errorResponse(res, 'Access denied due to parental control settings.', STATUS_CODES.FORBIDDEN);
+          }
+        }
       }
 
       const videoUrl = episode.video_url;

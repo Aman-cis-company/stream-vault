@@ -81,13 +81,28 @@ class SeriesService {
     await SeriesRepository.deleteById(id);
   }
 
-  async getById(id) {
+  async getById(id, userControls = null) {
     const series = await SeriesRepository.findById(id);
     if (!series) { const e = new Error('Series not found'); e.statusCode = 404; throw e; }
+
+    if (userControls) {
+      const { isRatingBlocked } = require('../../helpers/parentalFilter');
+      if (userControls.hide_restricted_content && series.is_age_restricted) {
+        const err = new Error('Access denied due to parental control settings.');
+        err.statusCode = 403;
+        throw err;
+      }
+      if (userControls.max_rating && isRatingBlocked(series.content_rating, userControls.max_rating)) {
+        const err = new Error('Access denied due to parental control settings.');
+        err.statusCode = 403;
+        throw err;
+      }
+    }
+
     return series;
   }
 
-  async getAll(query) {
+  async getAll(query, userControls = null) {
     const { page, limit, offset } = getPagination(query);
     const { search, category_id, status, is_featured } = query;
 
@@ -96,7 +111,7 @@ class SeriesService {
     else if (is_featured === 'false') isFeatured = false;
 
     const { rows, count } = await SeriesRepository.findAll({
-      limit, offset, search, categoryId: category_id, status, isFeatured,
+      limit, offset, search, categoryId: category_id, status, isFeatured, userControls,
     });
 
     return { series: rows, meta: paginationMeta(count, page, limit) };

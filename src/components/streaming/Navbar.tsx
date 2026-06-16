@@ -25,6 +25,7 @@ import {
   User,
   Users,
   Shield,
+  Lock,
   LogOut,
   Sparkles,
 } from "lucide-react";
@@ -311,6 +312,11 @@ export function Navbar() {
                   <DropdownMenuItem asChild className="rounded-xl mx-0.5 text-[13px] gap-2.5">
                     <Link to="/profile">
                       <User className="size-3.5 text-muted-foreground" /> Profile & Security
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="rounded-xl mx-0.5 text-[13px] gap-2.5">
+                    <Link to="/settings/parental-controls">
+                      <Lock className="size-3.5 text-muted-foreground" /> Parental Controls
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="rounded-xl mx-0.5 text-[13px] gap-2.5">

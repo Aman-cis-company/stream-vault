@@ -5,11 +5,12 @@ const authenticate = require('../middlewares/authenticate');
 const authorize = require('../middlewares/authorize');
 const { uploadMovieFiles, handleMulterError } = require('../middlewares/upload');
 const { validateCreate, validateUpdate } = require('../validators/movie.validator');
+const tryAuthenticate = require('../middlewares/tryAuthenticate');
 const ROLES = require('../../constants/roles');
 
 // Public routes
-router.get('/', MovieController.getAll.bind(MovieController));
-router.get('/:id', MovieController.getById.bind(MovieController));
+router.get('/', tryAuthenticate, MovieController.getAll.bind(MovieController));
+router.get('/:id', tryAuthenticate, MovieController.getById.bind(MovieController));
 router.get('/:id/transcoding-status', authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.TEAM_MEMBER), MovieController.getTranscodingStatus.bind(MovieController));
 
 // Protected routes — create/update accept multipart form data (thumbnail + video)

@@ -21,7 +21,12 @@ class SeriesController {
 
   async getAll(req, res) {
     try {
-      const { series, meta } = await SeriesService.getAll(req.query);
+      let userControls = null;
+      if (req.user) {
+        const { ParentalControl } = require('../../models');
+        userControls = await ParentalControl.findOne({ where: { user_id: req.user.id } });
+      }
+      const { series, meta } = await SeriesService.getAll(req.query, userControls);
       return successResponse(res, MESSAGES.SERIES_FETCHED, { series }, STATUS_CODES.OK, meta);
     } catch (err) {
       logger.error('SeriesController.getAll error', { error: err.message });
@@ -31,11 +36,19 @@ class SeriesController {
 
   async getById(req, res) {
     try {
-      const series = await SeriesService.getById(req.params.id);
+      let userControls = null;
+      if (req.user) {
+        const { ParentalControl } = require('../../models');
+        userControls = await ParentalControl.findOne({ where: { user_id: req.user.id } });
+      }
+      const series = await SeriesService.getById(req.params.id, userControls);
       return successResponse(res, MESSAGES.SERIES_FETCHED, { series });
     } catch (err) {
       logger.error('SeriesController.getById error', { error: err.message });
       if (err.statusCode === 404) return errorResponse(res, MESSAGES.SERIES_NOT_FOUND, STATUS_CODES.NOT_FOUND);
+      if (err.statusCode === 403) {
+        return errorResponse(res, err.message || 'Access denied due to parental control restrictions.', STATUS_CODES.FORBIDDEN);
+      }
       return errorResponse(res, MESSAGES.INTERNAL_ERROR, STATUS_CODES.INTERNAL_SERVER_ERROR);
     }
   }

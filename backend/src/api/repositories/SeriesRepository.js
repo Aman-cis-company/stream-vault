@@ -41,7 +41,7 @@ class SeriesRepository {
     return Series.destroy({ where: { id } });
   }
 
-  async findAll({ limit, offset, search, categoryId, status, isFeatured }) {
+  async findAll({ limit, offset, search, categoryId, status, isFeatured, userControls }) {
     const where = {};
     if (search) {
       where[Op.or] = [
@@ -53,8 +53,20 @@ class SeriesRepository {
     if (status) where.status = status;
     if (isFeatured !== undefined && isFeatured !== null) where.is_featured = isFeatured;
 
+    const { getParentalQueryFilters } = require('../../helpers/parentalFilter');
+    const parentalFilters = getParentalQueryFilters(userControls);
+    const mergedWhere = { ...where };
+    if (parentalFilters.is_age_restricted !== undefined) {
+      mergedWhere.is_age_restricted = parentalFilters.is_age_restricted;
+    }
+    if (parentalFilters[Op.and]) {
+      mergedWhere[Op.and] = mergedWhere[Op.and]
+        ? [...mergedWhere[Op.and], ...parentalFilters[Op.and]]
+        : parentalFilters[Op.and];
+    }
+
     return Series.findAndCountAll({
-      where,
+      where: mergedWhere,
       limit,
       offset,
       include: [{ model: Category, as: 'category', attributes: ['id', 'name', 'slug'] }],

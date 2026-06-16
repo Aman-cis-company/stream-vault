@@ -7,6 +7,7 @@ import {
   Users2,
   User,
   Shield,
+  Lock,
   CreditCard,
   TrendingUp,
   ArrowUpRight,
@@ -23,6 +24,7 @@ const NAV = [
   { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { to: "/affiliate", label: "Affiliate", icon: Users2 },
   { to: "/profile", label: "Profile & Security", icon: User },
+  { to: "/settings/parental-controls", label: "Parental Controls", icon: Lock },
 ] as const;
 
 export function DashboardLayout({ children, title }: { children: ReactNode; title: string }) {

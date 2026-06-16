@@ -15,6 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { ShieldCheck, Lock, EyeOff, Loader2 } from "lucide-react";
 import type { ContentRating } from "@/lib/mock-data";
@@ -42,11 +50,15 @@ function ParentalControlsInner() {
     hide_restricted_content: false,
     max_rating: null,
   });
+  const [hasPin, setHasPin] = useState(false);
   const [pin, setPin] = useState("");
-  const [currentPin, setCurrentPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // States for the professional PIN validation modal
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinDigits, setPinDigits] = useState(["", "", "", ""]);
 
   useEffect(() => {
     apiClient.get("/parental-controls")
@@ -57,15 +69,47 @@ function ParentalControlsInner() {
           hide_restricted_content: c.hide_restricted_content ?? false,
           max_rating: c.max_rating ?? null,
         });
+        setHasPin(c.pin_enabled ?? false);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  async function handleSave() {
+  const handleDigitChange = (index: number, val: string) => {
+    const newVal = val.replace(/\D/g, "").slice(-1);
+    const nextDigits = [...pinDigits];
+    nextDigits[index] = newVal;
+    setPinDigits(nextDigits);
+
+    // Auto-focus next input
+    if (newVal && index < 3) {
+      const nextInput = document.getElementById(`pin-input-${index + 1}`);
+      nextInput?.focus();
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !pinDigits[index] && index > 0) {
+      const prevInput = document.getElementById(`pin-input-${index - 1}`);
+      prevInput?.focus();
+    }
+  };
+
+  async function handleSave(enteredPin?: string) {
     if (controls.pin_enabled && pin) {
       if (pin.length < 4) { toast.error("PIN must be at least 4 digits."); return; }
       if (pin !== confirmPin) { toast.error("PINs do not match."); return; }
+    }
+
+    // If PIN is active on backend and no PIN has been supplied via confirmation modal yet
+    if (hasPin && !enteredPin) {
+      setPinDigits(["", "", "", ""]);
+      setShowPinModal(true);
+      // Wait for DOM then focus first box
+      setTimeout(() => {
+        document.getElementById("pin-input-0")?.focus();
+      }, 100);
+      return;
     }
 
     setSaving(true);
@@ -73,18 +117,26 @@ function ParentalControlsInner() {
       await apiClient.post("/parental-controls", {
         pin_enabled: controls.pin_enabled,
         pin: pin || undefined,
-        current_pin: currentPin || undefined,
+        current_pin: enteredPin || undefined,
         hide_restricted_content: controls.hide_restricted_content,
         max_rating: controls.max_rating || undefined,
       });
       toast.success("Parental controls saved.");
+      setHasPin(controls.pin_enabled);
       setPin("");
       setConfirmPin("");
-      setCurrentPin("");
+      setShowPinModal(false);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
         ?? "Failed to save.";
       toast.error(msg);
+      // Clear digits for another try
+      if (enteredPin) {
+        setPinDigits(["", "", "", ""]);
+        setTimeout(() => {
+          document.getElementById("pin-input-0")?.focus();
+        }, 100);
+      }
     } finally {
       setSaving(false);
     }
@@ -201,27 +253,64 @@ function ParentalControlsInner() {
                     placeholder="Re-enter PIN"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label>Current PIN <span className="text-muted-foreground font-normal">(required to change)</span></Label>
-                  <Input
-                    type="password"
-                    inputMode="numeric"
-                    maxLength={8}
-                    value={currentPin}
-                    onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, ""))}
-                    placeholder="Current PIN (if already set)"
-                  />
-                </div>
               </div>
             )}
           </div>
 
-          <Button className="w-full" onClick={handleSave} disabled={saving}>
+          <Button className="w-full" onClick={() => handleSave()} disabled={saving}>
             {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
             Save Settings
           </Button>
         </div>
       </div>
+
+      {/* Professional verification popup for Current PIN */}
+      <Dialog open={showPinModal} onOpenChange={setShowPinModal}>
+        <DialogContent className="sm:max-w-md bg-[oklch(0.12_0.02_260)] border-white/10 text-white rounded-2xl shadow-2xl backdrop-blur-md">
+          <DialogHeader className="flex flex-col items-center text-center space-y-3">
+            <div className="flex size-14 items-center justify-center rounded-full bg-primary/10 border border-primary/20">
+              <Lock className="size-6 text-primary" />
+            </div>
+            <DialogTitle className="text-xl font-bold tracking-tight">Verify Parental PIN</DialogTitle>
+            <DialogDescription className="text-sm text-white/60 max-w-xs">
+              Please enter your 4-digit parental PIN to authorize and save these changes.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex justify-center gap-3 py-6">
+            {pinDigits.map((digit, idx) => (
+              <Input
+                key={idx}
+                id={`pin-input-${idx}`}
+                type="password"
+                inputMode="numeric"
+                maxLength={1}
+                value={digit}
+                onChange={(e) => handleDigitChange(idx, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(idx, e)}
+                className="size-14 text-center text-xl font-bold rounded-xl bg-white/5 border-white/15 focus:border-primary focus:ring-1 focus:ring-primary text-white"
+              />
+            ))}
+          </div>
+
+          <DialogFooter className="sm:justify-center gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => setShowPinModal(false)}
+              className="text-white hover:text-white hover:bg-white/5 border border-white/10 rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => handleSave(pinDigits.join(""))}
+              disabled={saving || pinDigits.some(d => !d)}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 rounded-xl"
+            >
+              {saving ? <Loader2 className="mr-2 size-4 animate-spin" /> : "Verify & Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
