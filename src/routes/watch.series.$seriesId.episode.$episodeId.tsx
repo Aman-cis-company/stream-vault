@@ -16,7 +16,9 @@ import { assetUrl } from "@/services/api";
 import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   SkipBack, SkipForward, ArrowLeft, Loader2, ChevronDown, ChevronRight, RotateCcw,
+  Subtitles, Settings, Check
 } from "lucide-react";
+import { toast } from "sonner";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -41,11 +43,53 @@ interface EpisodePlayerProps {
   poster: string;
   title: string;
   resumeFrom?: number;
+  subtitleUrl?: string | null;
   onProgress?: (currentTime: number, duration: number) => void;
   onResumeConfirmed?: () => void;
 }
 
-function EpisodePlayer({ src, poster, title, resumeFrom = 0, onProgress, onResumeConfirmed }: EpisodePlayerProps) {
+interface Cue {
+  start: number;
+  end: number;
+  text: string;
+}
+
+function parseVtt(text: string): Cue[] {
+  const lines = text.split(/\r?\n/);
+  const cues: Cue[] = [];
+  let currentCue: Cue | null = null;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.includes("-->")) {
+      const parts = line.split("-->").map(p => p.trim());
+      if (parts.length === 2) {
+        const [startStr, endStr] = parts;
+        const parseTime = (str: string) => {
+          const timeParts = str.split(":");
+          let seconds = 0;
+          if (timeParts.length === 3) {
+            seconds = parseFloat(timeParts[0]) * 3600 + parseFloat(timeParts[1]) * 60 + parseFloat(timeParts[2]);
+          } else if (timeParts.length === 2) {
+            seconds = parseFloat(timeParts[0]) * 60 + parseFloat(timeParts[1]);
+          }
+          return seconds;
+        };
+        currentCue = {
+          start: parseTime(startStr),
+          end: parseTime(endStr),
+          text: ""
+        };
+        cues.push(currentCue);
+      }
+    } else if (currentCue && line && !line.startsWith("WEBVTT")) {
+      currentCue.text = currentCue.text ? currentCue.text + "\n" + line : line;
+    }
+  }
+  return cues;
+}
+
+function EpisodePlayer({ src, poster, title, resumeFrom = 0, subtitleUrl, onProgress, onResumeConfirmed }: EpisodePlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -61,6 +105,40 @@ function EpisodePlayer({ src, poster, title, resumeFrom = 0, onProgress, onResum
   const [fullscreen, setFullscreen] = useState(false);
   const [buffering, setBuffering] = useState(true);
   const [showResumeBanner, setShowResumeBanner] = useState(false);
+
+  // Subtitles custom styling states
+  const [subtitlesEnabled, setSubtitlesEnabled] = useState(false);
+  const [subtitleSize, setSubtitleSize] = useState<"small" | "medium" | "large">("medium");
+  const [subtitleColor, setSubtitleColor] = useState<"white" | "yellow">("white");
+  const [subtitleBg, setSubtitleBg] = useState<"transparent" | "black">("transparent");
+  const [subtitlePos, setSubtitlePos] = useState<"top" | "middle" | "bottom">("bottom");
+  const [subtitleCues, setSubtitleCues] = useState<Cue[]>([]);
+  const [showSubtitleMenu, setShowSubtitleMenu] = useState(false);
+
+  // Fetch and parse WebVTT file
+  useEffect(() => {
+    if (!subtitleUrl) {
+      setSubtitleCues([]);
+      setSubtitlesEnabled(false);
+      return;
+    }
+    const url = assetUrl(subtitleUrl);
+    fetch(url)
+      .then((r) => {
+        if (!r.ok) throw new Error("VTT file not found");
+        return r.text();
+      })
+      .then((text) => {
+        const cues = parseVtt(text);
+        setSubtitleCues(cues);
+        setSubtitlesEnabled(true); // Enable by default if subtitles are present!
+      })
+      .catch((err) => {
+        console.error("Failed to fetch/parse subtitles:", err);
+        setSubtitleCues([]);
+        setSubtitlesEnabled(false);
+      });
+  }, [subtitleUrl]);
 
   // Seek to resume position once the video has enough metadata
   const handleReady = useCallback(() => {
@@ -126,6 +204,10 @@ function EpisodePlayer({ src, poster, title, resumeFrom = 0, onProgress, onResum
   const progress = duration ? (currentTime / duration) * 100 : 0;
   const ytId = isYoutube(src) ? extractYouTubeId(src) : null;
 
+  const activeCue = subtitlesEnabled
+    ? subtitleCues.find((c) => currentTime >= c.start && currentTime <= c.end)
+    : null;
+
   if (ytId) {
     return (
       <div className="relative w-full aspect-video bg-black">
@@ -140,6 +222,35 @@ function EpisodePlayer({ src, poster, title, resumeFrom = 0, onProgress, onResum
       onDoubleClick={() => document.fullscreenElement ? document.exitFullscreen() : containerRef.current?.requestFullscreen()}>
       <video ref={videoRef} className="w-full h-full object-contain" poster={poster} playsInline
         onClick={() => { const v = videoRef.current; if (!v) return; v.paused ? v.play() : v.pause(); }} />
+
+      {/* Subtitles Custom Overlay */}
+      {subtitlesEnabled && activeCue && (
+        <div
+          className={`absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none text-center max-w-[85%] transition-all duration-200 ${
+            subtitlePos === "top"
+              ? "top-[10%]"
+              : subtitlePos === "middle"
+              ? "top-1/2 -translate-y-1/2"
+              : "bottom-[16%]"
+          }`}
+        >
+          <span
+            className={`inline-block whitespace-pre-line font-medium tracking-wide leading-relaxed drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] [text-shadow:_0_1px_4px_rgb(0_0_0)] ${
+              subtitleSize === "small"
+                ? "text-sm sm:text-base"
+                : subtitleSize === "large"
+                ? "text-lg sm:text-2xl md:text-3xl lg:text-4xl"
+                : "text-base sm:text-xl md:text-2xl"
+            } ${
+              subtitleColor === "yellow" ? "text-yellow-400" : "text-white"
+            } ${
+              subtitleBg === "black" ? "bg-black/75 px-4 py-2 rounded-md" : ""
+            }`}
+          >
+            {activeCue.text}
+          </span>
+        </div>
+      )}
       <div className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.1) 60%, rgba(0,0,0,0.25) 100%)" }} />
 
       {buffering && (
@@ -191,6 +302,124 @@ function EpisodePlayer({ src, poster, title, resumeFrom = 0, onProgress, onResum
           <div className="flex-1" />
           <span className="hidden lg:block text-[11px] text-white/50 truncate max-w-[200px]">{title}</span>
           <div className="flex-1" />
+          {/* Subtitles */}
+          <div className="relative">
+            <button
+              className="flex size-9 items-center justify-center rounded-lg hover:bg-white/10 active:scale-95 transition-all"
+              onClick={() => {
+                setShowSubtitleMenu((v) => !v);
+                resetHide();
+              }}
+              aria-label="Subtitles"
+            >
+              <Subtitles className={`size-[15px] ${subtitlesEnabled ? "text-primary font-bold" : "text-white/70"}`} />
+            </button>
+
+            {/* Subtitles Customization Dropdown */}
+            {showSubtitleMenu && (
+              <div className="absolute bottom-full right-0 mb-2 w-72 rounded-xl border border-white/10 bg-[#0c0c10]/95 backdrop-blur-xl p-4 shadow-2xl z-50 text-white flex flex-col gap-3">
+                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-white/40">Subtitles Settings</span>
+                  <button
+                    onClick={() => {
+                      if (!subtitleUrl) {
+                        toast.error("No subtitles available for this episode.");
+                        setSubtitlesEnabled(false);
+                      } else {
+                        setSubtitlesEnabled((v) => !v);
+                      }
+                    }}
+                    className={`text-[10px] px-2 py-0.5 rounded transition-all font-semibold ${
+                      subtitlesEnabled ? "bg-primary/20 text-primary border border-primary/30" : "bg-white/5 text-white/60 border border-white/10"
+                    }`}
+                  >
+                    {subtitlesEnabled ? "ON" : "OFF"}
+                  </button>
+                </div>
+
+                {/* Size Option */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[10px] text-white/40 font-semibold uppercase text-left">Text Size</span>
+                  <div className="grid grid-cols-3 gap-1">
+                    {(["small", "medium", "large"] as const).map((sz) => (
+                      <button
+                        key={sz}
+                        onClick={() => setSubtitleSize(sz)}
+                        className={`text-[10px] py-1 rounded transition-all capitalize border ${
+                          subtitleSize === sz
+                            ? "bg-primary/10 border-primary text-primary font-semibold"
+                            : "bg-white/5 border-transparent text-white/65 hover:bg-white/8 hover:text-white"
+                        }`}
+                      >
+                        {sz}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Color Option */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[10px] text-white/40 font-semibold uppercase text-left">Text Color</span>
+                  <div className="grid grid-cols-2 gap-1">
+                    {(["white", "yellow"] as const).map((col) => (
+                      <button
+                        key={col}
+                        onClick={() => setSubtitleColor(col)}
+                        className={`text-[10px] py-1 rounded transition-all capitalize border ${
+                          subtitleColor === col
+                            ? "bg-primary/10 border-primary text-primary font-semibold"
+                            : "bg-white/5 border-transparent text-white/65 hover:bg-white/8 hover:text-white"
+                        }`}
+                      >
+                        {col}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Background Option */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[10px] text-white/40 font-semibold uppercase text-left">Background Style</span>
+                  <div className="grid grid-cols-2 gap-1">
+                    {(["transparent", "black"] as const).map((bgStyle) => (
+                      <button
+                        key={bgStyle}
+                        onClick={() => setSubtitleBg(bgStyle)}
+                        className={`text-[10px] py-1 rounded transition-all capitalize border ${
+                          subtitleBg === bgStyle
+                            ? "bg-primary/10 border-primary text-primary font-semibold"
+                            : "bg-white/5 border-transparent text-white/65 hover:bg-white/8 hover:text-white"
+                        }`}
+                      >
+                        {bgStyle === "black" ? "Dark Box" : "No Box"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Position Option */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[10px] text-white/40 font-semibold uppercase text-left">Vertical Position</span>
+                  <div className="grid grid-cols-3 gap-1">
+                    {(["top", "middle", "bottom"] as const).map((pos) => (
+                      <button
+                        key={pos}
+                        onClick={() => setSubtitlePos(pos)}
+                        className={`text-[10px] py-1 rounded transition-all capitalize border ${
+                          subtitlePos === pos
+                            ? "bg-primary/10 border-primary text-primary font-semibold"
+                            : "bg-white/5 border-transparent text-white/65 hover:bg-white/8 hover:text-white"
+                        }`}
+                      >
+                        {pos}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button onClick={() => document.fullscreenElement ? document.exitFullscreen() : containerRef.current?.requestFullscreen()} className="flex size-9 items-center justify-center rounded-lg hover:bg-white/10">
             {fullscreen ? <Minimize className="size-[15px] text-white/80" /> : <Maximize className="size-[15px] text-white/80" />}
           </button>
@@ -378,6 +607,7 @@ function WatchEpisodeInner() {
                 poster={episodeThumbnail(currentEp)}
                 title={`${series.title} — S${currentEp.season_number}E${currentEp.episode_number}`}
                 resumeFrom={resumeFrom}
+                subtitleUrl={currentEp.subtitle_url}
                 onProgress={handleProgress}
               />
             )}

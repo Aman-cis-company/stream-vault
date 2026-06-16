@@ -1,5 +1,6 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
+import streamVaultLogo from "@/assets/streamvault-logo.png";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
@@ -43,13 +44,14 @@ const NAV_AUTH = [
 
 function StreamVaultLogo() {
   return (
-    <svg width="34" height="34" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect width="32" height="32" rx="9" fill="oklch(0.62 0.29 14)" />
-      <path d="M12 10L24 16L12 22V10Z" fill="white" />
-      <rect x="7" y="10" width="3" height="2" rx="1" fill="white" opacity="0.55" />
-      <rect x="7" y="14" width="3" height="2" rx="1" fill="white" opacity="0.55" />
-      <rect x="7" y="18" width="3" height="2" rx="1" fill="white" opacity="0.55" />
-    </svg>
+    <img
+      src={streamVaultLogo}
+      alt="StreamVault"
+      width={265}
+      height={55}
+      className="object-contain"
+      style={{ maxHeight: 55, mixBlendMode: 'screen' }}
+    />
   );
 }
 
@@ -119,16 +121,13 @@ export function Navbar() {
         <div className="flex h-[66px] w-full items-center gap-6 px-4 md:px-8 lg:px-12">
 
           {/* ── Logo ── */}
-          <Link to="/" className="flex items-center gap-2.5 shrink-0 group" aria-label="StreamVault home">
-            <div className="relative transition-transform duration-200 group-hover:scale-[1.07]">
+          <Link to="/" className="flex items-center shrink-0 group" aria-label="StreamVault home">
+            <div className="relative transition-transform duration-200 group-hover:scale-[1.04]">
               <div className="absolute inset-0 rounded-[9px] bg-primary/40 blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="relative">
                 <StreamVaultLogo />
               </div>
             </div>
-            <span className="text-[17px] font-extrabold tracking-[-0.025em] text-white">
-              Stream<span className="text-gradient">Vault</span>
-            </span>
           </Link>
 
           {/* ── Desktop nav ── */}

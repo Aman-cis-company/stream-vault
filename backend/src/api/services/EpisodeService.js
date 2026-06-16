@@ -4,6 +4,7 @@ const EpisodeRepository = require('../repositories/EpisodeRepository');
 const SeriesRepository = require('../repositories/SeriesRepository');
 const BunnyStreamService = require('./BunnyStreamService');
 const TranscodingService = require('./TranscodingService');
+const { generateSubtitles } = require('../../helpers/subtitleGenerator');
 const logger = require('../../config/logger');
 
 const UPLOADS_DIR = path.join(__dirname, '../../../uploads');
@@ -92,6 +93,21 @@ class EpisodeService {
       });
     }
 
+    // Fire-and-forget subtitle generation
+    if (files?.video?.[0]) {
+      const uploadedVideoPath = files.video[0].path;
+      const episodeTitle = `${series.title} S${episode.season_number}E${episode.episode_number}: ${episode.title || 'Untitled'}`;
+      const episodeSlug = `series-${seriesId}-s${episode.season_number}-e${episode.episode_number}`;
+      const epId = episode.id;
+      generateSubtitles(uploadedVideoPath, episodeTitle, episodeSlug)
+        .then((subUrl) => {
+          EpisodeRepository.updateById(epId, { subtitle_url: subUrl });
+        })
+        .catch((err) => {
+          logger.error('Failed to generate subtitles for episode', { episodeId: epId, error: err.message });
+        });
+    }
+
     // Keep total_seasons in sync
     const maxSeason = await this._maxSeason(seriesId);
     if (maxSeason > series.total_seasons) {
@@ -151,6 +167,21 @@ class EpisodeService {
         onComplete: (hlsUrl) => EpisodeRepository.updateById(episodeId, { video_url: hlsUrl, transcoding_status: 'completed' }),
         onError: () => EpisodeRepository.updateById(episodeId, { transcoding_status: 'failed' }),
       });
+    }
+
+    // Fire-and-forget subtitle generation
+    if (files?.video?.[0]) {
+      const uploadedVideoPath = files.video[0].path;
+      const series = await SeriesRepository.findById(seriesId);
+      const episodeTitle = `${series ? series.title : 'Series'} S${episode.season_number}E${episode.episode_number}: ${updateData.title || episode.title || 'Untitled'}`;
+      const episodeSlug = `series-${seriesId}-s${episode.season_number}-e${episode.episode_number}`;
+      generateSubtitles(uploadedVideoPath, episodeTitle, episodeSlug)
+        .then((subUrl) => {
+          EpisodeRepository.updateById(episodeId, { subtitle_url: subUrl });
+        })
+        .catch((err) => {
+          logger.error('Failed to generate subtitles for episode update', { episodeId, error: err.message });
+        });
     }
 
     return EpisodeRepository.findById(episodeId);

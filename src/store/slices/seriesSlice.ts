@@ -18,6 +18,7 @@ export interface BackendEpisode {
   release_date: string | null;
   createdAt: string;
   updatedAt: string;
+  subtitle_url?: string | null;
 }
 
 export interface BackendSeries {

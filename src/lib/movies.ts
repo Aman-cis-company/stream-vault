@@ -47,6 +47,7 @@ export function mapMovieToTitle(movie: BackendMovie): Title {
     is_age_restricted: movie.is_age_restricted ?? false,
     minimum_age: movie.minimum_age ?? null,
     warning_flags_json: movie.warning_flags_json ?? null,
+    subtitle_url: movie.subtitle_url ?? null,
   };
 }
 

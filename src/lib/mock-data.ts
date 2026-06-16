@@ -30,6 +30,7 @@ export interface Title {
   minimum_age?: number | null;
   warning_flags_json?: WarningFlag[] | null;
   transcoding_status?: "pending" | "processing" | "completed" | "failed" | null;
+  subtitle_url?: string | null;
 }
 
 export interface Plan {

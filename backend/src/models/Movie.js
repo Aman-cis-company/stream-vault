@@ -82,6 +82,11 @@ const Movie = sequelize.define('Movie', {
     type: DataTypes.JSON,
     allowNull: true,
   },
+  subtitle_url: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    defaultValue: null,
+  },
   created_by: {
     type: DataTypes.INTEGER.UNSIGNED,
     allowNull: true,

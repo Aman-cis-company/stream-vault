@@ -3,16 +3,18 @@ import { Twitter, Youtube, Instagram, Facebook, Github, ArrowUpRight } from "luc
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import streamVaultLogo from "@/assets/streamvault-logo.png";
 
 function LogoMark() {
   return (
-    <svg width="36" height="36" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect width="32" height="32" rx="8" fill="oklch(0.62 0.29 14)" />
-      <path d="M12 10L24 16L12 22V10Z" fill="white" />
-      <rect x="7" y="10" width="3" height="2" rx="1" fill="white" opacity="0.5" />
-      <rect x="7" y="14" width="3" height="2" rx="1" fill="white" opacity="0.5" />
-      <rect x="7" y="18" width="3" height="2" rx="1" fill="white" opacity="0.5" />
-    </svg>
+    <img
+      src={streamVaultLogo}
+      alt="StreamVault"
+      width={195}
+      height={55}
+      className="object-contain"
+      style={{ maxHeight: 55, mixBlendMode: 'screen' }}
+    />
   );
 }
 
@@ -94,13 +96,10 @@ export function Footer() {
         <div className="grid gap-10 px-4 py-14 md:grid-cols-2 lg:grid-cols-5 md:px-8 lg:px-12">
           {/* Brand column */}
           <div className="lg:col-span-2">
-            <Link to="/" className="flex items-center gap-2.5 group w-fit">
+            <Link to="/" className="flex items-center group w-fit">
               <div className="transition-transform duration-200 group-hover:scale-105">
                 <LogoMark />
               </div>
-              <span className="text-[18px] font-extrabold tracking-[-0.02em]">
-                Stream<span className="text-gradient">Vault</span>
-              </span>
             </Link>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
               Premium entertainment for India and beyond. Stream thousands of films and series in stunning 4K HDR. Over 2.4 million subscribers worldwide.

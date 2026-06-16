@@ -1,16 +1,20 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import heroBackdrop from "@/assets/hero-backdrop.jpg";
+import streamVaultLogo from "@/assets/streamvault-logo.png";
 
 function LogoMark({ size = 36 }: { size?: number }) {
+  const h = size;
+  const w = Math.round(size * 4);
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect width="32" height="32" rx="8" fill="oklch(0.62 0.29 14)" />
-      <path d="M12 10L24 16L12 22V10Z" fill="white" />
-      <rect x="7" y="10" width="3" height="2" rx="1" fill="white" opacity="0.5" />
-      <rect x="7" y="14" width="3" height="2" rx="1" fill="white" opacity="0.5" />
-      <rect x="7" y="18" width="3" height="2" rx="1" fill="white" opacity="0.5" />
-    </svg>
+    <img
+      src={streamVaultLogo}
+      alt="StreamVault"
+      width={w}
+      height={h}
+      className="object-contain"
+      style={{ maxHeight: h, mixBlendMode: 'screen' }}
+    />
   );
 }
 
@@ -51,13 +55,10 @@ export function AuthLayout({
         {/* Content */}
         <div className="relative z-10 flex h-full flex-col justify-between p-12">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 group w-fit">
+          <Link to="/" className="flex items-center group w-fit">
             <div className="transition-transform duration-200 group-hover:scale-105">
               <LogoMark size={40} />
             </div>
-            <span className="text-[20px] font-extrabold tracking-[-0.02em] text-white">
-              Stream<span className="text-gradient">Vault</span>
-            </span>
           </Link>
 
           {/* Hero quote + stats */}
@@ -111,11 +112,8 @@ export function AuthLayout({
       <div className="flex flex-col min-h-screen bg-[oklch(0.08_0.012_258)] lg:border-l lg:border-white/6">
         {/* Top bar (mobile logo) */}
         <div className="flex items-center justify-between px-6 pt-6 lg:hidden">
-          <Link to="/" className="flex items-center gap-2.5 group">
+          <Link to="/" className="flex items-center group">
             <LogoMark size={32} />
-            <span className="text-base font-extrabold tracking-[-0.02em] text-white">
-              Stream<span className="text-gradient">Vault</span>
-            </span>
           </Link>
         </div>
 

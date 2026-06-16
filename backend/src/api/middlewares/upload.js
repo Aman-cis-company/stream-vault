@@ -10,6 +10,7 @@ const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE, 10) || 524288000; // 5
 // Ensure required upload directories exist at startup
 fs.mkdirSync(path.join(UPLOAD_PATH, 'thumbnails'), { recursive: true });
 fs.mkdirSync(path.join(UPLOAD_PATH, 'videos'), { recursive: true });
+fs.mkdirSync(path.join(UPLOAD_PATH, 'subtitles'), { recursive: true });
 
 // ── Thumbnail storage ─────────────────────────────────────────────────────────
 const thumbnailStorage = multer.diskStorage({

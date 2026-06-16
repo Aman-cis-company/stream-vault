@@ -3,6 +3,7 @@ const path = require('path');
 const MovieRepository = require('../repositories/MovieRepository');
 const BunnyStreamService = require('./BunnyStreamService');
 const TranscodingService = require('./TranscodingService');
+const { generateSubtitles } = require('../../helpers/subtitleGenerator');
 const { generateUniqueSlug } = require('../../utils/slugify');
 const { getPagination } = require('../../utils/pagination');
 const { paginationMeta } = require('../../helpers/responseHelper');
@@ -115,6 +116,21 @@ class MovieService {
       });
     }
 
+    // Fire-and-forget subtitle generation
+    if (files && files.video && files.video[0]) {
+      const uploadedVideoPath = files.video[0].path;
+      const titleForSub = title;
+      const slugForSub = slug;
+      const movieId = movie.id;
+      generateSubtitles(uploadedVideoPath, titleForSub, slugForSub)
+        .then((subUrl) => {
+          MovieRepository.updateById(movieId, { subtitle_url: subUrl });
+        })
+        .catch((err) => {
+          logger.error('Failed to generate subtitles for movie', { movieId, error: err.message });
+        });
+    }
+
     return MovieRepository.findById(movie.id);
   }
 
@@ -201,6 +217,20 @@ class MovieService {
         onComplete: (hlsUrl) => MovieRepository.updateById(id, { video_url: hlsUrl, transcoding_status: 'completed' }),
         onError: () => MovieRepository.updateById(id, { transcoding_status: 'failed' }),
       });
+    }
+
+    // Fire-and-forget subtitle generation
+    if (files && files.video && files.video[0]) {
+      const uploadedVideoPath = files.video[0].path;
+      const titleForSub = updateData.title || movie.title;
+      const slugForSub = updateData.slug || movie.slug;
+      generateSubtitles(uploadedVideoPath, titleForSub, slugForSub)
+        .then((subUrl) => {
+          MovieRepository.updateById(id, { subtitle_url: subUrl });
+        })
+        .catch((err) => {
+          logger.error('Failed to generate subtitles for movie update', { movieId: id, error: err.message });
+        });
     }
 
     return MovieRepository.findById(id);
