@@ -569,7 +569,7 @@ function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, subtitl
                 {hoverTime.label}
               </div>
             ) : (
-              <VideoPreviewTooltip src={effectiveVideoUrl} hoverTime={hoverTime} duration={duration} />
+              <VideoPreviewTooltip src={src} hoverTime={hoverTime} duration={duration} />
             )
           )}
         </div>
