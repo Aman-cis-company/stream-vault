@@ -8,6 +8,7 @@ const { generateUniqueSlug } = require('../../utils/slugify');
 const { getPagination } = require('../../utils/pagination');
 const { paginationMeta } = require('../../helpers/responseHelper');
 const logger = require('../../config/logger');
+const { detectVideoProvider } = require('../../utils/videoProvider');
 
 // Absolute path to the uploads directory (works regardless of CWD)
 const UPLOADS_DIR = path.join(__dirname, '../../../uploads');
@@ -81,13 +82,19 @@ class MovieService {
       }
     }
 
+    const detected = detectVideoProvider(finalVideoUrl, provider_name);
+    const finalProviderName = detected.provider_name || (finalVideoUrl ? 'external' : 'bunny');
+    if (detected.provider_video_id) {
+      finalVideoId = detected.provider_video_id;
+    }
+
     const movie = await MovieRepository.create({
       category_id: category_id || null,
       title,
       slug,
       description,
       thumbnail_url: thumbnailUrl,
-      provider_name: provider_name || (finalVideoUrl ? 'external' : 'bunny'),
+      provider_name: finalProviderName,
       provider_video_id: finalVideoId,
       video_url: finalVideoUrl,
       transcoding_status: localVideoPath ? 'pending' : null,
@@ -206,6 +213,15 @@ class MovieService {
       }
     }
 
+    // Auto-detect provider if video_url changed or is provided
+    if (updateData.video_url !== undefined) {
+      const detected = detectVideoProvider(updateData.video_url, updateData.provider_name || movie.provider_name);
+      updateData.provider_name = detected.provider_name;
+      if (detected.provider_video_id) {
+        updateData.provider_video_id = detected.provider_video_id;
+      }
+    }
+
     await MovieRepository.updateById(id, updateData);
 
     // Fire-and-forget transcoding for local uploads
@@ -277,6 +293,10 @@ class MovieService {
       }
     }
 
+    if (movie.provider_name === 'bunny' && movie.provider_video_id) {
+      movie.setDataValue('video_url', BunnyStreamService.generateEmbedUrl(movie.provider_video_id));
+    }
+
     return movie;
   }
 
@@ -301,6 +321,12 @@ class MovieService {
       isBanner,
       status,
       userControls,
+    });
+
+    rows.forEach(movie => {
+      if (movie.provider_name === 'bunny' && movie.provider_video_id) {
+        movie.setDataValue('video_url', BunnyStreamService.generateEmbedUrl(movie.provider_video_id));
+      }
     });
 
     return {

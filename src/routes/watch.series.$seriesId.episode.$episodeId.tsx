@@ -31,10 +31,29 @@ function fmtTime(s: number) {
 }
 
 function isHls(url: string) { return url.includes(".m3u8") || url.includes("/hls/"); }
-function isYoutube(url: string) { return url.includes("youtube.com") || url.includes("youtu.be"); }
+function isYoutube(url: string) {
+  return !!extractYouTubeId(url);
+}
+function isBunny(url: string) {
+  return url.includes("mediadelivery.net") || url.includes("bunny");
+}
 function extractYouTubeId(url: string) {
-  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([^?&\s]+)/);
-  return m ? m[1] : null;
+  if (!url) return null;
+  const patterns = [
+    /youtu\.be\/([^?&\s]+)/,
+    /youtube\.com\/watch\?v=([^&\s]+)/,
+    /youtube\.com\/embed\/([^?&\s]+)/,
+    /youtube\.com\/shorts\/([^?&\s]+)/,
+    /youtube\.com\/live\/([^?&\s]+)/,
+  ];
+  for (const p of patterns) {
+    const m = url.match(p);
+    if (m) return m[1];
+  }
+  if (/^[a-zA-Z0-9_-]{11}$/.test(url)) {
+    return url;
+  }
+  return null;
 }
 
 // ── Video Player ──────────────────────────────────────────────────────────────
@@ -274,15 +293,33 @@ function EpisodePlayer({ src, poster, title, resumeFrom = 0, subtitleUrl, onProg
 
   const progress = duration ? (currentTime / duration) * 100 : 0;
   const ytId = isYoutube(src) ? extractYouTubeId(src) : null;
+  const isBunnySrc = isBunny(src);
 
   const activeCue = subtitlesEnabled
     ? subtitleCues.find((c) => currentTime >= c.start && currentTime <= c.end)
     : null;
 
+  if (isBunnySrc) {
+    const startParam = resumeFrom > 5 ? `&t=${Math.floor(resumeFrom)}` : "";
+    const separator = src.includes("?") ? "&" : "?";
+    const finalUrl = `${src}${separator}autoplay=true${startParam}`;
+    return (
+      <div className="relative w-full bg-black select-none overflow-hidden" style={{ maxHeight: "62vh", aspectRatio: "16/7" }}>
+        <iframe
+          src={finalUrl}
+          title={title}
+          allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
+          allowFullScreen
+          className="absolute inset-0 w-full h-full object-contain border-0"
+        />
+      </div>
+    );
+  }
+
   if (ytId) {
     return (
-      <div className="relative w-full aspect-video bg-black">
-        <iframe src={`https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&start=${Math.floor(resumeFrom)}`} title={title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="absolute inset-0 w-full h-full border-0" />
+      <div className="relative w-full bg-black select-none overflow-hidden" style={{ maxHeight: "62vh", aspectRatio: "16/7" }}>
+        <iframe src={`https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&start=${Math.floor(resumeFrom)}`} title={title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="absolute inset-0 w-full h-full object-contain border-0" />
       </div>
     );
   }

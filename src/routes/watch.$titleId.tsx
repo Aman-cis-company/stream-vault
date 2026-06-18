@@ -49,15 +49,20 @@ function fmtTime(secs: number): string {
 }
 
 function extractYouTubeId(url: string): string | null {
+  if (!url) return null;
   const patterns = [
     /youtu\.be\/([^?&\s]+)/,
     /youtube\.com\/watch\?v=([^&\s]+)/,
     /youtube\.com\/embed\/([^?&\s]+)/,
     /youtube\.com\/shorts\/([^?&\s]+)/,
+    /youtube\.com\/live\/([^?&\s]+)/,
   ];
   for (const p of patterns) {
     const m = url.match(p);
     if (m) return m[1];
+  }
+  if (/^[a-zA-Z0-9_-]{11}$/.test(url)) {
+    return url;
   }
   return null;
 }
@@ -66,9 +71,10 @@ function isHlsUrl(url: string): boolean {
   return url.includes(".m3u8") || url.includes("/hls/");
 }
 
-function videoSourceType(url: string): "youtube" | "hls" | "direct" | "none" {
+function videoSourceType(url: string): "youtube" | "bunny" | "hls" | "direct" | "none" {
   if (!url) return "none";
   if (extractYouTubeId(url)) return "youtube";
+  if (url.includes("mediadelivery.net") || url.includes("bunny")) return "bunny";
   if (isHlsUrl(url)) return "hls";
   return "direct";
 }
@@ -79,13 +85,42 @@ function YouTubePlayer({ videoId, title, resumeFrom = 0 }: { videoId: string; ti
   const startParam = resumeFrom > 5 ? `&start=${Math.floor(resumeFrom)}` : "";
   const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1${startParam}`;
   return (
-    <div className="relative w-full aspect-video bg-black">
+    <div className="relative w-full bg-black select-none overflow-hidden" style={{ maxHeight: "62vh", aspectRatio: "16/7" }}>
       <iframe
         src={embedUrl}
         title={title}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowFullScreen
-        className="absolute inset-0 w-full h-full"
+        className="absolute inset-0 w-full h-full object-contain"
+        style={{ border: 0 }}
+      />
+      {/* DRM badge overlay */}
+      <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-2 z-10">
+        <span className="inline-flex items-center gap-1 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-semibold text-emerald-400 backdrop-blur-sm border border-emerald-500/30">
+          <svg className="size-2.5" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 1a5 5 0 0 1 5 5v1h1a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h1V6a5 5 0 0 1 5-5zm0 1.5A3.5 3.5 0 0 0 4.5 6v1h7V6A3.5 3.5 0 0 0 8 2.5z" />
+          </svg>
+          DRM Protected
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ── Bunny Stream Player ──────────────────────────────────────────────────────
+
+function BunnyPlayer({ embedUrl, title, resumeFrom = 0 }: { embedUrl: string; title: string; resumeFrom?: number }) {
+  const startParam = resumeFrom > 5 ? `&t=${Math.floor(resumeFrom)}` : "";
+  const separator = embedUrl.includes("?") ? "&" : "?";
+  const finalUrl = `${embedUrl}${separator}autoplay=true${startParam}`;
+  return (
+    <div className="relative w-full bg-black select-none overflow-hidden" style={{ maxHeight: "62vh", aspectRatio: "16/7" }}>
+      <iframe
+        src={finalUrl}
+        title={title}
+        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
+        allowFullScreen
+        className="absolute inset-0 w-full h-full object-contain"
         style={{ border: 0 }}
       />
       {/* DRM badge overlay */}
@@ -1001,6 +1036,8 @@ function WatchInner() {
               <p className="text-white/50 text-sm">No video source available</p>
             </div>
           </div>
+        ) : srcType === "bunny" ? (
+          <BunnyPlayer embedUrl={effectiveVideoUrl} title={title.name} resumeFrom={resumeFrom} />
         ) : srcType === "youtube" && youtubeId ? (
           <YouTubePlayer videoId={youtubeId} title={title.name} resumeFrom={resumeFrom} />
         ) : (

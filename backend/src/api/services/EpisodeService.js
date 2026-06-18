@@ -6,6 +6,7 @@ const BunnyStreamService = require('./BunnyStreamService');
 const TranscodingService = require('./TranscodingService');
 const { generateSubtitles } = require('../../helpers/subtitleGenerator');
 const logger = require('../../config/logger');
+const { detectVideoProvider } = require('../../utils/videoProvider');
 
 const UPLOADS_DIR = path.join(__dirname, '../../../uploads');
 
@@ -62,6 +63,12 @@ class EpisodeService {
         }
       }
     }
+
+    const detected = detectVideoProvider(finalVideoUrl, provider_name);
+    const finalProviderName = detected.provider_name || (finalVideoUrl ? 'external' : 'bunny');
+    if (detected.provider_video_id) {
+      finalVideoId = detected.provider_video_id;
+    }
  
     const episode = await EpisodeRepository.create({
       series_id: seriesId,
@@ -71,7 +78,7 @@ class EpisodeService {
       description: description || null,
       thumbnail_url: thumbnailUrl,
       duration: duration || null,
-      provider_name: provider_name || (finalVideoUrl ? 'external' : 'bunny'),
+      provider_name: finalProviderName,
       provider_video_id: finalVideoId,
       video_url: finalVideoUrl,
       transcoding_status: localVideoPath ? 'pending' : null,
@@ -158,6 +165,15 @@ class EpisodeService {
       }
     }
 
+    // Auto-detect provider if video_url changed or is provided
+    if (updateData.video_url !== undefined) {
+      const detected = detectVideoProvider(updateData.video_url, updateData.provider_name || episode.provider_name);
+      updateData.provider_name = detected.provider_name;
+      if (detected.provider_video_id) {
+        updateData.provider_video_id = detected.provider_video_id;
+      }
+    }
+
     await EpisodeRepository.updateById(episodeId, updateData);
 
     // Fire-and-forget transcoding for local uploads
@@ -203,12 +219,24 @@ class EpisodeService {
     const series = await SeriesRepository.findById(seriesId);
     if (!series) { const e = new Error('Series not found'); e.statusCode = 404; throw e; }
     const episodes = await EpisodeRepository.findBySeriesId(seriesId);
+    
+    episodes.forEach(ep => {
+      if (ep.provider_name === 'bunny' && ep.provider_video_id) {
+        ep.setDataValue('video_url', BunnyStreamService.generateEmbedUrl(ep.provider_video_id));
+      }
+    });
+
     return episodes;
   }
 
   async getById(seriesId, episodeId) {
     const episode = await EpisodeRepository.findBySeriesAndEpisode(seriesId, episodeId);
     if (!episode) { const e = new Error('Episode not found'); e.statusCode = 404; throw e; }
+    
+    if (episode.provider_name === 'bunny' && episode.provider_video_id) {
+      episode.setDataValue('video_url', BunnyStreamService.generateEmbedUrl(episode.provider_video_id));
+    }
+
     return episode;
   }
 

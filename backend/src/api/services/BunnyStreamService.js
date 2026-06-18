@@ -177,6 +177,33 @@ class BunnyStreamService {
   }
 
   /**
+   * Build a token-authenticated iframe embed URL.
+   * Format: SHA256_HEX(token_security_key + video_id + expiration)
+   */
+  generateEmbedUrl(videoId, ttlSeconds = 4 * 60 * 60) {
+    if (!this.libraryId) {
+      logger.warn('BunnyStream: BUNNY_LIBRARY_ID not set — embed URLs will be empty');
+      return '';
+    }
+
+    const expiry = Math.floor(Date.now() / 1000) + ttlSeconds;
+
+    if (!this.tokenKey) {
+      // No token key configured — return plain embed URL
+      return `https://iframe.mediadelivery.net/embed/${this.libraryId}/${videoId}?autoplay=true`;
+    }
+
+    const hashInput = this.tokenKey + videoId + expiry;
+    const token = crypto
+      .createHash('sha256')
+      .update(hashInput)
+      .digest('hex');
+
+    return `https://iframe.mediadelivery.net/embed/${this.libraryId}/${videoId}?token=${token}&expires=${expiry}&autoplay=true`;
+  }
+
+
+  /**
    * List videos in the library.
    */
   async listVideos(page = 1, itemsPerPage = 100, search = '') {
