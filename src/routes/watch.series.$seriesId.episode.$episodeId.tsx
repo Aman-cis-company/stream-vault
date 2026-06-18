@@ -90,6 +90,62 @@ function parseVtt(text: string): Cue[] {
   return cues;
 }
 
+interface VideoPreviewTooltipProps {
+  src: string;
+  hoverTime: { pct: number; label: string };
+  duration: number;
+}
+
+function VideoPreviewTooltip({ src, hoverTime, duration }: VideoPreviewTooltipProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
+  const targetTime = (hoverTime.pct / 100) * duration;
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !src) return;
+
+    if (isHls(src) && Hls.isSupported()) {
+      const hls = new Hls({ enableWorker: true });
+      hlsRef.current = hls;
+      hls.loadSource(src);
+      hls.attachMedia(video);
+      return () => {
+        hls.destroy();
+        hlsRef.current = null;
+      };
+    } else {
+      video.src = src;
+    }
+  }, [src]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !isFinite(targetTime)) return;
+    video.currentTime = targetTime;
+  }, [targetTime]);
+
+  return (
+    <div
+      className="pointer-events-none absolute -top-[132px] z-50 flex flex-col items-center gap-1 rounded-lg bg-black/95 border border-white/10 p-1 shadow-2xl transition-all"
+      style={{ left: `clamp(10%, ${hoverTime.pct}%, 90%)`, transform: "translateX(-50%)" }}
+    >
+      <div className="relative w-40 aspect-video rounded overflow-hidden bg-zinc-900 border border-white/5">
+        <video
+          ref={videoRef}
+          muted
+          playsInline
+          className="w-full h-full object-cover"
+        />
+      </div>
+      <div className="rounded bg-black/85 px-1.5 py-0.5 text-[10px] font-medium text-white border border-white/5">
+        {hoverTime.label}
+      </div>
+      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-black/95" />
+    </div>
+  );
+}
+
 function EpisodePlayer({ src, poster, title, resumeFrom = 0, subtitleUrl, onProgress, onResumeConfirmed }: EpisodePlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -109,6 +165,15 @@ function EpisodePlayer({ src, poster, title, resumeFrom = 0, subtitleUrl, onProg
   const [fullscreen, setFullscreen] = useState(false);
   const [buffering, setBuffering] = useState(true);
   const [showResumeBanner, setShowResumeBanner] = useState(false);
+  const [hoverTime, setHoverTime] = useState<{ pct: number; label: string } | null>(null);
+
+  const handleProgressHover = (e: React.MouseEvent<HTMLDivElement>) => {
+    const v = videoRef.current;
+    if (!v || !isFinite(v.duration) || v.duration <= 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = ((e.clientX - rect.left) / rect.width) * 100;
+    setHoverTime({ pct, label: fmtTime((pct / 100) * v.duration) });
+  };
 
   // Subtitles custom styling states
   const [subtitlesEnabled, setSubtitlesEnabled] = useState(false);
@@ -290,9 +355,24 @@ function EpisodePlayer({ src, poster, title, resumeFrom = 0, subtitleUrl, onProg
       <div className={`absolute inset-x-0 bottom-0 z-30 transition-all duration-300 ${showControls || !playing ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
         {/* Seek bar */}
         <div className="group/seek relative mx-3 mb-2 h-[3px] cursor-pointer rounded-full bg-white/20 hover:h-[5px] transition-all"
-          onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); const v = videoRef.current; if (!v || !isFinite(v.duration)) return; v.currentTime = ((e.clientX - r.left) / r.width) * v.duration; }}>
+          onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); const v = videoRef.current; if (!v || !isFinite(v.duration)) return; v.currentTime = ((e.clientX - r.left) / r.width) * v.duration; }}
+          onMouseMove={handleProgressHover}
+          onMouseLeave={() => setHoverTime(null)}
+        >
           <div className="absolute inset-y-0 left-0 rounded-full bg-white/20" style={{ width: `${buffered}%` }} />
           <div className="absolute inset-y-0 left-0 rounded-full bg-primary" style={{ width: `${progress}%` }} />
+          {hoverTime && (
+            ytId ? (
+              <div
+                className="pointer-events-none absolute -top-7 rounded-md bg-black/90 backdrop-blur-sm px-1.5 py-0.5 text-[11px] font-medium text-white border border-white/10 shadow-lg"
+                style={{ left: `clamp(0%, ${hoverTime.pct}%, calc(100% - 40px))`, transform: "translateX(-50%)" }}
+              >
+                {hoverTime.label}
+              </div>
+            ) : (
+              <VideoPreviewTooltip src={src} hoverTime={hoverTime} duration={duration} />
+            )
+          )}
         </div>
         {/* Controls */}
         <div className="flex items-center gap-1 px-3 pb-3">

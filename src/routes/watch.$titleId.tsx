@@ -156,7 +156,64 @@ function parseVtt(text: string): Cue[] {
   return cues;
 }
 
+interface VideoPreviewTooltipProps {
+  src: string;
+  hoverTime: { pct: number; label: string };
+  duration: number;
+}
+
+function VideoPreviewTooltip({ src, hoverTime, duration }: VideoPreviewTooltipProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
+  const targetTime = (hoverTime.pct / 100) * duration;
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !src) return;
+
+    if (isHlsUrl(src) && Hls.isSupported()) {
+      const hls = new Hls({ enableWorker: true, lowLatencyMode: false });
+      hlsRef.current = hls;
+      hls.loadSource(src);
+      hls.attachMedia(video);
+      return () => {
+        hls.destroy();
+        hlsRef.current = null;
+      };
+    } else {
+      video.src = src;
+    }
+  }, [src]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !isFinite(targetTime)) return;
+    video.currentTime = targetTime;
+  }, [targetTime]);
+
+  return (
+    <div
+      className="pointer-events-none absolute -top-[132px] z-50 flex flex-col items-center gap-1 rounded-lg bg-black/95 border border-white/10 p-1 shadow-2xl transition-all"
+      style={{ left: `clamp(10%, ${hoverTime.pct}%, 90%)`, transform: "translateX(-50%)" }}
+    >
+      <div className="relative w-40 aspect-video rounded overflow-hidden bg-zinc-900 border border-white/5">
+        <video
+          ref={videoRef}
+          muted
+          playsInline
+          className="w-full h-full object-cover"
+        />
+      </div>
+      <div className="rounded bg-black/85 px-1.5 py-0.5 text-[10px] font-medium text-white border border-white/5">
+        {hoverTime.label}
+      </div>
+      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-black/95" />
+    </div>
+  );
+}
+
 function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, subtitleUrl, onProgress, onResumeConfirmed }: NativePlayerProps) {
+  const srcType = videoSourceType(src);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
@@ -504,12 +561,16 @@ function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, subtitl
           </div>
           {/* Time tooltip */}
           {hoverTime && (
-            <div
-              className="pointer-events-none absolute -top-7 rounded-md bg-black/90 backdrop-blur-sm px-1.5 py-0.5 text-[11px] font-medium text-white border border-white/10 shadow-lg"
-              style={{ left: `clamp(0%, ${hoverTime.pct}%, calc(100% - 40px))`, transform: "translateX(-50%)" }}
-            >
-              {hoverTime.label}
-            </div>
+            srcType === "youtube" ? (
+              <div
+                className="pointer-events-none absolute -top-7 rounded-md bg-black/90 backdrop-blur-sm px-1.5 py-0.5 text-[11px] font-medium text-white border border-white/10 shadow-lg"
+                style={{ left: `clamp(0%, ${hoverTime.pct}%, calc(100% - 40px))`, transform: "translateX(-50%)" }}
+              >
+                {hoverTime.label}
+              </div>
+            ) : (
+              <VideoPreviewTooltip src={effectiveVideoUrl} hoverTime={hoverTime} duration={duration} />
+            )
           )}
         </div>
 
