@@ -24,3 +24,15 @@ https://github.com/Aman-cis-company/stream-vault.git
 run this command to generate credentials 
 
 node -e "const n = require('nodemailer'); n.createTestAccount().then(a => { console.log('MAIL_USER=' + a.user); console.log('MAIL_PASSWORD=' + a.pass); });"
+
+------------------OPENAI WHISPER for Subtitle----------------
+-we use OpenAI whisper free version for auto subtitle generation
+-we use whiper as command line (use shell command) 
+-Free, but requires Python + Whisper installed on the server
+
+install CLI whiper on local system
+commands:-
+sudo apt update
+sudo apt install python3 python3-pip ffmpeg -y
+pip3 install openai-whisper
+whisper --help (Verify installation)

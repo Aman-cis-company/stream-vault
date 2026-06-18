@@ -108,6 +108,24 @@ class MovieController {
       return errorResponse(res, MESSAGES.INTERNAL_ERROR, STATUS_CODES.INTERNAL_SERVER_ERROR);
     }
   }
+
+  async updateBannerOrder(req, res) {
+    try {
+      const { movieIds } = req.body;
+      if (!Array.isArray(movieIds)) {
+        return errorResponse(res, 'movieIds must be an array of movie IDs', STATUS_CODES.BAD_REQUEST);
+      }
+      await MovieService.updateBannerOrder(movieIds, req.user.id);
+      
+      // Broadcast update to client sockets
+      socketServer.broadcast(EVENTS.MOVIE_UPDATED, { refreshBanner: true });
+
+      return successResponse(res, 'Banner sequence updated successfully');
+    } catch (err) {
+      logger.error('MovieController.updateBannerOrder error', { error: err.message });
+      return errorResponse(res, err.message || MESSAGES.INTERNAL_ERROR, err.statusCode || STATUS_CODES.INTERNAL_SERVER_ERROR);
+    }
+  }
 }
 
 module.exports = new MovieController();

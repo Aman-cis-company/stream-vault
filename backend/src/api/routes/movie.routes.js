@@ -10,6 +10,7 @@ const ROLES = require('../../constants/roles');
 
 // Public routes
 router.get('/', tryAuthenticate, MovieController.getAll.bind(MovieController));
+router.put('/banner', authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.TEAM_MEMBER), MovieController.updateBannerOrder.bind(MovieController));
 router.get('/:id', tryAuthenticate, MovieController.getById.bind(MovieController));
 router.get('/:id/transcoding-status', authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.TEAM_MEMBER), MovieController.getTranscodingStatus.bind(MovieController));
 

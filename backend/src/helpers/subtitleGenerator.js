@@ -12,22 +12,22 @@ if (!fs.existsSync(SUBTITLES_DIR)) {
 }
 
 // Migrate any existing subtitle files from root uploads/subtitles to backend/uploads/subtitles
-const ROOT_SUBTITLES_DIR = path.resolve(__dirname, '../../../uploads/subtitles');
-if (fs.existsSync(ROOT_SUBTITLES_DIR)) {
-  try {
-    const files = fs.readdirSync(ROOT_SUBTITLES_DIR);
-    files.forEach((file) => {
-      const srcFile = path.join(ROOT_SUBTITLES_DIR, file);
-      const destFile = path.join(SUBTITLES_DIR, file);
-      if (fs.statSync(srcFile).isFile()) {
-        fs.renameSync(srcFile, destFile);
-        logger.info(`[Subtitle Migrator] Moved ${file} to backend/uploads/subtitles`);
-      }
-    });
-  } catch (err) {
-    logger.error(`[Subtitle Migrator] Migration error: ${err.message}`);
-  }
-}
+// const ROOT_SUBTITLES_DIR = path.resolve(__dirname, '../../../uploads/subtitles');
+// if (fs.existsSync(ROOT_SUBTITLES_DIR)) {
+//   try {
+//     const files = fs.readdirSync(ROOT_SUBTITLES_DIR);
+//     files.forEach((file) => {
+//       const srcFile = path.join(ROOT_SUBTITLES_DIR, file);
+//       const destFile = path.join(SUBTITLES_DIR, file);
+//       if (fs.statSync(srcFile).isFile()) {
+//         fs.renameSync(srcFile, destFile);
+//         logger.info(`[Subtitle Migrator] Moved ${file} to backend/uploads/subtitles`);
+//       }
+//     });
+//   } catch (err) {
+//     logger.error(`[Subtitle Migrator] Migration error: ${err.message}`);
+//   }
+// }
 
 /**
  * Runs Whisper command if available to generate WebVTT/SRT subtitles from video.

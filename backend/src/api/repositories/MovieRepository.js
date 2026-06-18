@@ -22,16 +22,20 @@ class MovieRepository {
     return Movie.create(data);
   }
 
-  async updateById(id, data) {
-    const [affected] = await Movie.update(data, { where: { id } });
+  async updateById(id, data, options = {}) {
+    const [affected] = await Movie.update(data, { where: { id }, ...options });
     return affected;
+  }
+
+  async updateAll(data, options = {}) {
+    return Movie.update(data, { where: {}, ...options });
   }
 
   async deleteById(id) {
     return Movie.destroy({ where: { id } });
   }
 
-  async findAll({ limit, offset, search, categoryId, isFeatured, status, userControls }) {
+  async findAll({ limit, offset, search, categoryId, isFeatured, isBanner, status, userControls }) {
     const where = {};
     if (search) {
       where[Op.or] = [
@@ -41,6 +45,7 @@ class MovieRepository {
     }
     if (categoryId) where.category_id = categoryId;
     if (isFeatured !== undefined && isFeatured !== null) where.is_featured = isFeatured;
+    if (isBanner !== undefined && isBanner !== null) where.is_banner = isBanner;
     if (status) where.status = status;
 
     const { getParentalQueryFilters } = require('../../helpers/parentalFilter');
@@ -55,6 +60,10 @@ class MovieRepository {
         : parentalFilters[Op.and];
     }
 
+    const order = isBanner === true
+      ? [['banner_order', 'ASC'], ['created_at', 'DESC']]
+      : [['created_at', 'DESC']];
+
     return Movie.findAndCountAll({
       where: mergedWhere,
       limit,
@@ -62,7 +71,7 @@ class MovieRepository {
       include: [
         { model: Category, as: 'category', attributes: ['id', 'name', 'slug'] },
       ],
-      order: [['created_at', 'DESC']],
+      order,
     });
   }
 

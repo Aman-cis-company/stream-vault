@@ -5,6 +5,8 @@ import { apiClient } from "@/services/api";
 import { fetchVideoStreamUrl, mapMovieToTitle } from "@/lib/movies";
 import type { Title } from "@/lib/mock-data";
 import type { BackendMovie } from "@/store/slices/moviesSlice";
+import { useSocketEvent } from "@/hooks/useSocket";
+import { SOCKET_EVENTS } from "@/lib/socket";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -68,14 +70,14 @@ function BgVideo({ src, poster, muted }: BgVideoProps) {
       const hls = new Hls({
         enableWorker: true,
         autoStartLoad: true,
-        capLevelToPlayerSize: false,       // never cap to player size
-        startLevel: -1,                    // overridden immediately in MANIFEST_PARSED
-        maxBufferLength: 60,               // buffer up to 60s ahead
-        maxBufferSize: 120 * 1024 * 1024,  // 120 MB buffer for HD
+        capLevelToPlayerSize: false, // never cap to player size
+        startLevel: -1, // overridden immediately in MANIFEST_PARSED
+        maxBufferLength: 60, // buffer up to 60s ahead
+        maxBufferSize: 120 * 1024 * 1024, // 120 MB buffer for HD
         maxMaxBufferLength: 120,
         // Assume 8 Mbps bandwidth so ABR picks highest tier immediately
         abrEwmaDefaultEstimate: 8_000_000,
-        testBandwidth: false,              // skip initial bandwidth test
+        testBandwidth: false, // skip initial bandwidth test
       });
       hlsRef.current = hls;
       hls.loadSource(src);
@@ -84,9 +86,9 @@ function BgVideo({ src, poster, muted }: BgVideoProps) {
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         if (hls.levels && hls.levels.length > 0) {
           const top = hls.levels.length - 1;
-          hls.currentLevel = top;   // lock current segment fetch
-          hls.loadLevel = top;      // lock loader
-          hls.nextLevel = top;      // lock next switch
+          hls.currentLevel = top; // lock current segment fetch
+          hls.loadLevel = top; // lock loader
+          hls.nextLevel = top; // lock next switch
         }
         video.play().catch(() => {});
       });
@@ -101,7 +103,10 @@ function BgVideo({ src, poster, muted }: BgVideoProps) {
       hls.on(Hls.Events.ERROR, (_, d) => {
         if (d.fatal) hls.recoverMediaError();
       });
-    } else if (type === "hls" && video.canPlayType("application/vnd.apple.mpegurl")) {
+    } else if (
+      type === "hls" &&
+      video.canPlayType("application/vnd.apple.mpegurl")
+    ) {
       // Native HLS (Safari) — browser manages quality; just play
       video.src = src;
       video.load();
@@ -210,27 +215,51 @@ export function Hero() {
   const pausedRef = useRef(false);
   const lastFetchedId = useRef<string>("");
 
-  useEffect(() => {
+  const fetchBannerMovies = useCallback(() => {
     apiClient
-      .get("/movies?status=published&limit=8")
+      .get("/movies?status=published&is_banner=true&limit=10")
       .then(({ data }) => {
-        const fetched: Title[] = (data.data.movies as BackendMovie[])
+        let fetched: Title[] = (data.data.movies as BackendMovie[])
           .map(mapMovieToTitle)
           .filter((t) => t.backdropUrl || t.posterUrl);
-        if (fetched.length >= 2) setMovies(fetched.slice(0, 6));
-        if (fetched.length > 0) {
-          const targetIndex = fetched
-            .slice(0, 6)
-            .findIndex((movie) => movie.id === "10");
-          if (targetIndex !== -1) {
-            setActiveIdx(targetIndex);
-          }
+
+        if (fetched.length >= 1) {
+          setMovies(fetched);
+          return;
         }
+
+        // Fallback: fetch default published movies if no banner movies are set
+        apiClient
+          .get("/movies?status=published&limit=8")
+          .then(({ data: fallbackData }) => {
+            fetched = (fallbackData.data.movies as BackendMovie[])
+              .map(mapMovieToTitle)
+              .filter((t) => t.backdropUrl || t.posterUrl);
+            if (fetched.length >= 2) setMovies(fetched.slice(0, 6));
+            if (fetched.length > 0) {
+              const targetIndex = fetched
+                .slice(0, 6)
+                .findIndex((movie) => movie.id === "10");
+              if (targetIndex !== -1) {
+                setActiveIdx(targetIndex);
+              }
+            }
+          })
+          .catch(() => {});
       })
       .catch(() => {});
   }, []);
 
-  const safeIdx = movies.length > 0 ? Math.min(activeIdx, movies.length - 1) : 0;
+  useEffect(() => {
+    fetchBannerMovies();
+  }, [fetchBannerMovies]);
+
+  useSocketEvent(SOCKET_EVENTS.MOVIE_CREATED, fetchBannerMovies);
+  useSocketEvent(SOCKET_EVENTS.MOVIE_UPDATED, fetchBannerMovies);
+  useSocketEvent(SOCKET_EVENTS.MOVIE_DELETED, fetchBannerMovies);
+
+  const safeIdx =
+    movies.length > 0 ? Math.min(activeIdx, movies.length - 1) : 0;
   const current = movies[safeIdx];
 
   useEffect(() => {
@@ -331,8 +360,12 @@ export function Hero() {
     <section
       className="relative -mt-16 w-full overflow-hidden"
       style={{ height: "clamp(560px, 82vh, 900px)" }}
-      onMouseEnter={() => { pausedRef.current = true; }}
-      onMouseLeave={() => { pausedRef.current = false; }}
+      onMouseEnter={() => {
+        pausedRef.current = true;
+      }}
+      onMouseLeave={() => {
+        pausedRef.current = false;
+      }}
     >
       {/* Background poster with smooth crossfade */}
       <img
@@ -371,21 +404,25 @@ export function Hero() {
       {/* Subtle top fade for navbar blend */}
       <div
         className="pointer-events-none absolute inset-x-0 top-0 z-10 h-36"
-        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 100%)" }}
+        style={{
+          background:
+            "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 100%)",
+        }}
       />
 
       {/* HD / Video quality badge */}
       {hasVideo && (
         <div className="absolute top-20 right-6 z-30 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/40 px-2.5 py-1 backdrop-blur-sm">
           <Hd className="size-3.5 text-white/80" />
-          <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">Live</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">
+            Live
+          </span>
           <span className="size-1.5 rounded-full bg-primary animate-glow-pulse" />
         </div>
       )}
 
       {/* Main content */}
       <div className="relative z-20 flex h-full max-w-full flex-col justify-between px-8 pb-6 pt-24 sm:px-8">
-
         {/* Hero text + actions */}
         <div
           key={`content-${contentKey}`}

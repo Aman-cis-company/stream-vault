@@ -58,6 +58,14 @@ const Movie = sequelize.define('Movie', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  is_banner: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  banner_order: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
   status: {
     type: DataTypes.ENUM('published', 'draft', 'archived'),
     defaultValue: 'draft',

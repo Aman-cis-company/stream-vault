@@ -2,7 +2,11 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { apiClient } from "@/services/api";
 
 export type ContentRating = "G" | "PG" | "PG-13" | "16+" | "18+" | "21+";
-export type WarningFlag = "violence" | "strong_language" | "mature_themes" | "nudity";
+export type WarningFlag =
+  | "violence"
+  | "strong_language"
+  | "mature_themes"
+  | "nudity";
 
 export interface BackendMovie {
   id: number;
@@ -18,6 +22,8 @@ export interface BackendMovie {
   is_featured: boolean;
   status: "published" | "draft" | "archived";
   category_id: number | null;
+  is_banner?: boolean;
+  banner_order?: number;
   createdAt: string;
   updatedAt: string;
   category?: { id: number; name: string; slug: string } | null;
@@ -55,7 +61,7 @@ export const fetchMoviesThunk = createAsyncThunk(
     if (params?.page) q.set("page", String(params.page));
     const { data } = await apiClient.get(`/movies?${q}`);
     return data;
-  }
+  },
 );
 
 const initialState: MoviesState = {

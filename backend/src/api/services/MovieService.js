@@ -282,11 +282,15 @@ class MovieService {
 
   async getAll(query, userControls = null) {
     const { page, limit, offset } = getPagination(query);
-    const { search, category_id, is_featured, status } = query;
+    const { search, category_id, is_featured, is_banner, status } = query;
 
     let isFeatured = undefined;
     if (is_featured === 'true') isFeatured = true;
     else if (is_featured === 'false') isFeatured = false;
+
+    let isBanner = undefined;
+    if (is_banner === 'true') isBanner = true;
+    else if (is_banner === 'false') isBanner = false;
 
     const { rows, count } = await MovieRepository.findAll({
       limit,
@@ -294,6 +298,7 @@ class MovieService {
       search,
       categoryId: category_id,
       isFeatured,
+      isBanner,
       status,
       userControls,
     });
@@ -302,6 +307,26 @@ class MovieService {
       movies: rows,
       meta: paginationMeta(count, page, limit),
     };
+  }
+
+  async updateBannerOrder(movieIds, userId) {
+    const { sequelize } = require('../../config/database');
+    const transaction = await sequelize.transaction();
+    try {
+      // 1. Reset all movies' banner status
+      await MovieRepository.updateAll({ is_banner: false, banner_order: 0 }, { transaction });
+
+      // 2. Set new banner order
+      for (let i = 0; i < movieIds.length; i++) {
+        const id = movieIds[i];
+        await MovieRepository.updateById(id, { is_banner: true, banner_order: i }, { transaction });
+      }
+
+      await transaction.commit();
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
   }
 }
 

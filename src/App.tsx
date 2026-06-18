@@ -13,6 +13,7 @@ import AdminPortal from "./routes/admin";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminMovies from "./pages/admin/AdminMovies";
 import AdminPlans from "./pages/admin/AdminPlans";
+import AdminBanner from "./pages/admin/AdminBanner";
 import Watch from "./routes/watch.$titleId";
 import PaymentSuccess from "./routes/payment-success";
 import PaymentCancel from "./routes/payment-cancel";
@@ -44,7 +45,10 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/my-list" element={<MyList />} />
-        <Route path="/settings/parental-controls" element={<ParentalControls />} />
+        <Route
+          path="/settings/parental-controls"
+          element={<ParentalControls />}
+        />
         <Route path="/affiliate" element={<Affiliate />} />
         {/* Admin portal */}
         <Route path="/admin" element={<AdminPortal />} />
@@ -52,8 +56,12 @@ export default function App() {
         <Route path="/admin/movies" element={<AdminMovies />} />
         <Route path="/admin/plans" element={<AdminPlans />} />
         <Route path="/admin/series" element={<AdminSeries />} />
+        <Route path="/admin/banner" element={<AdminBanner />} />
         <Route path="/series/:seriesId" element={<SeriesDetail />} />
-        <Route path="/watch/series/:seriesId/episode/:episodeId" element={<WatchEpisode />} />
+        <Route
+          path="/watch/series/:seriesId/episode/:episodeId"
+          element={<WatchEpisode />}
+        />
         <Route path="/watch/:titleId" element={<Watch />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/payment/success" element={<PaymentSuccess />} />
