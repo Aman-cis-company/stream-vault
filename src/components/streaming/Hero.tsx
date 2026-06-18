@@ -9,6 +9,7 @@ import { useSocketEvent } from "@/hooks/useSocket";
 import { SOCKET_EVENTS } from "@/lib/socket";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { RatingBadge } from "./RatingBadge";
 import {
   Play,
   Info,
@@ -456,9 +457,7 @@ export function Hero() {
           {/* Meta row */}
           <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
             {current.rating > 0 && (
-              <span className="inline-flex items-center gap-1 font-bold text-amber-400 drop-shadow">
-                <Star className="size-3.5 fill-current" /> {current.rating}
-              </span>
+              <RatingBadge rating={current.rating} />
             )}
             <span className="text-white/55 font-medium">{current.year}</span>
             {current.durationMin > 0 && (

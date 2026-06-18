@@ -82,6 +82,7 @@ interface MovieForm {
   is_age_restricted: boolean;
   minimum_age: string;
   warning_flags: WarningFlag[];
+  rating: string;
 }
 
 const EMPTY_FORM: MovieForm = {
@@ -99,6 +100,7 @@ const EMPTY_FORM: MovieForm = {
   is_age_restricted: false,
   minimum_age: "",
   warning_flags: [],
+  rating: "",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -172,6 +174,7 @@ function MoviesPage() {
       is_age_restricted: movie.is_age_restricted ?? false,
       minimum_age: movie.minimum_age ? String(movie.minimum_age) : "",
       warning_flags: movie.warning_flags_json ?? [],
+      rating: movie.rating ? String(movie.rating) : "",
     });
     setThumbnailFile(null);
     setThumbnailPreview(movie.thumbnail_url ? assetUrl(movie.thumbnail_url) : "");
@@ -208,6 +211,17 @@ function MoviesPage() {
       fd.append("is_age_restricted", String(form.is_age_restricted));
       if (form.minimum_age) fd.append("minimum_age", form.minimum_age);
       if (form.warning_flags.length > 0) fd.append("warning_flags_json", JSON.stringify(form.warning_flags));
+      if (form.rating.trim()) {
+        const num = Number(form.rating);
+        if (isNaN(num) || num < 0 || num > 10) {
+          toast.error("Rating must be a number between 0.0 and 10.0");
+          setSaving(false);
+          return;
+        }
+        fd.append("rating", String(num.toFixed(1)));
+      } else {
+        fd.append("rating", "");
+      }
 
       if (form.videoMode === "url" && form.video_url.trim()) {
         fd.append("video_url", form.video_url.trim());
@@ -560,8 +574,8 @@ function MoviesPage() {
               </Label>
             </div>
 
-            {/* Language + Content Rating */}
-            <div className="grid gap-4 sm:grid-cols-2">
+            {/* Language + Content Rating + Decimal Rating */}
+            <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label>Language</Label>
                 <Input
@@ -588,6 +602,18 @@ function MoviesPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>IMDb Rating (0.0 - 10.0)</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="10"
+                  value={form.rating}
+                  onChange={(e) => setForm({ ...form, rating: e.target.value })}
+                  placeholder="e.g. 8.5"
+                />
               </div>
             </div>
 

@@ -20,7 +20,7 @@ function deleteLocalVideoFile(videoUrl) {
 class SeriesService {
   async create(data, files, userId) {
     const {
-      title, description, category_id, language, content_rating,
+      title, description, category_id, language, content_rating, rating,
       is_age_restricted, minimum_age, warning_flags_json,
       is_featured, status, total_seasons, release_date,
     } = data;
@@ -40,6 +40,7 @@ class SeriesService {
       thumbnail_url: thumbnailUrl,
       language: language || null,
       content_rating: content_rating || null,
+      rating: rating || null,
       is_age_restricted: is_age_restricted || false,
       minimum_age: minimum_age || null,
       warning_flags_json: warning_flags_json || null,
@@ -59,6 +60,7 @@ class SeriesService {
     if (!series) { const e = new Error('Series not found'); e.statusCode = 404; throw e; }
 
     const updateData = { ...data, updated_by: userId };
+    if (updateData.rating === '') updateData.rating = null;
 
     if (data.title && data.title !== series.title) {
       updateData.slug = await generateUniqueSlug(data.title, async (s) => {

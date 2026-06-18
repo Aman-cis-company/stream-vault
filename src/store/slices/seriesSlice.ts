@@ -19,6 +19,7 @@ export interface BackendEpisode {
   createdAt: string;
   updatedAt: string;
   subtitle_url?: string | null;
+  rating?: number | null;
 }
 
 export interface BackendSeries {
@@ -41,6 +42,7 @@ export interface BackendSeries {
   updatedAt: string;
   category?: { id: number; name: string; slug: string } | null;
   episodes?: BackendEpisode[];
+  rating?: number | null;
 }
 
 interface SeriesState {

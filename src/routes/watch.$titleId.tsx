@@ -7,6 +7,7 @@ import { MainLayout } from "@/components/layouts/MainLayout";
 import { Protected } from "@/components/streaming/Protected";
 import { TitleCard } from "@/components/streaming/TitleCard";
 import { AgeRatingBadge } from "@/components/streaming/AgeRatingBadge";
+import { RatingBadge } from "@/components/streaming/RatingBadge";
 import { ContentWarningModal } from "@/components/streaming/ContentWarningModal";
 import type { Title } from "@/lib/mock-data";
 import { fetchMovieById, fetchMovies, fetchVideoStreamUrl, getMovieProgress, saveMovieProgress, fetchInteractionStatus, toggleLike, toggleList } from "@/lib/movies";
@@ -988,9 +989,7 @@ function WatchInner() {
                 </span>
               )}
               {title.rating > 0 && (
-                <span className="inline-flex items-center gap-1 text-amber-400 text-sm font-bold">
-                  <Star className="size-3.5 fill-current" /> {title.rating}
-                </span>
+                <RatingBadge rating={title.rating} />
               )}
             </div>
 

@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import Hls from "hls.js";
 import { Protected } from "@/components/streaming/Protected";
 import { AgeRatingBadge } from "@/components/streaming/AgeRatingBadge";
+import { RatingBadge } from "@/components/streaming/RatingBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -618,6 +619,7 @@ function WatchEpisodeInner() {
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <Badge variant="outline" className="text-xs">S{currentEp.season_number} E{currentEp.episode_number}</Badge>
               {series.content_rating && <AgeRatingBadge rating={series.content_rating} />}
+              {currentEp.rating && Number(currentEp.rating) > 0 && <RatingBadge rating={currentEp.rating} />}
               {currentEp.duration && <span className="text-sm text-muted-foreground">{formatDuration(currentEp.duration)}</span>}
               {resumeFrom > 5 && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 border border-primary/25 px-2 py-0.5 text-xs text-primary font-medium">

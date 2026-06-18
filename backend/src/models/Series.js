@@ -14,6 +14,7 @@ const Series = sequelize.define('Series', {
   minimum_age: { type: DataTypes.TINYINT.UNSIGNED, allowNull: true },
   warning_flags_json: { type: DataTypes.JSON, allowNull: true },
   is_featured: { type: DataTypes.BOOLEAN, defaultValue: false },
+  rating: { type: DataTypes.DECIMAL(3, 1), allowNull: true, defaultValue: null },
   status: { type: DataTypes.ENUM('published', 'draft', 'archived'), defaultValue: 'draft' },
   total_seasons: { type: DataTypes.TINYINT.UNSIGNED, defaultValue: 1 },
   release_date: { type: DataTypes.DATEONLY, allowNull: true },

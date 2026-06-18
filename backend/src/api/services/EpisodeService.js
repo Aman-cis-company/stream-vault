@@ -24,24 +24,24 @@ class EpisodeService {
     const series = await SeriesRepository.findById(seriesId);
     if (!series) { const e = new Error('Series not found'); e.statusCode = 404; throw e; }
 
-    const { season_number = 1, episode_number, title, description, duration, release_date, status, provider_name, provider_video_id, video_url } = data;
-
+    const { season_number = 1, episode_number, title, description, duration, release_date, status, provider_name, provider_video_id, video_url, rating } = data;
+ 
     if (!episode_number) { const e = new Error('episode_number is required'); e.statusCode = 422; throw e; }
-
+ 
     const exists = await EpisodeRepository.episodeExists(seriesId, season_number, episode_number);
     if (exists) {
       const e = new Error(`S${season_number}E${episode_number} already exists for this series`);
       e.statusCode = 409; throw e;
     }
-
+ 
     let thumbnailUrl = null;
     if (files?.thumbnail?.[0]) thumbnailUrl = `/uploads/thumbnails/${files.thumbnail[0].filename}`;
-
+ 
     let finalVideoId = provider_video_id || null;
     let finalVideoUrl = video_url || null;
     let localVideoPath = null;
     let localVideoOutputName = null;
-
+ 
     if (files?.video?.[0]) {
       const videoFile = files.video[0];
       const resolvedProvider = provider_name || 'bunny';
@@ -62,7 +62,7 @@ class EpisodeService {
         }
       }
     }
-
+ 
     const episode = await EpisodeRepository.create({
       series_id: seriesId,
       season_number: Number(season_number),
@@ -75,12 +75,13 @@ class EpisodeService {
       provider_video_id: finalVideoId,
       video_url: finalVideoUrl,
       transcoding_status: localVideoPath ? 'pending' : null,
+      rating: rating || null,
       status: status || 'draft',
       release_date: release_date || null,
       created_by: userId,
       updated_by: userId,
     });
-
+ 
     // Fire-and-forget transcoding for local uploads
     if (localVideoPath) {
       const episodeId = episode.id;
@@ -92,7 +93,7 @@ class EpisodeService {
         onError: () => EpisodeRepository.updateById(episodeId, { transcoding_status: 'failed' }),
       });
     }
-
+ 
     // Fire-and-forget subtitle generation
     if (files?.video?.[0]) {
       const uploadedVideoPath = files.video[0].path;
@@ -107,21 +108,22 @@ class EpisodeService {
           logger.error('Failed to generate subtitles for episode', { episodeId: epId, error: err.message });
         });
     }
-
+ 
     // Keep total_seasons in sync
     const maxSeason = await this._maxSeason(seriesId);
     if (maxSeason > series.total_seasons) {
       await SeriesRepository.updateById(seriesId, { total_seasons: maxSeason });
     }
-
+ 
     return EpisodeRepository.findById(episode.id);
   }
-
+ 
   async update(seriesId, episodeId, data, files, userId) {
     const episode = await EpisodeRepository.findBySeriesAndEpisode(seriesId, episodeId);
     if (!episode) { const e = new Error('Episode not found'); e.statusCode = 404; throw e; }
-
+ 
     const updateData = { ...data, updated_by: userId };
+    if (updateData.rating === '') updateData.rating = null;
 
     if (files?.thumbnail?.[0]) updateData.thumbnail_url = `/uploads/thumbnails/${files.thumbnail[0].filename}`;
 

@@ -46,7 +46,7 @@ interface SeriesForm {
   title: string; description: string; category_id: string; status: "published" | "draft" | "archived";
   is_featured: boolean; language: string; content_rating: ContentRating | "";
   is_age_restricted: boolean; minimum_age: string; warning_flags: WarningFlag[];
-  total_seasons: string; release_date: string;
+  rating: string;
 }
 
 const EMPTY_SERIES: SeriesForm = {
@@ -54,6 +54,7 @@ const EMPTY_SERIES: SeriesForm = {
   is_featured: false, language: "", content_rating: "",
   is_age_restricted: false, minimum_age: "", warning_flags: [],
   total_seasons: "1", release_date: "",
+  rating: "",
 };
 
 // ── Episode form ──────────────────────────────────────────────────────────────
@@ -62,12 +63,14 @@ interface EpisodeForm {
   season_number: string; episode_number: string; title: string; description: string;
   duration: string; release_date: string; status: "published" | "draft" | "archived";
   videoMode: "url" | "file" | "local"; video_url: string;
+  rating: string;
 }
 
 const EMPTY_EPISODE: EpisodeForm = {
   season_number: "1", episode_number: "", title: "", description: "",
   duration: "", release_date: "", status: "draft",
   videoMode: "url", video_url: "",
+  rating: "",
 };
 
 // ── Episode Manager ───────────────────────────────────────────────────────────
@@ -127,6 +130,7 @@ function EpisodeManager({ series, onClose }: { series: BackendSeries; onClose: (
       status: ep.status,
       videoMode: ep.provider_name === "local" ? "local" : ep.video_url ? "url" : "file",
       video_url: ep.video_url ?? "",
+      rating: ep.rating ? String(ep.rating) : "",
     });
     setEpThumbFile(null);
     setEpThumbPreview(ep.thumbnail_url ? assetUrl(ep.thumbnail_url) : "");
@@ -149,6 +153,17 @@ function EpisodeManager({ series, onClose }: { series: BackendSeries; onClose: (
       if (epForm.duration) fd.append("duration", epForm.duration);
       if (epForm.release_date) fd.append("release_date", epForm.release_date);
       fd.append("status", epForm.status);
+      if (epForm.rating.trim()) {
+        const num = Number(epForm.rating);
+        if (isNaN(num) || num < 0 || num > 10) {
+          toast.error("Rating must be a number between 0.0 and 10.0");
+          setSavingEp(false);
+          return;
+        }
+        fd.append("rating", String(num.toFixed(1)));
+      } else {
+        fd.append("rating", "");
+      }
       if (epForm.videoMode === "url" && epForm.video_url.trim()) fd.append("video_url", epForm.video_url.trim());
       else if (epForm.videoMode === "file" && epVideoFile) { fd.append("video", epVideoFile); fd.append("provider_name", "bunny"); }
       else if (epForm.videoMode === "local" && epVideoFile) { fd.append("video", epVideoFile); fd.append("provider_name", "local"); }
@@ -294,16 +309,30 @@ function EpisodeManager({ series, onClose }: { series: BackendSeries; onClose: (
                 <Input type="date" value={epForm.release_date} onChange={(e) => setEpForm({ ...epForm, release_date: e.target.value })} />
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>Status</Label>
-              <Select value={epForm.status} onValueChange={(v) => setEpForm({ ...epForm, status: v as EpisodeForm["status"] })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="published">Published</SelectItem>
-                  <SelectItem value="archived">Archived</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select value={epForm.status} onValueChange={(v) => setEpForm({ ...epForm, status: v as EpisodeForm["status"] })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="published">Published</SelectItem>
+                    <SelectItem value="archived">Archived</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>IMDb Rating (0.0 - 10.0)</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="10"
+                  value={epForm.rating}
+                  onChange={(e) => setEpForm({ ...epForm, rating: e.target.value })}
+                  placeholder="e.g. 8.5"
+                />
+              </div>
             </div>
 
             {/* Thumbnail */}
@@ -436,6 +465,7 @@ function SeriesPage() {
       is_age_restricted: s.is_age_restricted ?? false, minimum_age: s.minimum_age ? String(s.minimum_age) : "",
       warning_flags: s.warning_flags_json ?? [], total_seasons: String(s.total_seasons ?? 1),
       release_date: s.release_date ?? "",
+      rating: s.rating ? String(s.rating) : "",
     });
     setThumbFile(null); setThumbPreview(s.thumbnail_url ? assetUrl(s.thumbnail_url) : ""); setOpen(true);
   }
@@ -456,6 +486,17 @@ function SeriesPage() {
       if (form.minimum_age) fd.append("minimum_age", form.minimum_age);
       if (form.warning_flags.length) fd.append("warning_flags_json", JSON.stringify(form.warning_flags));
       fd.append("total_seasons", form.total_seasons || "1");
+      if (form.rating.trim()) {
+        const num = Number(form.rating);
+        if (isNaN(num) || num < 0 || num > 10) {
+          toast.error("Rating must be a number between 0.0 and 10.0");
+          setSaving(false);
+          return;
+        }
+        fd.append("rating", String(num.toFixed(1)));
+      } else {
+        fd.append("rating", "");
+      }
       if (form.release_date) fd.append("release_date", form.release_date);
       if (thumbFile) fd.append("thumbnail", thumbFile);
 
@@ -648,7 +689,7 @@ function SeriesPage() {
 
             {/* Restrictions */}
             <TabsContent value="restrictions" className="space-y-4 pt-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
                   <Label>Content Rating</Label>
                   <Select value={form.content_rating || "none"} onValueChange={(v) => setForm({ ...form, content_rating: v === "none" ? "" : v as ContentRating })}>
@@ -658,6 +699,18 @@ function SeriesPage() {
                       {CONTENT_RATINGS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>IMDb Rating (0.0 - 10.0)</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="10"
+                    value={form.rating}
+                    onChange={(e) => setForm({ ...form, rating: e.target.value })}
+                    placeholder="e.g. 8.5"
+                  />
                 </div>
               </div>
               <div className="rounded-lg border border-border bg-card/50 p-4 space-y-3">

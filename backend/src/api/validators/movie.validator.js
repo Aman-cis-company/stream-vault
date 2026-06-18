@@ -16,6 +16,7 @@ const createSchema = Joi.object({
   status: Joi.string().valid('published', 'draft', 'archived').default('draft').label('Status'),
   language: Joi.string().max(100).optional().allow('', null).label('Language'),
   content_rating: Joi.string().valid(...CONTENT_RATINGS).optional().allow(null, '').label('Content rating'),
+  rating: Joi.number().min(0).max(10).precision(1).optional().allow(null, '').label('Rating'),
   is_age_restricted: Joi.boolean().default(false).label('Age restricted'),
   minimum_age: Joi.number().integer().min(0).max(99).optional().allow(null, '').label('Minimum age'),
   warning_flags_json: Joi.alternatives()
@@ -39,6 +40,7 @@ const updateSchema = Joi.object({
   status: Joi.string().valid('published', 'draft', 'archived').optional().label('Status'),
   language: Joi.string().max(100).optional().allow('', null).label('Language'),
   content_rating: Joi.string().valid(...CONTENT_RATINGS).optional().allow(null, '').label('Content rating'),
+  rating: Joi.number().min(0).max(10).precision(1).optional().allow(null, '').label('Rating'),
   is_age_restricted: Joi.boolean().optional().label('Age restricted'),
   minimum_age: Joi.number().integer().min(0).max(99).optional().allow(null, '').label('Minimum age'),
   warning_flags_json: Joi.alternatives()
@@ -62,9 +64,8 @@ const validate = (schema) => (req, res, next) => {
     }));
     return res.status(422).json({ success: false, message: 'Validation failed.', errors });
   }
-  // Convert empty strings to null for optional fields
   ['category_id', 'description', 'provider_video_id', 'video_url', 'duration', 'release_date',
-   'language', 'content_rating', 'minimum_age', 'warning_flags_json'].forEach((key) => {
+   'language', 'content_rating', 'minimum_age', 'warning_flags_json', 'rating'].forEach((key) => {
     if (value[key] === '') value[key] = null;
   });
   // Parse warning_flags_json if it came in as a JSON string

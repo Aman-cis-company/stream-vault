@@ -34,6 +34,7 @@ export interface BackendMovie {
   warning_flags_json?: WarningFlag[] | null;
   transcoding_status?: "pending" | "processing" | "completed" | "failed" | null;
   subtitle_url?: string | null;
+  rating?: number | null;
 }
 
 interface MoviesState {

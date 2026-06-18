@@ -4,6 +4,7 @@ import { MainLayout } from "@/components/layouts/MainLayout";
 import { Protected } from "@/components/streaming/Protected";
 import { AgeRatingBadge } from "@/components/streaming/AgeRatingBadge";
 import { ContentWarningModal } from "@/components/streaming/ContentWarningModal";
+import { RatingBadge } from "@/components/streaming/RatingBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { fetchSeriesById, groupEpisodesBySeasons, seriesThumbnail, episodeThumbnail, formatDuration, type BackendSeries, type BackendEpisode } from "@/lib/series";
@@ -126,6 +127,7 @@ function SeriesDetailInner() {
                 <Badge className="bg-primary/20 text-primary border-primary/30 text-xs font-semibold tracking-wide">SERIES</Badge>
                 {series.is_featured && <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">⭐ Featured</Badge>}
                 {series.content_rating && <AgeRatingBadge rating={series.content_rating} />}
+                {series.rating && Number(series.rating) > 0 && <RatingBadge rating={series.rating} />}
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">{series.title}</h1>
@@ -299,6 +301,9 @@ function EpisodeCard({ ep, index, onPlay }: { ep: BackendEpisode; index: number;
               <span className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">
                 E{ep.episode_number}
               </span>
+              {ep.rating && Number(ep.rating) > 0 && (
+                <RatingBadge rating={ep.rating} showMax={false} />
+              )}
               {isNew && (
                 <span className="inline-flex items-center rounded-full bg-primary/15 text-primary border border-primary/25 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
                   New

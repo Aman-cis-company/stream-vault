@@ -66,6 +66,11 @@ const Movie = sequelize.define('Movie', {
     type: DataTypes.INTEGER,
     defaultValue: 0,
   },
+  rating: {
+    type: DataTypes.DECIMAL(3, 1),
+    allowNull: true,
+    defaultValue: null,
+  },
   status: {
     type: DataTypes.ENUM('published', 'draft', 'archived'),
     defaultValue: 'draft',

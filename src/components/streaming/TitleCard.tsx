@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import type { Title } from "@/lib/mock-data";
 import { Play, Plus, Star, Clock } from "lucide-react";
 import { useState } from "react";
+import { RatingBadge } from "./RatingBadge";
 
 function posterBg(hue: number) {
   return {
@@ -80,10 +81,7 @@ export function TitleCard({ title, fullWidth: _fullWidth = false }: { title: Tit
           {/* Meta row — slides in on hover */}
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-[60ms]">
             {title.rating > 0 && (
-              <span className="inline-flex items-center gap-0.5 font-semibold text-amber-400">
-                <Star className="size-3 fill-current" />
-                {title.rating}
-              </span>
+              <RatingBadge rating={title.rating} showMax={false} />
             )}
             <span className="text-white/55">{title.year}</span>
             {title.durationMin > 0 && (
