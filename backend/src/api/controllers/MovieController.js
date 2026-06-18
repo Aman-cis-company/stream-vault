@@ -27,6 +27,32 @@ class MovieController {
         userControls = await ParentalControl.findOne({ where: { user_id: req.user.id } });
       }
       const { movies, meta } = await MovieService.getAll(req.query, userControls);
+      
+      if (req.user && movies && movies.length > 0) {
+        const { WatchHistory } = require('../../models');
+        const { Op } = require('sequelize');
+        const watchHistory = await WatchHistory.findAll({
+          where: {
+            user_id: req.user.id,
+            movie_id: { [Op.not]: null },
+            episode_id: null
+          },
+          raw: true
+        });
+
+        const progressMap = {};
+        watchHistory.forEach(wh => {
+          progressMap[wh.movie_id] = parseFloat(wh.completion_percentage);
+        });
+
+        movies.forEach(movie => {
+          if (movie.dataValues) {
+            movie.dataValues.progress = progressMap[movie.id] !== undefined ? progressMap[movie.id] : null;
+          }
+          movie.progress = progressMap[movie.id] !== undefined ? progressMap[movie.id] : null;
+        });
+      }
+
       return successResponse(res, MESSAGES.MOVIES_FETCHED, { movies }, STATUS_CODES.OK, meta);
     } catch (err) {
       logger.error('MovieController.getAll error', { error: err.message });
@@ -42,6 +68,24 @@ class MovieController {
         userControls = await ParentalControl.findOne({ where: { user_id: req.user.id } });
       }
       const movie = await MovieService.getById(req.params.id, userControls);
+      
+      if (req.user && movie) {
+        const { WatchHistory } = require('../../models');
+        const wh = await WatchHistory.findOne({
+          where: {
+            user_id: req.user.id,
+            movie_id: movie.id,
+            episode_id: null
+          }
+        });
+        if (wh) {
+          if (movie.dataValues) {
+            movie.dataValues.progress = parseFloat(wh.completion_percentage);
+          }
+          movie.progress = parseFloat(wh.completion_percentage);
+        }
+      }
+
       return successResponse(res, MESSAGES.MOVIE_FETCHED, { movie });
     } catch (err) {
       logger.error('MovieController.getById error', { error: err.message });

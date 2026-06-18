@@ -43,6 +43,7 @@ export interface BackendSeries {
   category?: { id: number; name: string; slug: string } | null;
   episodes?: BackendEpisode[];
   rating?: number | null;
+  progress?: number | null;
 }
 
 interface SeriesState {

@@ -35,6 +35,7 @@ export interface BackendMovie {
   transcoding_status?: "pending" | "processing" | "completed" | "failed" | null;
   subtitle_url?: string | null;
   rating?: number | null;
+  progress?: number | null;
 }
 
 interface MoviesState {

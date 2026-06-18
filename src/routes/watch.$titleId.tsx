@@ -241,11 +241,6 @@ function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, subtitl
         setBuffering(false);
         const lvls = data.levels.map((l) => (l.height ? `${l.height}p` : "Auto"));
         setQualities(["Auto", ...new Set(lvls)]);
-        if (resumeFromRef.current > 5 && !hasSeekRef.current) {
-          video.currentTime = resumeFromRef.current;
-          hasSeekRef.current = true;
-          setShowResumeBanner(true);
-        }
         tryPlay();
       });
       hls.on(Hls.Events.ERROR, (_, d) => {
@@ -263,11 +258,6 @@ function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, subtitl
       video.load();
       video.addEventListener("loadeddata", () => {
         setBuffering(false);
-        if (resumeFromRef.current > 5 && !hasSeekRef.current) {
-          video.currentTime = resumeFromRef.current;
-          hasSeekRef.current = true;
-          setShowResumeBanner(true);
-        }
         tryPlay();
       }, { once: true });
     }
@@ -282,7 +272,14 @@ function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, subtitl
 
     const onTime = () => {
       setCurrentTime(v.currentTime);
-      if (isFinite(v.duration)) onProgress?.(v.currentTime, v.duration);
+      if (isFinite(v.duration)) {
+        onProgress?.(v.currentTime, v.duration);
+        if (resumeFromRef.current > 5 && !hasSeekRef.current) {
+          hasSeekRef.current = true;
+          v.currentTime = resumeFromRef.current;
+          setShowResumeBanner(true);
+        }
+      }
     };
     const onDur = () => { if (isFinite(v.duration)) setDuration(v.duration); };
     const onPlay = () => setPlaying(true);
@@ -440,7 +437,6 @@ function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, subtitl
             onClick={() => {
               const v = videoRef.current;
               if (v) v.currentTime = 0;
-              hasSeekRef.current = false;
               setShowResumeBanner(false);
               onResumeConfirmed?.();
             }}
@@ -958,6 +954,7 @@ function WatchInner() {
             onResumeConfirmed={() => {
               lastSavedRef.current = 0;
               setSavedAt(0);
+              setResumeFrom(0);
               saveMovieProgress(titleId!, 0, title.durationMin * 60);
             }}
           />

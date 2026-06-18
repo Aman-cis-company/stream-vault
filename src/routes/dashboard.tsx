@@ -6,7 +6,8 @@ import { Protected } from "@/components/streaming/Protected";
 import { TitleCard } from "@/components/streaming/TitleCard";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
-import { fetchMovies } from "@/lib/movies";
+import { fetchMovies, mapMovieToTitle } from "@/lib/movies";
+import { SeriesCard } from "@/components/streaming/TitleRow";
 import { useSocketEvent } from "@/hooks/useSocket";
 import { SOCKET_EVENTS } from "@/lib/socket";
 import type { Title } from "@/lib/mock-data";
@@ -63,6 +64,7 @@ export default function DashboardPage() {
 function Dashboard() {
   const { user } = useAuth();
   const [recommended, setRecommended] = useState<Title[]>([]);
+  const [continueWatching, setContinueWatching] = useState<any[]>([]);
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [stats, setStats] = useState<UserStats | null>(null);
@@ -75,11 +77,13 @@ function Dashboard() {
       api.get("/user/stats"),
       api.get("/user/watch-activity"),
       api.get("/user/recent-activity?limit=5"),
+      api.get("/user/continue-watching").catch(() => ({ data: { data: { continueWatching: [] } } })),
     ])
-      .then(([statsRes, activityRes, recentRes]) => {
+      .then(([statsRes, activityRes, recentRes, continueRes]) => {
         setStats(statsRes.data.data);
         setActivity(activityRes.data.data.activity ?? []);
         setRecentActivity(recentRes.data.data.activity ?? []);
+        setContinueWatching(continueRes.data.data.continueWatching ?? []);
       })
       .catch(() => {})
       .finally(() => setLoadingStats(false));
@@ -249,19 +253,28 @@ function Dashboard() {
         </div>
 
         {/* Continue watching */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Continue Watching</h2>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/browse">View all <ArrowRight className="ml-1 size-3.5" /></Link>
-            </Button>
-          </div>
-          <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2">
-            {recommended.slice(0, 5).map((t) => (
-              <TitleCard key={t.id} title={t} />
-            ))}
-          </div>
-        </section>
+        {continueWatching.length > 0 && (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Continue Watching</h2>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/browse">View all <ArrowRight className="ml-1 size-3.5" /></Link>
+              </Button>
+            </div>
+            <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2">
+              {continueWatching.map((item) => {
+                if (item.type === "movie") {
+                  const title = mapMovieToTitle(item);
+                  title.progress = item.progress;
+                  return <TitleCard key={`movie-${item.id}`} title={title} />;
+                } else {
+                  const seriesWithProgress = { ...item, progress: item.progress };
+                  return <SeriesCard key={`series-${item.id}`} s={seriesWithProgress} />;
+                }
+              })}
+            </div>
+          </section>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Recent activity */}

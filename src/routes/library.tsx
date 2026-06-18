@@ -84,6 +84,13 @@ function SeriesCard({ series }: { series: BackendSeries }) {
           )}
         </div>
       </div>
+
+      {/* Watch progress bar */}
+      {series.progress != null && (
+        <div className="absolute inset-x-0 bottom-0 z-20 h-[3px] bg-white/10">
+          <div className="h-full bg-primary" style={{ width: `${series.progress}%` }} />
+        </div>
+      )}
     </Link>
   );
 }

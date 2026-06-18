@@ -167,4 +167,82 @@ router.get('/recent-activity', authenticate, async (req, res) => {
   }
 });
 
+// GET /api/v1/user/continue-watching — combined list of movies and series in progress
+router.get('/continue-watching', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const records = await WatchHistory.findAll({
+      where: {
+        user_id: userId,
+        completion_percentage: {
+          [Op.gt]: 0,
+          [Op.lt]: 95,
+        },
+      },
+      include: [
+        {
+          model: Movie,
+          as: 'movie',
+          where: { status: 'published' },
+          required: false,
+        },
+        {
+          model: Episode,
+          as: 'episode',
+          where: { status: 'published' },
+          required: false,
+          include: [
+            {
+              model: Series,
+              as: 'series',
+              where: { status: 'published' },
+              required: false,
+            },
+          ],
+        },
+      ],
+      order: [['last_watched_at', 'DESC']],
+    });
+
+    const seenSeriesIds = new Set();
+    const seenMovieIds = new Set();
+    const continueWatchingList = [];
+
+    for (const record of records) {
+      if (record.movie_id && record.movie) {
+        if (!seenMovieIds.has(record.movie_id)) {
+          seenMovieIds.add(record.movie_id);
+          const movieJson = record.movie.toJSON();
+          movieJson.progress = parseFloat(record.completion_percentage);
+          movieJson.type = 'movie';
+          continueWatchingList.push(movieJson);
+        }
+      } else if (record.episode_id && record.episode && record.episode.series) {
+        const seriesId = record.episode.series.id;
+        if (!seenSeriesIds.has(seriesId)) {
+          seenSeriesIds.add(seriesId);
+          const seriesJson = record.episode.series.toJSON();
+          seriesJson.last_watched_episode = {
+            id: record.episode.id,
+            title: record.episode.title,
+            episode_number: record.episode.episode_number,
+            season_number: record.episode.season_number,
+            watch_time: record.watch_time,
+          };
+          seriesJson.progress = parseFloat(record.completion_percentage);
+          seriesJson.type = 'series';
+          continueWatchingList.push(seriesJson);
+        }
+      }
+    }
+
+    return successResponse(res, 'Continue watching list fetched', {
+      continueWatching: continueWatchingList,
+    });
+  } catch (err) {
+    require('../../config/logger').error('Failed to fetch continue-watching list', { error: err.message });
+    return errorResponse(res, 'Failed to fetch continue watching list', 500);
+  }
+});
+
 module.exports = router;

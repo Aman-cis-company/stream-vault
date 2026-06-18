@@ -48,6 +48,7 @@ export function mapMovieToTitle(movie: BackendMovie): Title {
     minimum_age: movie.minimum_age ?? null,
     warning_flags_json: movie.warning_flags_json ?? null,
     subtitle_url: movie.subtitle_url ?? null,
+    progress: movie.progress !== undefined && movie.progress !== null ? Number(movie.progress) : undefined,
   };
 }
 

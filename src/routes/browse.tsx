@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { Hero } from "@/components/streaming/Hero";
-import { ContentRow, SeriesContentRow } from "@/components/streaming/TitleRow";
+import { ContentRow, SeriesContentRow, SeriesCard, EmblaRow } from "@/components/streaming/TitleRow";
+import { TitleCard } from "@/components/streaming/TitleCard";
 import { apiClient } from "@/services/api";
 import { mapMovieToTitle } from "@/lib/movies";
 import { fetchSeriesList } from "@/lib/series";
@@ -57,20 +58,23 @@ export default function Browse() {
   const [moviesByCategory, setMoviesByCategory] = useState<Record<number, Title[]>>({});
   const [extras, setExtras] = useState<Title[]>([]);
   const [seriesList, setSeriesList] = useState<BackendSeries[]>([]);
+  const [continueWatching, setContinueWatching] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     try {
-      const [catRes, movRes, seriesData] = await Promise.all([
+      const [catRes, movRes, seriesData, continueRes] = await Promise.all([
         apiClient.get("/categories?status=active&limit=50"),
         apiClient.get("/movies?status=published&limit=100"),
         fetchSeriesList({ status: "published", limit: 50 }),
+        apiClient.get("/user/continue-watching").catch(() => ({ data: { data: { continueWatching: [] } } })),
       ]);
 
       const cats: Category[] = catRes.data.data.categories ?? [];
       const movies: BackendMovie[] = movRes.data.data.movies ?? [];
       setCategories(cats);
       setSeriesList(seriesData);
+      setContinueWatching(continueRes.data.data.continueWatching ?? []);
 
       const byCat: Record<number, Title[]> = {};
       const rest: Title[] = [];
@@ -141,6 +145,33 @@ export default function Browse() {
           </div>
         ) : (
           <div className="pt-6 space-y-1">
+
+            {/* ── Continue Watching ── */}
+            {continueWatching.length > 0 && (
+              <>
+                <EmblaRow heading="Continue Watching">
+                  {continueWatching.map((item) => {
+                    if (item.type === "movie") {
+                      const title = mapMovieToTitle(item);
+                      title.progress = item.progress;
+                      return (
+                        <div key={`movie-${item.id}`} className="shrink-0" style={{ width: "clamp(145px, 12vw, 190px)" }}>
+                          <TitleCard title={title} />
+                        </div>
+                      );
+                    } else {
+                      const seriesWithProgress = { ...item, progress: item.progress };
+                      return (
+                        <div key={`series-${item.id}`} className="shrink-0" style={{ width: "clamp(145px, 12vw, 190px)" }}>
+                          <SeriesCard s={seriesWithProgress} />
+                        </div>
+                      );
+                    }
+                  })}
+                </EmblaRow>
+                <SectionDivider />
+              </>
+            )}
 
             {/* ── Trending Now ── */}
             {trendingMovies.length > 0 && (

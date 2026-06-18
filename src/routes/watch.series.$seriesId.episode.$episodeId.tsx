@@ -96,6 +96,9 @@ function EpisodePlayer({ src, poster, title, resumeFrom = 0, subtitleUrl, onProg
   const hlsRef = useRef<Hls | null>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const hasSeekRef = useRef(false);
+  const resumeFromRef = useRef(resumeFrom);
+  resumeFromRef.current = resumeFrom;
+
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -146,13 +149,8 @@ function EpisodePlayer({ src, poster, title, resumeFrom = 0, subtitleUrl, onProg
     const video = videoRef.current;
     if (!video) return;
     setBuffering(false);
-    if (resumeFrom > 5 && !hasSeekRef.current) {
-      hasSeekRef.current = true;
-      video.currentTime = resumeFrom;
-      setShowResumeBanner(true);
-    }
     video.play().catch(() => { video.muted = true; setMuted(true); video.play().catch(() => {}); });
-  }, [resumeFrom]);
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -183,7 +181,14 @@ function EpisodePlayer({ src, poster, title, resumeFrom = 0, subtitleUrl, onProg
     const handlers = {
       timeupdate: () => {
         setCurrentTime(v.currentTime);
-        if (isFinite(v.duration) && v.duration > 0) onProgress?.(v.currentTime, v.duration);
+        if (isFinite(v.duration) && v.duration > 0) {
+          onProgress?.(v.currentTime, v.duration);
+          if (resumeFromRef.current > 5 && !hasSeekRef.current) {
+            hasSeekRef.current = true;
+            v.currentTime = resumeFromRef.current;
+            setShowResumeBanner(true);
+          }
+        }
       },
       durationchange: () => { if (isFinite(v.duration)) setDuration(v.duration); },
       play: () => setPlaying(true), pause: () => setPlaying(false),
@@ -610,6 +615,11 @@ function WatchEpisodeInner() {
                 resumeFrom={resumeFrom}
                 subtitleUrl={currentEp.subtitle_url}
                 onProgress={handleProgress}
+                onResumeConfirmed={() => {
+                  lastSavedRef.current = 0;
+                  setResumeFrom(0);
+                  saveEpisodeProgress(currentEp.id, 0, currentEp.duration || 1800);
+                }}
               />
             )}
           </div>

@@ -27,6 +27,51 @@ class SeriesController {
         userControls = await ParentalControl.findOne({ where: { user_id: req.user.id } });
       }
       const { series, meta } = await SeriesService.getAll(req.query, userControls);
+
+      if (req.user && series && series.length > 0) {
+        const { Episode, WatchHistory } = require('../../models');
+        const seriesIds = series.map(s => s.id);
+        
+        const episodes = await Episode.findAll({
+          where: { series_id: seriesIds },
+          attributes: ['id', 'series_id'],
+          raw: true
+        });
+
+        const episodeToSeriesMap = {};
+        const episodeIds = [];
+        episodes.forEach(ep => {
+          episodeToSeriesMap[ep.id] = ep.series_id;
+          episodeIds.push(ep.id);
+        });
+
+        if (episodeIds.length > 0) {
+          const watchHistory = await WatchHistory.findAll({
+            where: { user_id: req.user.id, episode_id: episodeIds },
+            order: [['last_watched_at', 'DESC']],
+            raw: true
+          });
+
+          const seriesProgress = {};
+          const seenSeries = new Set();
+          
+          watchHistory.forEach(wh => {
+            const seriesId = episodeToSeriesMap[wh.episode_id];
+            if (seriesId && !seenSeries.has(seriesId)) {
+              seenSeries.add(seriesId);
+              seriesProgress[seriesId] = parseFloat(wh.completion_percentage);
+            }
+          });
+
+          series.forEach(s => {
+            if (s.dataValues) {
+              s.dataValues.progress = seriesProgress[s.id] !== undefined ? seriesProgress[s.id] : null;
+            }
+            s.progress = seriesProgress[s.id] !== undefined ? seriesProgress[s.id] : null;
+          });
+        }
+      }
+
       return successResponse(res, MESSAGES.SERIES_FETCHED, { series }, STATUS_CODES.OK, meta);
     } catch (err) {
       logger.error('SeriesController.getAll error', { error: err.message });
@@ -42,6 +87,29 @@ class SeriesController {
         userControls = await ParentalControl.findOne({ where: { user_id: req.user.id } });
       }
       const series = await SeriesService.getById(req.params.id, userControls);
+
+      if (req.user && series) {
+        const { Episode, WatchHistory } = require('../../models');
+        const episodes = await Episode.findAll({
+          where: { series_id: series.id },
+          attributes: ['id'],
+          raw: true
+        });
+        const epIds = episodes.map(e => e.id);
+        if (epIds.length > 0) {
+          const lastWatched = await WatchHistory.findOne({
+            where: { user_id: req.user.id, episode_id: epIds },
+            order: [['last_watched_at', 'DESC']]
+          });
+          if (lastWatched) {
+            if (series.dataValues) {
+              series.dataValues.progress = parseFloat(lastWatched.completion_percentage);
+            }
+            series.progress = parseFloat(lastWatched.completion_percentage);
+          }
+        }
+      }
+
       return successResponse(res, MESSAGES.SERIES_FETCHED, { series });
     } catch (err) {
       logger.error('SeriesController.getById error', { error: err.message });

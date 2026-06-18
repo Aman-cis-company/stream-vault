@@ -23,7 +23,7 @@ function SkeletonCard() {
 
 // ── Series card ───────────────────────────────────────────────────────────────
 
-function SeriesCard({ s }: { s: BackendSeries }) {
+export function SeriesCard({ s }: { s: BackendSeries }) {
   const [imgErr, setImgErr] = useState(false);
 
   return (
@@ -87,6 +87,13 @@ function SeriesCard({ s }: { s: BackendSeries }) {
           )}
         </div>
       </div>
+
+      {/* Watch progress bar */}
+      {s.progress != null && (
+        <div className="absolute inset-x-0 bottom-0 z-20 h-[3px] bg-white/10">
+          <div className="h-full bg-primary" style={{ width: `${s.progress}%` }} />
+        </div>
+      )}
     </Link>
   );
 }
@@ -111,7 +118,7 @@ interface EmblaRowProps {
   children?: ReactNode;
 }
 
-function EmblaRow({
+export function EmblaRow({
   heading,
   badge,
   seeAllHref,
