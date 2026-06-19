@@ -80,8 +80,9 @@ const MANAGE_CARDS = [
     desc: "Create and manage categories that group movies for subscribers on the frontend.",
     href: "/admin/categories",
     label: "Manage Categories",
-    color: "from-violet-500/20 to-violet-500/5 border-violet-500/25",
-    iconBg: "bg-violet-500/15 text-violet-400",
+    color: "from-violet-500/10 via-violet-500/3 to-transparent border-violet-500/15 hover:border-violet-500/35 hover:shadow-[0_0_20px_rgba(139,92,246,0.1)]",
+    iconBg: "bg-violet-500/10 text-violet-400 border border-violet-500/20",
+    btnClass: "border-violet-500/20 text-violet-400 hover:bg-violet-500/10 hover:border-violet-500/40",
   },
   {
     icon: Film,
@@ -89,8 +90,9 @@ const MANAGE_CARDS = [
     desc: "Select which movies are featured on the browse page banner and set their display order.",
     href: "/admin/banner",
     label: "Manage Banner",
-    color: "from-amber-500/20 to-amber-500/5 border-amber-500/25",
-    iconBg: "bg-amber-500/15 text-amber-400",
+    color: "from-amber-500/10 via-amber-500/3 to-transparent border-amber-500/15 hover:border-amber-500/35 hover:shadow-[0_0_20px_rgba(245,158,11,0.1)]",
+    iconBg: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+    btnClass: "border-amber-500/20 text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/40",
   },
   {
     icon: Film,
@@ -98,8 +100,9 @@ const MANAGE_CARDS = [
     desc: "Add, edit, publish or archive movies. Assign categories, upload thumbnails and videos.",
     href: "/admin/movies",
     label: "Manage Movies",
-    color: "from-primary/20 to-primary/5 border-primary/25",
-    iconBg: "bg-primary/15 text-primary",
+    color: "from-primary/10 via-primary/3 to-transparent border-primary/15 hover:border-primary/35 hover:shadow-[0_0_20px_rgba(225,29,72,0.1)]",
+    iconBg: "bg-primary/10 text-primary border border-primary/20",
+    btnClass: "border-primary/20 text-primary hover:bg-primary/10 hover:border-primary/40",
   },
   {
     icon: Tv,
@@ -107,8 +110,9 @@ const MANAGE_CARDS = [
     desc: "Create and manage web series with multiple seasons and episodes.",
     href: "/admin/series",
     label: "Manage Series",
-    color: "from-cyan-500/20 to-cyan-500/5 border-cyan-500/25",
-    iconBg: "bg-cyan-500/15 text-cyan-400",
+    color: "from-cyan-500/10 via-cyan-500/3 to-transparent border-cyan-500/15 hover:border-cyan-500/35 hover:shadow-[0_0_20px_rgba(6,182,212,0.1)]",
+    iconBg: "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
+    btnClass: "border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-500/40",
   },
   {
     icon: CreditCard,
@@ -116,8 +120,9 @@ const MANAGE_CARDS = [
     desc: "Manage plans, pricing tiers, and Stripe Price ID configuration.",
     href: "/admin/plans",
     label: "Manage Plans",
-    color: "from-emerald-500/20 to-emerald-500/5 border-emerald-500/25",
-    iconBg: "bg-emerald-500/15 text-emerald-400",
+    color: "from-emerald-500/10 via-emerald-500/3 to-transparent border-emerald-500/15 hover:border-emerald-500/35 hover:shadow-[0_0_20px_rgba(16,185,129,0.1)]",
+    iconBg: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+    btnClass: "border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/40",
   },
 ];
 
@@ -466,16 +471,16 @@ function Admin() {
               return (
                 <div
                   key={card.title}
-                  className={`group relative flex flex-col rounded-2xl border bg-gradient-to-br p-6 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_48px_-12px_rgba(0,0,0,0.5)] ${card.color}`}
+                  className={`group relative flex flex-col rounded-2xl border bg-gradient-to-br p-6 transition-all duration-300 hover:-translate-y-0.5 ${card.color}`}
                 >
                   <div className="flex items-start gap-4 mb-4">
                     <span
-                      className={`inline-flex size-11 shrink-0 items-center justify-center rounded-xl ${card.iconBg}`}
+                      className={`inline-flex size-11 shrink-0 items-center justify-center rounded-xl transition-colors duration-300 ${card.iconBg}`}
                     >
                       <card.icon className="size-5" />
                     </span>
                     <div className="min-w-0">
-                      <h2 className="font-extrabold text-base">{card.title}</h2>
+                      <h2 className="font-extrabold text-base tracking-tight">{card.title}</h2>
                       {count && (
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {count}
@@ -488,11 +493,12 @@ function Admin() {
                   </p>
                   <Button
                     asChild
-                    className="w-full rounded-xl h-10 font-bold text-sm"
+                    variant="outline"
+                    className={`w-fit rounded-xl h-10 px-5 font-bold text-sm bg-transparent transition-all duration-300 group/btn ${card.btnClass}`}
                   >
                     <Link to={card.href} className="flex items-center gap-1.5">
                       {card.label}
-                      <ArrowUpRight className="size-3.5 opacity-70 group-hover:opacity-100 transition-opacity" />
+                      <ArrowUpRight className="size-3.5 opacity-80 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
                     </Link>
                   </Button>
                 </div>
