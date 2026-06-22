@@ -36,10 +36,12 @@ class AuthController {
 
   async login(req, res) {
     try {
-      const { email, password } = req.body;
+      console.log("--- AuthController.login request body ---", req.body);
+      const { email, password, forceLogout } = req.body;
       const { user, accessToken, refreshToken } = await AuthService.login(
         email,
         password,
+        !!forceLogout
       );
       return successResponse(res, MESSAGES.LOGIN_SUCCESS, {
         user,
@@ -48,6 +50,14 @@ class AuthController {
       });
     } catch (err) {
       logger.error("AuthController.login error", { error: err.message });
+      if (err.code === 'MAX_SCREENS_EXCEEDED') {
+        return res.status(STATUS_CODES.FORBIDDEN).json({
+          success: false,
+          message: err.message,
+          code: 'MAX_SCREENS_EXCEEDED',
+          maxScreens: err.maxScreens
+        });
+      }
       if (err.statusCode === 401) {
         return errorResponse(
           res,
@@ -58,6 +68,21 @@ class AuthController {
       if (err.statusCode === 403) {
         return errorResponse(res, err.message, STATUS_CODES.FORBIDDEN);
       }
+      return errorResponse(
+        res,
+        MESSAGES.INTERNAL_ERROR,
+        STATUS_CODES.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async logoutOthers(req, res) {
+    try {
+      const { refresh_token, socketId } = req.body;
+      await AuthService.logoutOthers(req.user.id, refresh_token, socketId);
+      return successResponse(res, "Other screens logged out successfully");
+    } catch (err) {
+      logger.error("AuthController.logoutOthers error", { error: err.message });
       return errorResponse(
         res,
         MESSAGES.INTERNAL_ERROR,

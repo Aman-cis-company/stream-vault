@@ -19,6 +19,7 @@ const registerSchema = Joi.object({
 const loginSchema = Joi.object({
   email: Joi.string().email().lowercase().required().label('Email'),
   password: Joi.string().required().label('Password'),
+  forceLogout: Joi.boolean().optional().label('Force logout'),
 });
 
 const refreshTokenSchema = Joi.object({

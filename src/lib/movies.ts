@@ -162,6 +162,8 @@ export interface BackendPlan {
   stripe_price_id: string | null;
   features_json: string[] | null;
   status: string;
+  quality?: string | null;
+  max_screens?: number;
 }
 
 export async function fetchPlans(): Promise<BackendPlan[]> {

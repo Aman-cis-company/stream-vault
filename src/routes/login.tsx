@@ -24,6 +24,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showPw, setShowPw] = useState(false);
+  const [blockedError, setBlockedError] = useState<{ message: string; maxScreens: number } | null>(null);
 
   // Support redirect back after login (e.g. from pricing page)
   const returnTo = (location.state as { returnTo?: string } | null)?.returnTo ?? "/dashboard";
@@ -40,21 +41,47 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (values: FormValues) => {
+    setBlockedError(null);
     try {
       await login(values.email, values.password);
       toast.success("Welcome back!");
       navigate(returnTo, { replace: true });
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Invalid email or password.";
-      toast.error("Login failed", { description: msg });
+    } catch (err: any) {
+      if (err && err.code === "MAX_SCREENS_EXCEEDED") {
+        setBlockedError(err);
+      } else {
+        const msg = err?.message ?? "Invalid email or password.";
+        toast.error("Login failed", { description: msg });
+      }
     }
   };
 
   return (
     <AuthLayout title="Sign in" subtitle="Continue to your StreamVault account.">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+        {blockedError && (
+          <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/10 text-sm space-y-3">
+            <p className="text-foreground font-semibold text-center">{blockedError.message}</p>
+            <Button
+              type="button"
+              variant="destructive"
+              className="w-full text-xs font-bold py-2 h-9 rounded-lg"
+              onClick={async () => {
+                const values = watch();
+                try {
+                  await login(values.email, values.password, true);
+                  toast.success("Welcome back!");
+                  navigate(returnTo, { replace: true });
+                } catch (forceErr: any) {
+                  toast.error("Force login failed", { description: forceErr?.message ?? "Error" });
+                }
+              }}
+            >
+              Logout Other Screens
+            </Button>
+          </div>
+        )}
+
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input

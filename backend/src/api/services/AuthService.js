@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
 const UserRepository = require('../repositories/UserRepository');
+const SubscriptionRepository = require('../repositories/SubscriptionRepository');
 const { RefreshToken, Role, AffiliateCode, ReferralConversion } = require('../../models');
 const COMMISSION_RATE = parseFloat(process.env.AFFILIATE_COMMISSION_RATE || '0.10');
 const socketServer = require('../../socket');
@@ -90,7 +91,7 @@ class AuthService {
    * Login any user.
    * Returns { user, accessToken, refreshToken }
    */
-  async login(email, password) {
+  async login(email, password, forceLogout = false) {
     const user = await UserRepository.findByEmailWithPassword(email);
 
     if (!user) {
@@ -117,6 +118,47 @@ class AuthService {
       throw err;
     }
 
+    // Retrieve subscription plan details to check session limit
+    const activeSub = await SubscriptionRepository.findActiveByUserId(user.id);
+    const maxScreens = activeSub && activeSub.plan ? activeSub.plan.max_screens : 2;
+
+    if (forceLogout) {
+      // Revoke all existing refresh tokens
+      await RefreshToken.update(
+        { is_revoked: true },
+        { where: { user_id: user.id, is_revoked: false } }
+      );
+
+      // Disconnect all active socket connections
+      const io = socketServer.getIO();
+      if (io) {
+        const userSockets = Array.from(io.sockets.sockets.values()).filter(
+          (s) => s.data.userId === user.id
+        );
+        userSockets.forEach((s) => {
+          s.emit('max_screens_exceeded', { message: 'force_logged_out' });
+          s.disconnect(true);
+        });
+      }
+    } else {
+      // Check active refresh token count against subscription limit
+      const activeSessions = await RefreshToken.count({
+        where: {
+          user_id: user.id,
+          is_revoked: false,
+          expires_at: { [Op.gt]: new Date() },
+        },
+      });
+
+      if (activeSessions >= maxScreens) {
+        const err = new Error(`your account is loggedin in ${maxScreens} screen please manage`);
+        err.statusCode = 403;
+        err.code = 'MAX_SCREENS_EXCEEDED';
+        err.maxScreens = maxScreens;
+        throw err;
+      }
+    }
+
     // Update last_login (non-blocking)
     UserRepository.updateById(user.id, { last_login: new Date() }).catch(() => {});
 
@@ -134,6 +176,34 @@ class AuthService {
 
     const safeUser = await UserRepository.findById(user.id);
     return { user: safeUser, accessToken, refreshToken: refreshTokenValue };
+  }
+
+  /**
+   * Revoke all other refresh tokens for the user and disconnect their sockets.
+   */
+  async logoutOthers(userId, currentRefreshToken, keepSocketId) {
+    const whereClause = {
+      user_id: userId,
+      is_revoked: false,
+    };
+    if (currentRefreshToken) {
+      whereClause.token = { [Op.ne]: currentRefreshToken };
+    }
+    await RefreshToken.update(
+      { is_revoked: true },
+      { where: whereClause }
+    );
+
+    const io = socketServer.getIO();
+    if (io) {
+      const userSockets = Array.from(io.sockets.sockets.values()).filter(
+        (s) => s.data.userId === userId && s.id !== keepSocketId
+      );
+      userSockets.forEach((s) => {
+        s.emit('max_screens_exceeded', { message: 'force_logged_out' });
+        s.disconnect(true);
+      });
+    }
   }
 
   /**

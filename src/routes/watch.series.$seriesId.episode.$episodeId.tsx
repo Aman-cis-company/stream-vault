@@ -13,7 +13,7 @@ import {
   formatDuration, seriesThumbnail,
   type BackendSeries, type BackendEpisode,
 } from "@/lib/series";
-import { assetUrl } from "@/services/api";
+import { assetUrl, apiClient } from "@/services/api";
 import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   SkipBack, SkipForward, ArrowLeft, Loader2, ChevronDown, ChevronRight, RotateCcw,
@@ -66,6 +66,7 @@ interface EpisodePlayerProps {
   subtitleUrl?: string | null;
   onProgress?: (currentTime: number, duration: number) => void;
   onResumeConfirmed?: () => void;
+  maxQuality?: string;
 }
 
 interface Cue {
@@ -165,7 +166,7 @@ function VideoPreviewTooltip({ src, hoverTime, duration }: VideoPreviewTooltipPr
   );
 }
 
-function EpisodePlayer({ src, poster, title, resumeFrom = 0, subtitleUrl, onProgress, onResumeConfirmed }: EpisodePlayerProps) {
+function EpisodePlayer({ src, poster, title, resumeFrom = 0, subtitleUrl, onProgress, onResumeConfirmed, maxQuality = "720" }: EpisodePlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -250,7 +251,19 @@ function EpisodePlayer({ src, poster, title, resumeFrom = 0, subtitleUrl, onProg
       hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, handleReady);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        const maxQ = maxQuality ? parseInt(maxQuality, 10) : 720;
+        let maxLvlIndex = -1;
+        for (let i = 0; i < hls.levels.length; i++) {
+          if (hls.levels[i].height && hls.levels[i].height <= maxQ) {
+            maxLvlIndex = i;
+          }
+        }
+        if (maxLvlIndex !== -1) {
+          hls.autoLevelCapping = maxLvlIndex;
+        }
+        handleReady();
+      });
       hls.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) hls.recoverMediaError(); });
       return () => { hls.destroy(); hlsRef.current = null; };
     } else {
@@ -258,7 +271,7 @@ function EpisodePlayer({ src, poster, title, resumeFrom = 0, subtitleUrl, onProg
       video.load();
       video.addEventListener("loadedmetadata", handleReady, { once: true });
     }
-  }, [src, handleReady]);
+  }, [src, handleReady, maxQuality]);
 
   useEffect(() => {
     const v = videoRef.current; if (!v) return;
@@ -622,6 +635,20 @@ function WatchEpisodeInner() {
   // Throttle: only save when position moved ≥10 s since last save
   const lastSavedRef = useRef(0);
 
+  const [subscription, setSubscription] = useState<any>(null);
+
+  useEffect(() => {
+    apiClient.get("/stripe/subscription-status")
+      .then(({ data }) => {
+        if (data?.success && data?.data?.subscription) {
+          setSubscription(data.data.subscription);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load subscription status", err);
+      });
+  }, []);
+
   useEffect(() => {
     if (!seriesId) return;
     Promise.all([fetchSeriesById(seriesId), fetchEpisodesBySeriesId(seriesId)])
@@ -737,6 +764,7 @@ function WatchEpisodeInner() {
                   setResumeFrom(0);
                   saveEpisodeProgress(currentEp.id, 0, currentEp.duration || 1800);
                 }}
+                maxQuality={subscription?.plan?.quality ?? "720"}
               />
             )}
           </div>

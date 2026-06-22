@@ -24,8 +24,8 @@ export function useAuth() {
   const { user, isAuthenticated } = useSelector((s: RootState) => s.auth);
 
   const login = useCallback(
-    async (email: string, password: string) => {
-      return dispatch(loginThunk({ email, password })).unwrap();
+    async (email: string, password: string, forceLogout?: boolean) => {
+      return dispatch(loginThunk({ email, password, forceLogout })).unwrap();
     },
     [dispatch]
   );

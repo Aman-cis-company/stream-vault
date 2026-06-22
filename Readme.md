@@ -36,3 +36,13 @@ sudo apt update
 sudo apt install python3 python3-pip ffmpeg -y
 pip3 install openai-whisper
 whisper --help (Verify installation)
+
+
+---------------------------
+HLS Video (HTTP Live Streaming)
+
+1) Create an HLS Video: Upload any .mp4 → Convert → Auto sub → Stream. No encoder needed.
+2)Used Adaptive Bitrate Streaming
+3)Supported on All Devices and Browsers
+4)Apple releases the HLS in 2009
+

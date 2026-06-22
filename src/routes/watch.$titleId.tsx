@@ -11,7 +11,7 @@ import { RatingBadge } from "@/components/streaming/RatingBadge";
 import { ContentWarningModal } from "@/components/streaming/ContentWarningModal";
 import type { Title } from "@/lib/mock-data";
 import { fetchMovieById, fetchMovies, fetchVideoStreamUrl, getMovieProgress, saveMovieProgress, fetchInteractionStatus, toggleLike, toggleList } from "@/lib/movies";
-import { assetUrl } from "@/services/api";
+import { assetUrl, apiClient } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -147,6 +147,7 @@ interface NativePlayerProps {
   subtitleUrl?: string | null;
   onProgress?: (currentTime: number, duration: number) => void;
   onResumeConfirmed?: () => void;
+  maxQuality?: string;
 }
 
 interface Cue {
@@ -247,7 +248,7 @@ function VideoPreviewTooltip({ src, hoverTime, duration }: VideoPreviewTooltipPr
   );
 }
 
-function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, subtitleUrl, onProgress, onResumeConfirmed }: NativePlayerProps) {
+function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, subtitleUrl, onProgress, onResumeConfirmed, maxQuality = "720" }: NativePlayerProps) {
   const srcType = videoSourceType(src);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -331,7 +332,20 @@ function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, subtitl
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
         setBuffering(false);
-        const lvls = data.levels.map((l) => (l.height ? `${l.height}p` : "Auto"));
+        const maxQ = maxQuality ? parseInt(maxQuality, 10) : 720;
+        
+        let maxLvlIndex = -1;
+        for (let i = 0; i < hls.levels.length; i++) {
+          if (hls.levels[i].height && hls.levels[i].height <= maxQ) {
+            maxLvlIndex = i;
+          }
+        }
+        if (maxLvlIndex !== -1) {
+          hls.autoLevelCapping = maxLvlIndex;
+        }
+
+        const filteredLevels = data.levels.filter((l) => !l.height || l.height <= maxQ);
+        const lvls = filteredLevels.map((l) => (l.height ? `${l.height}p` : "Auto"));
         setQualities(["Auto", ...new Set(lvls)]);
         tryPlay();
       });
@@ -353,7 +367,7 @@ function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, subtitl
         tryPlay();
       }, { once: true });
     }
-  }, [src]);
+  }, [src, maxQuality]);
 
   // Video event listeners
   useEffect(() => {
@@ -883,6 +897,20 @@ function WatchInner() {
   const lastSavedRef = useRef(0);
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [subscription, setSubscription] = useState<any>(null);
+
+  useEffect(() => {
+    apiClient.get("/stripe/subscription-status")
+      .then(({ data }) => {
+        if (data?.success && data?.data?.subscription) {
+          setSubscription(data.data.subscription);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load subscription status", err);
+      });
+  }, []);
+
   const loadMovie = useCallback((id: string, isPolling = false) => {
     fetchMovieById(id)
       .then((t) => {
@@ -1055,6 +1083,7 @@ function WatchInner() {
               setResumeFrom(0);
               saveMovieProgress(titleId!, 0, title.durationMin * 60);
             }}
+            maxQuality={subscription?.plan?.quality ?? "720"}
           />
         )}
       </div>

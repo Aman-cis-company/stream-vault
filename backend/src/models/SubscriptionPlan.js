@@ -35,6 +35,16 @@ const SubscriptionPlan = sequelize.define('SubscriptionPlan', {
     type: DataTypes.JSON,
     allowNull: true,
   },
+  quality: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    defaultValue: '1080p',
+  },
+  max_screens: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 2,
+  },
   status: {
     type: DataTypes.ENUM('active', 'inactive'),
     defaultValue: 'active',

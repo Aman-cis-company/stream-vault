@@ -22,8 +22,10 @@ function mapBackendPlan(p: BackendPlan, index: number): Plan {
     cadence,
     priceInr: price,
     perMonthInr: monthlyPrice,
-    quality: "Full HD 1080p",
-    screens: 2,
+    quality: p.quality
+      ? (p.quality === "720" ? "HD 720p" : p.quality === "1080" ? "Full HD 1080p" : p.quality)
+      : "Full HD 1080p",
+    screens: p.max_screens ?? 2,
     features: Array.isArray(p.features_json)
       ? p.features_json
       : [`${cadence} billing`, "Unlimited streaming", "Cancel anytime"],
@@ -141,12 +143,16 @@ export default function Pricing() {
 
             <div className="mt-5">
               <div className="flex items-end gap-1">
-                <span className="text-4xl font-extrabold tracking-tight">₹{p.perMonthInr}</span>
-                <span className="mb-1 text-sm text-muted-foreground">/mo</span>
+                <span className="text-4xl font-extrabold tracking-tight">
+                  ₹{p.cadence === "Yearly" ? p.priceInr : p.perMonthInr}
+                </span>
+                <span className="mb-1 text-sm text-muted-foreground">
+                  /{p.cadence === "Yearly" ? "yr" : "mo"}
+                </span>
               </div>
               {p.cadence === "Yearly" && (
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  ₹{p.priceInr} billed yearly
+                  ₹{p.perMonthInr}/mo equivalent
                 </p>
               )}
             </div>

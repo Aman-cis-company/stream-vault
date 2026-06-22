@@ -1,6 +1,7 @@
 const { Server } = require('socket.io');
 const { verifyAccessToken } = require('../helpers/tokenHelper');
 const UserRepository = require('../api/repositories/UserRepository');
+const SubscriptionRepository = require('../api/repositories/SubscriptionRepository');
 const logger = require('../config/logger');
 const EVENTS = require('./events');
 
@@ -76,7 +77,7 @@ function init(httpServer) {
   });
 
   // ── Connection handler ───────────────────────────────────────────────────
-  io.on('connection', (socket) => {
+  io.on('connection', async (socket) => {
     const { authenticated, userId, role } = socket.data;
 
     // Everyone joins the broadcast room
@@ -95,10 +96,58 @@ function init(httpServer) {
       }
 
       logger.info('Socket connected', { userId, role, socketId: socket.id });
+
+      // Check current connection count against plan's max screens
+      try {
+        const activeSub = await SubscriptionRepository.findActiveByUserId(userId);
+        const maxScreens = activeSub && activeSub.plan ? activeSub.plan.max_screens : 2;
+
+        const userSockets = Array.from(io.sockets.sockets.values()).filter(
+          (s) => s.data.authenticated && s.data.userId === userId && s.id !== socket.id
+        );
+        const activeUnblockedSockets = userSockets.filter((s) => !s.data.isBlocked);
+
+        if (activeUnblockedSockets.length >= maxScreens) {
+          socket.data.isBlocked = true;
+          socket.emit('max_screens_exceeded', {
+            message: `your account is loggedin in ${maxScreens} screen please manage`,
+            maxScreens,
+          });
+        } else {
+          socket.data.isBlocked = false;
+        }
+      } catch (err) {
+        logger.error('Socket connection limit check error', { error: err.message });
+      }
     }
 
-    socket.on('disconnect', (reason) => {
+    socket.on('disconnect', async (reason) => {
       logger.info('Socket disconnected', { userId: userId ?? 'anon', reason });
+      if (authenticated) {
+        try {
+          const activeSub = await SubscriptionRepository.findActiveByUserId(userId);
+          const maxScreens = activeSub && activeSub.plan ? activeSub.plan.max_screens : 2;
+
+          const userSockets = Array.from(io.sockets.sockets.values()).filter(
+            (s) => s.data.authenticated && s.data.userId === userId
+          );
+          
+          const unblocked = userSockets.filter((s) => !s.data.isBlocked);
+          const blocked = userSockets.filter((s) => s.data.isBlocked);
+
+          let unblockedCount = unblocked.length;
+          while (unblockedCount < maxScreens && blocked.length > 0) {
+            const nextSock = blocked.shift();
+            if (nextSock) {
+              nextSock.data.isBlocked = false;
+              nextSock.emit('block_removed');
+              unblockedCount++;
+            }
+          }
+        } catch (err) {
+          logger.error('Socket disconnect re-evaluation error', { error: err.message });
+        }
+      }
     });
 
     socket.on('error', (err) => {

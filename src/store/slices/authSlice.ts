@@ -64,18 +64,24 @@ function clearTokens() {
 export const loginThunk = createAsyncThunk(
   "auth/login",
   async (
-    { email, password }: { email: string; password: string },
+    { email, password, forceLogout }: { email: string; password: string; forceLogout?: boolean },
     { rejectWithValue }
   ) => {
     try {
-      const { data } = await apiClient.post("/auth/login", { email, password });
+      const { data } = await apiClient.post("/auth/login", { email, password, forceLogout });
       const { user: u, accessToken, refreshToken } = data.data;
       persistTokens(accessToken, refreshToken);
       return { user: buildUser(u), accessToken, refreshToken };
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Login failed";
+      const responseData = (err as { response?: { data?: any } })?.response?.data;
+      if (responseData && responseData.code === "MAX_SCREENS_EXCEEDED") {
+        return rejectWithValue({
+          code: "MAX_SCREENS_EXCEEDED",
+          message: responseData.message || "your account is loggedin in 2 screen please manage",
+          maxScreens: responseData.maxScreens || 2,
+        });
+      }
+      const msg = responseData?.message ?? "Login failed";
       return rejectWithValue(msg);
     }
   }
@@ -170,7 +176,11 @@ const authSlice = createSlice({
       })
       .addCase(loginThunk.rejected, (state, action) => {
         state.loading = false;
-        state.error = (action.payload as string) ?? action.error.message ?? "Login failed";
+        if (action.payload && typeof action.payload === "object") {
+          state.error = (action.payload as any).message ?? "Login failed";
+        } else {
+          state.error = (action.payload as string) ?? action.error.message ?? "Login failed";
+        }
       })
       .addCase(registerThunk.pending, (state) => {
         state.loading = true;

@@ -72,9 +72,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
     <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
       
-      <div className={`w-full flex-1 gap-8 px-4 py-8 sm:px-6 grid transition-all duration-300 ${
-        isAdmin ? "lg:px-8" : "mx-auto max-w-7xl"
-      } ${
+      <div className={`w-full flex-1 gap-8 px-4 py-8 sm:px-6 lg:px-8 grid transition-all duration-300 ${
         isCollapsed ? "lg:grid-cols-[68px_1fr]" : "lg:grid-cols-[240px_1fr]"
       }`}>
 
