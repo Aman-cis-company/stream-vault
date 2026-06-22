@@ -6,6 +6,7 @@ const socketServer = require('./socket');
 const { sequelize } = require('./models');
 const { startSubscriptionExpiryJob } = require('./jobs/subscriptionExpiry.job');
 const logger = require('./config/logger');
+const { restoreSubtitles } = require('./utils/subtitleRestorer');
 
 const PORT = parseInt(process.env.PORT, 10) || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -20,6 +21,7 @@ const startServer = async () => {
     }
 
     startSubscriptionExpiryJob();
+    await restoreSubtitles();
 
     // Create HTTP server from Express app so Socket.IO can share the same port
     const httpServer = http.createServer(app);

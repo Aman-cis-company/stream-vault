@@ -330,6 +330,90 @@ class AuthService {
     await UserRepository.updateById(userId, { ...data, password: hashed });
     return UserRepository.findById(userId);
   }
+
+  /**
+   * Login by phone number (OTP already verified).
+   * Returns { user, accessToken, refreshToken }
+   */
+  async loginByPhone(phone, forceLogout = false) {
+    const user = await UserRepository.findByPhone(phone);
+
+    if (!user) {
+      const err = new Error('User not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    if (user.status === 'inactive') {
+      const err = new Error('Account is inactive');
+      err.statusCode = 403;
+      throw err;
+    }
+    if (user.status === 'banned') {
+      const err = new Error('Account is banned');
+      err.statusCode = 403;
+      throw err;
+    }
+
+    // Retrieve subscription plan details to check session limit
+    const activeSub = await SubscriptionRepository.findActiveByUserId(user.id);
+    const maxScreens = activeSub && activeSub.plan ? activeSub.plan.max_screens : 2;
+
+    if (forceLogout) {
+      // Revoke all existing refresh tokens
+      await RefreshToken.update(
+        { is_revoked: true },
+        { where: { user_id: user.id, is_revoked: false } }
+      );
+
+      // Disconnect all active socket connections
+      const io = socketServer.getIO();
+      if (io) {
+        const userSockets = Array.from(io.sockets.sockets.values()).filter(
+          (s) => s.data.userId === user.id
+        );
+        userSockets.forEach((s) => {
+          s.emit('max_screens_exceeded', { message: 'force_logged_out' });
+          s.disconnect(true);
+        });
+      }
+    } else {
+      // Check active refresh token count against subscription limit
+      const activeSessions = await RefreshToken.count({
+        where: {
+          user_id: user.id,
+          is_revoked: false,
+          expires_at: { [Op.gt]: new Date() },
+        },
+      });
+
+      if (activeSessions >= maxScreens) {
+        const err = new Error(`your account is loggedin in ${maxScreens} screen please manage`);
+        err.statusCode = 403;
+        err.code = 'MAX_SCREENS_EXCEEDED';
+        err.maxScreens = maxScreens;
+        throw err;
+      }
+    }
+
+    // Update last_login (non-blocking)
+    UserRepository.updateById(user.id, { last_login: new Date() }).catch(() => {});
+
+    const payload = { id: user.id, email: user.email, role: user.role?.name };
+    const accessToken = generateAccessToken(payload);
+    const refreshTokenValue = generateRefreshToken();
+    const expiresAt = getRefreshTokenExpiry();
+
+    await RefreshToken.create({
+      user_id: user.id,
+      token: refreshTokenValue,
+      expires_at: expiresAt,
+      is_revoked: false,
+    });
+
+    const safeUser = await UserRepository.findById(user.id);
+    return { user: safeUser, accessToken, refreshToken: refreshTokenValue };
+  }
 }
 
 module.exports = new AuthService();

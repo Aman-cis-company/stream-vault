@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/store";
 import {
   loginThunk,
+  phoneLoginThunk,
   registerThunk,
   logoutThunk,
 } from "@/store/slices/authSlice";
@@ -43,9 +44,16 @@ export function useAuth() {
     [dispatch]
   );
 
+  const phoneLogin = useCallback(
+    async (data: { user: any; accessToken: string; refreshToken: string }) => {
+      return dispatch(phoneLoginThunk(data)).unwrap();
+    },
+    [dispatch]
+  );
+
   const logout = useCallback(async () => {
     await dispatch(logoutThunk());
   }, [dispatch]);
 
-  return { user, isAuthenticated, login, register, logout };
+  return { user, isAuthenticated, login, phoneLogin, register, logout };
 }

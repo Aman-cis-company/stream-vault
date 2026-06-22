@@ -87,6 +87,21 @@ export const loginThunk = createAsyncThunk(
   }
 );
 
+export const phoneLoginThunk = createAsyncThunk(
+  "auth/phoneLogin",
+  async (
+    { user, accessToken, refreshToken }: { user: any; accessToken: string; refreshToken: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      persistTokens(accessToken, refreshToken);
+      return { user: buildUser(user), accessToken, refreshToken };
+    } catch (err: unknown) {
+      return rejectWithValue("Failed to set authentication state");
+    }
+  }
+);
+
 export const registerThunk = createAsyncThunk(
   "auth/register",
   async (
@@ -167,6 +182,14 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(loginThunk.fulfilled, (state, { payload }) => {
+        state.loading = false;
+        state.user = payload.user;
+        state.accessToken = payload.accessToken;
+        state.refreshToken = payload.refreshToken;
+        state.isAuthenticated = true;
+        state.error = null;
+      })
+      .addCase(phoneLoginThunk.fulfilled, (state, { payload }) => {
         state.loading = false;
         state.user = payload.user;
         state.accessToken = payload.accessToken;

@@ -39,6 +39,16 @@ class UserRepository {
   }
 
   /**
+   * Find a user by phone.
+   */
+  async findByPhone(phone) {
+    return User.findOne({
+      where: { phone },
+      include: [{ model: Role, as: 'role', attributes: ['id', 'name'] }],
+    });
+  }
+
+  /**
    * Create a new user.
    */
   async create(data) {

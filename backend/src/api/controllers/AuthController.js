@@ -6,6 +6,9 @@ const {
 const MESSAGES = require("../../constants/messages");
 const STATUS_CODES = require("../../constants/statusCodes");
 const logger = require("../../config/logger");
+const jwt = require("jsonwebtoken");
+const twilioConfig = require("../../config/twilio");
+const UserRepository = require("../repositories/UserRepository");
 
 class AuthController {
   async register(req, res) {
@@ -199,6 +202,210 @@ class AuthController {
         res,
         MESSAGES.INTERNAL_ERROR,
         STATUS_CODES.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async phoneSendOtp(req, res) {
+    try {
+      const { phone } = req.body;
+      if (!phone) {
+        return errorResponse(res, "Phone number is required", STATUS_CODES.BAD_REQUEST);
+      }
+
+      // Generate a 6-digit OTP code
+      const otp = String(Math.floor(100000 + Math.random() * 900000));
+      
+      // Store in global cache with 5 minute expiration
+      if (!global.otpCache) {
+        global.otpCache = new Map();
+      }
+      global.otpCache.set(phone, {
+        otp,
+        expiresAt: Date.now() + 5 * 60 * 1000,
+      });
+
+      logger.info(`Generated OTP for ${phone}: ${otp}`);
+
+      // Try sending via Twilio if configured
+      if (twilioConfig.isEnabled) {
+        try {
+          await twilioConfig.client.messages.create({
+            body: `Your StreamVault verification code is ${otp}. Expires in 5 minutes.`,
+            from: twilioConfig.phoneNumber,
+            to: phone,
+          });
+          logger.info(`OTP SMS sent successfully to ${phone}`);
+        } catch (smsErr) {
+          logger.error("Failed to send OTP via Twilio", { error: smsErr.message });
+          // In development/fallback mode, allow proceeding
+          if (process.env.NODE_ENV === "development") {
+            console.log(`[DEVELOPMENT OTP FALLBACK] Code for ${phone}: ${otp}`);
+            return successResponse(res, "OTP generated (Twilio sandbox unverified number fallback)", {
+              devMode: true,
+              otp,
+            });
+          } else {
+            throw smsErr;
+          }
+        }
+      } else {
+        console.log(`[OTP CONSOLE LOG] Code for ${phone}: ${otp}`);
+        return successResponse(res, "OTP generated (Console Log)", {
+          devMode: true,
+          otp,
+        });
+      }
+
+      return successResponse(res, "OTP sent successfully", {
+        devMode: false,
+      });
+    } catch (err) {
+      logger.error("AuthController.phoneSendOtp error", { error: err.message });
+      return errorResponse(
+        res,
+        err.message || MESSAGES.INTERNAL_ERROR,
+        STATUS_CODES.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async phoneVerifyOtp(req, res) {
+    try {
+      const { phone, otp, forceLogout } = req.body;
+      if (!phone || !otp) {
+        return errorResponse(res, "Phone number and OTP code are required", STATUS_CODES.BAD_REQUEST);
+      }
+
+      // Check OTP in memory cache
+      if (!global.otpCache) {
+        global.otpCache = new Map();
+      }
+      const entry = global.otpCache.get(phone);
+      if (!entry) {
+        return errorResponse(res, "No OTP code request found for this phone number", STATUS_CODES.BAD_REQUEST);
+      }
+
+      if (entry.otp !== otp) {
+        return errorResponse(res, "Invalid OTP code", STATUS_CODES.BAD_REQUEST);
+      }
+
+      if (Date.now() > entry.expiresAt) {
+        global.otpCache.delete(phone);
+        return errorResponse(res, "OTP code has expired", STATUS_CODES.BAD_REQUEST);
+      }
+
+      // Clear OTP on success
+      global.otpCache.delete(phone);
+
+      // Check if user exists
+      const user = await UserRepository.findByPhone(phone);
+      if (user) {
+        // Log in the user automatically
+        const { user: loggedInUser, accessToken, refreshToken } = await AuthService.loginByPhone(
+          phone,
+          !!forceLogout
+        );
+
+        return successResponse(res, "OTP verified and logged in successfully", {
+          isNewUser: false,
+          user: loggedInUser,
+          accessToken,
+          refreshToken,
+        });
+      } else {
+        // Sign a signup token valid for 15 minutes to prevent spoofing
+        const signupToken = jwt.sign(
+          { phone, temp: true },
+          process.env.JWT_SECRET || "change-this-secret-in-production",
+          { expiresIn: "15m" }
+        );
+
+        return successResponse(res, "OTP verified. Finish registering your account details.", {
+          isNewUser: true,
+          phone,
+          signupToken,
+        });
+      }
+    } catch (err) {
+      logger.error("AuthController.phoneVerifyOtp error", { error: err.message });
+      if (err.code === 'MAX_SCREENS_EXCEEDED') {
+        return res.status(STATUS_CODES.FORBIDDEN).json({
+          success: false,
+          message: err.message,
+          code: 'MAX_SCREENS_EXCEEDED',
+          maxScreens: err.maxScreens
+        });
+      }
+      return errorResponse(
+        res,
+        err.message || MESSAGES.INTERNAL_ERROR,
+        STATUS_CODES.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async phoneCompleteSignup(req, res) {
+    try {
+      const { signupToken, first_name, last_name, email, password, ref_code } = req.body;
+      if (!signupToken || !first_name || !last_name || !email || !password) {
+        return errorResponse(res, "All fields are required to complete setup", STATUS_CODES.BAD_REQUEST);
+      }
+
+      // Verify signupToken
+      let payload;
+      try {
+        payload = jwt.verify(
+          signupToken,
+          process.env.JWT_SECRET || "change-this-secret-in-production"
+        );
+      } catch (tokenErr) {
+        return errorResponse(res, "Registration token has expired or is invalid. Please request a new OTP.", STATUS_CODES.UNAUTHORIZED);
+      }
+
+      if (!payload.phone || !payload.temp) {
+        return errorResponse(res, "Invalid registration token", STATUS_CODES.BAD_REQUEST);
+      }
+
+      // Create new user using existing AuthService register method
+      const user = await AuthService.register({
+        first_name,
+        last_name,
+        email,
+        password,
+        phone: payload.phone,
+        ref_code,
+      });
+
+      // Automatically generate active session token pair (log them in)
+      const { user: loggedInUser, accessToken, refreshToken } = await AuthService.loginByPhone(
+        payload.phone,
+        false
+      );
+
+      return successResponse(
+        res,
+        "Account created and logged in successfully",
+        {
+          user: loggedInUser,
+          accessToken,
+          refreshToken,
+        },
+        STATUS_CODES.CREATED
+      );
+    } catch (err) {
+      logger.error("AuthController.phoneCompleteSignup error", { error: err.message });
+      if (err.statusCode === 409) {
+        return errorResponse(
+          res,
+          MESSAGES.EMAIL_ALREADY_EXISTS,
+          STATUS_CODES.CONFLICT,
+        );
+      }
+      return errorResponse(
+        res,
+        err.message || MESSAGES.INTERNAL_ERROR,
+        err.statusCode || STATUS_CODES.INTERNAL_SERVER_ERROR,
       );
     }
   }
