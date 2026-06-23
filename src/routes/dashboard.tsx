@@ -266,10 +266,18 @@ function Dashboard() {
                 if (item.type === "movie") {
                   const title = mapMovieToTitle(item);
                   title.progress = item.progress;
-                  return <TitleCard key={`movie-${item.id}`} title={title} />;
+                  return (
+                    <div key={`movie-${item.id}`} className="w-40 sm:w-48 shrink-0">
+                      <TitleCard title={title} />
+                    </div>
+                  );
                 } else {
                   const seriesWithProgress = { ...item, progress: item.progress };
-                  return <SeriesCard key={`series-${item.id}`} s={seriesWithProgress} />;
+                  return (
+                    <div key={`series-${item.id}`} className="w-40 sm:w-48 shrink-0">
+                      <SeriesCard s={seriesWithProgress} />
+                    </div>
+                  );
                 }
               })}
             </div>
@@ -361,7 +369,9 @@ function Dashboard() {
           </div>
           <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2">
             {recommended.map((t) => (
-              <TitleCard key={t.id} title={t} />
+              <div key={t.id} className="w-40 sm:w-48 shrink-0">
+                <TitleCard title={t} />
+              </div>
             ))}
           </div>
         </section>

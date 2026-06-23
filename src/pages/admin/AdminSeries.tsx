@@ -46,6 +46,7 @@ interface SeriesForm {
   title: string; description: string; category_id: string; status: "published" | "draft" | "archived";
   is_featured: boolean; language: string; content_rating: ContentRating | "";
   is_age_restricted: boolean; minimum_age: string; warning_flags: WarningFlag[];
+  total_seasons: string; release_date: string;
   rating: string;
 }
 

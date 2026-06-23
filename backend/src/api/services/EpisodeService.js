@@ -5,6 +5,7 @@ const SeriesRepository = require('../repositories/SeriesRepository');
 const BunnyStreamService = require('./BunnyStreamService');
 const TranscodingService = require('./TranscodingService');
 const { generateSubtitles } = require('../../helpers/subtitleGenerator');
+const { dubVideo } = require('../../helpers/audioDubber');
 const logger = require('../../config/logger');
 const { detectVideoProvider } = require('../../utils/videoProvider');
 
@@ -108,8 +109,13 @@ class EpisodeService {
       const episodeSlug = `series-${seriesId}-s${episode.season_number}-e${episode.episode_number}`;
       const epId = episode.id;
       generateSubtitles(uploadedVideoPath, episodeTitle, episodeSlug)
-        .then((subUrl) => {
-          EpisodeRepository.updateById(epId, { subtitle_url: subUrl });
+        .then(async (subUrl) => {
+          await EpisodeRepository.updateById(epId, { subtitle_url: subUrl });
+          const absoluteVttPath = path.join(__dirname, '../../../', subUrl);
+          const audioUrl = await dubVideo(absoluteVttPath, episodeSlug);
+          if (audioUrl) {
+            await EpisodeRepository.updateById(epId, { dubbed_audio_url: audioUrl });
+          }
         })
         .catch((err) => {
           logger.error('Failed to generate subtitles for episode', { episodeId: epId, error: err.message });
@@ -194,8 +200,13 @@ class EpisodeService {
       const episodeTitle = `${series ? series.title : 'Series'} S${episode.season_number}E${episode.episode_number}: ${updateData.title || episode.title || 'Untitled'}`;
       const episodeSlug = `series-${seriesId}-s${episode.season_number}-e${episode.episode_number}`;
       generateSubtitles(uploadedVideoPath, episodeTitle, episodeSlug)
-        .then((subUrl) => {
-          EpisodeRepository.updateById(episodeId, { subtitle_url: subUrl });
+        .then(async (subUrl) => {
+          await EpisodeRepository.updateById(episodeId, { subtitle_url: subUrl });
+          const absoluteVttPath = path.join(__dirname, '../../../', subUrl);
+          const audioUrl = await dubVideo(absoluteVttPath, episodeSlug);
+          if (audioUrl) {
+            await EpisodeRepository.updateById(episodeId, { dubbed_audio_url: audioUrl });
+          }
         })
         .catch((err) => {
           logger.error('Failed to generate subtitles for episode update', { episodeId, error: err.message });

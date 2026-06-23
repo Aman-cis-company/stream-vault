@@ -4,6 +4,7 @@ const MovieRepository = require('../repositories/MovieRepository');
 const BunnyStreamService = require('./BunnyStreamService');
 const TranscodingService = require('./TranscodingService');
 const { generateSubtitles } = require('../../helpers/subtitleGenerator');
+const { dubVideo } = require('../../helpers/audioDubber');
 const { generateUniqueSlug } = require('../../utils/slugify');
 const { getPagination } = require('../../utils/pagination');
 const { paginationMeta } = require('../../helpers/responseHelper');
@@ -130,8 +131,13 @@ class MovieService {
       const slugForSub = slug;
       const movieId = movie.id;
       generateSubtitles(uploadedVideoPath, titleForSub, slugForSub)
-        .then((subUrl) => {
-          MovieRepository.updateById(movieId, { subtitle_url: subUrl });
+        .then(async (subUrl) => {
+          await MovieRepository.updateById(movieId, { subtitle_url: subUrl });
+          const absoluteVttPath = path.join(__dirname, '../../../', subUrl);
+          const audioUrl = await dubVideo(absoluteVttPath, slugForSub);
+          if (audioUrl) {
+            await MovieRepository.updateById(movieId, { dubbed_audio_url: audioUrl });
+          }
         })
         .catch((err) => {
           logger.error('Failed to generate subtitles for movie', { movieId, error: err.message });
@@ -241,8 +247,13 @@ class MovieService {
       const titleForSub = updateData.title || movie.title;
       const slugForSub = updateData.slug || movie.slug;
       generateSubtitles(uploadedVideoPath, titleForSub, slugForSub)
-        .then((subUrl) => {
-          MovieRepository.updateById(id, { subtitle_url: subUrl });
+        .then(async (subUrl) => {
+          await MovieRepository.updateById(id, { subtitle_url: subUrl });
+          const absoluteVttPath = path.join(__dirname, '../../../', subUrl);
+          const audioUrl = await dubVideo(absoluteVttPath, slugForSub);
+          if (audioUrl) {
+            await MovieRepository.updateById(id, { dubbed_audio_url: audioUrl });
+          }
         })
         .catch((err) => {
           logger.error('Failed to generate subtitles for movie update', { movieId: id, error: err.message });

@@ -74,6 +74,16 @@ app.use('/uploads/subtitles', express.static(path.join(__dirname, '../uploads/su
   },
 }));
 
+// Dubbed audio: served statically
+app.use('/uploads/audio', express.static(path.join(__dirname, '../uploads/audio'), {
+  maxAge: '1d',
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.mp3')) {
+      res.setHeader('Content-Type', 'audio/mpeg');
+    }
+  },
+}));
+
 // ── General Rate Limiter ──────────────────────────────────────────────────────
 app.use('/api', generalLimiter);
 // app.get('/api/demo', (req, res) => {

@@ -100,6 +100,11 @@ const Movie = sequelize.define('Movie', {
     allowNull: true,
     defaultValue: null,
   },
+  dubbed_audio_url: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    defaultValue: null,
+  },
   created_by: {
     type: DataTypes.INTEGER.UNSIGNED,
     allowNull: true,

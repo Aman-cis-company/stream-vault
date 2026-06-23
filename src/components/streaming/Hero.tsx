@@ -456,9 +456,7 @@ export function Hero() {
 
           {/* Meta row */}
           <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-            {current.rating > 0 && (
-              <RatingBadge rating={current.rating} />
-            )}
+            {current.rating > 0 && <RatingBadge rating={current.rating} />}
             <span className="text-white/55 font-medium">{current.year}</span>
             {current.durationMin > 0 && (
               <span className="inline-flex items-center gap-1 text-white/55">
@@ -534,7 +532,7 @@ export function Hero() {
 
         {/* Bottom bar — thumbnails + nav controls */}
         {movies.length > 1 && (
-          <div className="flex items-end justify-between gap-3">
+          <div className="flex items-end justify-start gap-4">
             {/* Thumbnail strip */}
             <div className="hidden sm:flex items-end gap-2 overflow-x-auto scrollbar-none pb-1">
               {movies.map((m, idx) => (

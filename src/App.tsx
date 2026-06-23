@@ -27,6 +27,9 @@ import MyList from "./routes/my-list";
 import Checkout from "./routes/checkout";
 import RecordKeeping from "./routes/record-keeping";
 import ResetPasswordPage from "./routes/reset-password";
+import Privacy from "./routes/privacy";
+import Terms from "./routes/terms";
+import Help from "./routes/help";
 
 export default function App() {
   return (
@@ -45,6 +48,9 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/my-list" element={<MyList />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/help" element={<Help />} />
         <Route
           path="/settings/parental-controls"
           element={<ParentalControls />}

@@ -18,6 +18,7 @@ const Episode = sequelize.define('Episode', {
   status: { type: DataTypes.ENUM('published', 'draft', 'archived'), defaultValue: 'draft' },
   release_date: { type: DataTypes.DATEONLY, allowNull: true },
   subtitle_url: { type: DataTypes.STRING(500), allowNull: true, defaultValue: null },
+  dubbed_audio_url: { type: DataTypes.STRING(500), allowNull: true, defaultValue: null },
   created_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
   updated_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
 }, {

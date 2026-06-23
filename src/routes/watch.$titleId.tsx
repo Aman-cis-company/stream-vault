@@ -33,6 +33,7 @@ import {
   Subtitles,
   Loader2,
   ChevronRight,
+  Globe,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -145,6 +146,7 @@ interface NativePlayerProps {
   durationMin: number;
   resumeFrom?: number;
   subtitleUrl?: string | null;
+  dubbedAudioUrl?: string | null;
   onProgress?: (currentTime: number, duration: number) => void;
   onResumeConfirmed?: () => void;
   maxQuality?: string;
@@ -248,7 +250,7 @@ function VideoPreviewTooltip({ src, hoverTime, duration }: VideoPreviewTooltipPr
   );
 }
 
-function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, subtitleUrl, onProgress, onResumeConfirmed, maxQuality = "720" }: NativePlayerProps) {
+function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, subtitleUrl, dubbedAudioUrl, onProgress, onResumeConfirmed, maxQuality = "720" }: NativePlayerProps) {
   const srcType = videoSourceType(src);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -282,6 +284,84 @@ function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, subtitl
   const [subtitlePos, setSubtitlePos] = useState<"top" | "middle" | "bottom">("bottom");
   const [subtitleCues, setSubtitleCues] = useState<Cue[]>([]);
   const [showSubtitleMenu, setShowSubtitleMenu] = useState(false);
+
+  // Audio track states & references
+  const [audioLanguage, setAudioLanguage] = useState<"eng" | "hin">("eng");
+  const [showAudioMenu, setShowAudioMenu] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  const audioLanguageRef = useRef(audioLanguage);
+  useEffect(() => {
+    audioLanguageRef.current = audioLanguage;
+  }, [audioLanguage]);
+
+  // Synchronize audio track playback state, volume, and mute status
+  useEffect(() => {
+    const video = videoRef.current;
+    const audio = audioRef.current;
+    if (!video) return;
+
+    if (audioLanguage === "hin" && audio) {
+      video.muted = true;
+      audio.muted = muted;
+      audio.volume = volume;
+
+      if (playing) {
+        audio.play().catch((e) => console.log("Audio play blocked:", e));
+      } else {
+        audio.pause();
+      }
+    } else {
+      if (audio) {
+        audio.pause();
+      }
+      video.muted = muted;
+      video.volume = volume;
+    }
+  }, [audioLanguage, playing, muted, volume]);
+
+  // Synchronize audio track current time on seek or timeupdate
+  useEffect(() => {
+    const video = videoRef.current;
+    const audio = audioRef.current;
+    if (!video || !audio || audioLanguage !== "hin") return;
+
+    const syncTime = () => {
+      if (Math.abs(audio.currentTime - video.currentTime) > 0.15) {
+        audio.currentTime = video.currentTime;
+      }
+    };
+
+    video.addEventListener("timeupdate", syncTime);
+    video.addEventListener("seeking", syncTime);
+    video.addEventListener("seeked", syncTime);
+    video.addEventListener("play", syncTime);
+    video.addEventListener("playing", syncTime);
+
+    return () => {
+      video.removeEventListener("timeupdate", syncTime);
+      video.removeEventListener("seeking", syncTime);
+      video.removeEventListener("seeked", syncTime);
+      video.removeEventListener("play", syncTime);
+      video.removeEventListener("playing", syncTime);
+    };
+  }, [audioLanguage]);
+
+  // Synchronize playback speed rate
+  useEffect(() => {
+    const video = videoRef.current;
+    const audio = audioRef.current;
+    if (!video || !audio || audioLanguage !== "hin") return;
+
+    const syncRate = () => {
+      audio.playbackRate = video.playbackRate;
+    };
+
+    video.addEventListener("ratechange", syncRate);
+    return () => {
+      video.removeEventListener("ratechange", syncRate);
+    };
+  }, [audioLanguage]);
 
   // Fetch and parse WebVTT file
   useEffect(() => {
@@ -388,15 +468,44 @@ function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, subtitl
       }
     };
     const onDur = () => { if (isFinite(v.duration)) setDuration(v.duration); };
-    const onPlay = () => setPlaying(true);
-    const onPause = () => setPlaying(false);
-    const onWait = () => setBuffering(true);
-    const onPlaying = () => setBuffering(false);
+    const onPlay = () => {
+      setPlaying(true);
+      const audio = audioRef.current;
+      if (audioLanguageRef.current === "hin" && audio) {
+        audio.play().catch((e) => console.log("Audio play blocked:", e));
+      }
+    };
+    const onPause = () => {
+      setPlaying(false);
+      const audio = audioRef.current;
+      if (audio) {
+        audio.pause();
+      }
+    };
+    const onWait = () => {
+      setBuffering(true);
+      const audio = audioRef.current;
+      if (audioLanguageRef.current === "hin" && audio) {
+        audio.pause();
+      }
+    };
+    const onPlaying = () => {
+      setBuffering(false);
+      const audio = audioRef.current;
+      if (audioLanguageRef.current === "hin" && audio) {
+        audio.play().catch((e) => console.log("Audio play blocked:", e));
+      }
+    };
     const onProg = () => {
       if (v.buffered.length && v.duration)
         setBuffered((v.buffered.end(v.buffered.length - 1) / v.duration) * 100);
     };
-    const onVol = () => { setVolume(v.volume); setMuted(v.muted); };
+    const onVol = () => {
+      if (audioLanguageRef.current !== "hin") {
+        setVolume(v.volume);
+        setMuted(v.muted);
+      }
+    };
     const onFs = () => setFullscreen(!!document.fullscreenElement);
 
     on("timeupdate", onTime); on("durationchange", onDur); on("play", onPlay);
@@ -435,11 +544,39 @@ function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, subtitl
 
   const setVol = (val: number) => {
     const v = videoRef.current; if (!v) return;
-    v.volume = val; v.muted = val === 0;
+    setVolume(val);
+    const newMuted = val === 0;
+    setMuted(newMuted);
+    if (audioLanguage !== "hin") {
+      v.volume = val;
+      v.muted = newMuted;
+    } else {
+      const audio = audioRef.current;
+      if (audio) {
+        audio.volume = val;
+        audio.muted = newMuted;
+        if (!newMuted && playing) {
+          audio.play().catch((e) => console.log("Audio play blocked:", e));
+        }
+      }
+    }
   };
 
   const toggleMute = () => {
-    const v = videoRef.current; if (!v) return; v.muted = !v.muted;
+    const v = videoRef.current; if (!v) return;
+    const newMuted = !muted;
+    setMuted(newMuted);
+    if (audioLanguage !== "hin") {
+      v.muted = newMuted;
+    } else {
+      const audio = audioRef.current;
+      if (audio) {
+        audio.muted = newMuted;
+        if (!newMuted && playing) {
+          audio.play().catch((e) => console.log("Audio play blocked:", e));
+        }
+      }
+    }
   };
 
   const toggleFullscreen = () => {
@@ -476,6 +613,16 @@ function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, subtitl
         onClick={togglePlay}
         style={{ cursor: "pointer", display: "block" }}
       />
+
+      {/* Dubbed audio element */}
+      {dubbedAudioUrl && (
+        <audio
+          ref={audioRef}
+          src={assetUrl(dubbedAudioUrl)}
+          preload="auto"
+          className="hidden"
+        />
+      )}
 
       {/* Subtitles Custom Overlay */}
       {subtitlesEnabled && activeCue && (
@@ -527,7 +674,20 @@ function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, subtitl
       {/* Muted autoplay notice */}
       {muted && playing && (
         <button
-          onClick={() => { const v = videoRef.current; if (v) { v.muted = false; setMuted(false); } }}
+          onClick={() => {
+            const v = videoRef.current;
+            if (v) {
+              v.muted = false;
+              setMuted(false);
+              if (audioLanguage === "hin") {
+                const audio = audioRef.current;
+                if (audio) {
+                  audio.muted = false;
+                  audio.play().catch((e) => console.log("Audio play blocked:", e));
+                }
+              }
+            }
+          }}
           className="absolute top-3 right-3 z-30 flex items-center gap-2 rounded-full bg-black/70 backdrop-blur px-3 py-1.5 text-xs font-semibold text-white border border-white/20 hover:bg-black/90 transition-colors"
         >
           <VolumeX className="size-3.5 text-amber-400" />
@@ -702,6 +862,7 @@ function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, subtitl
               className="flex size-9 items-center justify-center rounded-lg hover:bg-white/10 active:scale-95 transition-all"
               onClick={() => {
                 setShowSubtitleMenu((v) => !v);
+                setShowAudioMenu(false);
                 setShowSettings(false);
                 resetHide();
               }}
@@ -815,11 +976,76 @@ function NativePlayer({ src, poster, title, durationMin, resumeFrom = 0, subtitl
             )}
           </div>
 
+          {/* Audio Language Switcher */}
+          {dubbedAudioUrl && (
+            <div className="relative">
+              <button
+                className="flex size-9 items-center justify-center rounded-lg hover:bg-white/10 active:scale-95 transition-all"
+                onClick={() => {
+                  setShowAudioMenu((v) => !v);
+                  setShowSubtitleMenu(false);
+                  setShowSettings(false);
+                  resetHide();
+                }}
+                aria-label="Audio Language"
+              >
+                <Globe className={`size-[15px] ${audioLanguage === "hin" ? "text-primary font-bold" : "text-white/70"}`} />
+              </button>
+
+              {showAudioMenu && (
+                <div className="absolute bottom-full right-0 mb-2 w-48 rounded-xl border border-white/10 bg-[#0c0c10]/95 backdrop-blur-xl p-4 shadow-2xl z-50 text-white flex flex-col gap-3">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-white/40 border-b border-white/5 pb-2 text-left">Audio Track</span>
+                  <div className="flex flex-col gap-1">
+                    <button
+                      onClick={() => {
+                        setAudioLanguage("eng");
+                        setShowAudioMenu(false);
+                        const audio = audioRef.current;
+                        if (audio) {
+                          audio.pause();
+                        }
+                      }}
+                      className={`flex w-full items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
+                        audioLanguage === "eng" ? "text-primary bg-primary/10 font-semibold" : "text-white/75 hover:bg-white/5"
+                      }`}
+                    >
+                      <span>English (Original)</span>
+                      {audioLanguage === "eng" && <Check className="size-3.5 text-primary" />}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAudioLanguage("hin");
+                        setShowAudioMenu(false);
+                        const video = videoRef.current;
+                        const audio = audioRef.current;
+                        if (video && !video.paused && audio) {
+                          audio.currentTime = video.currentTime;
+                          audio.play().catch((e) => console.log("Audio play blocked:", e));
+                        }
+                      }}
+                      className={`flex w-full items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
+                        audioLanguage === "hin" ? "text-primary bg-primary/10 font-semibold" : "text-white/75 hover:bg-white/5"
+                      }`}
+                    >
+                      <span>Hindi (AI Dubbed)</span>
+                      {audioLanguage === "hin" && <Check className="size-3.5 text-primary" />}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Quality */}
           {qualities.length > 1 && (
             <div className="relative">
               <button
-                onClick={() => { setShowSettings((v) => !v); resetHide(); }}
+                onClick={() => {
+                  setShowSettings((v) => !v);
+                  setShowSubtitleMenu(false);
+                  setShowAudioMenu(false);
+                  resetHide();
+                }}
                 className="flex items-center gap-1 rounded-lg px-2 py-1.5 hover:bg-white/10 active:scale-95 transition-all"
               >
                 <Settings className="size-[14px] text-white/70" />
@@ -1076,6 +1302,7 @@ function WatchInner() {
             durationMin={title.durationMin}
             resumeFrom={resumeFrom}
             subtitleUrl={title.subtitle_url}
+            dubbedAudioUrl={title.dubbed_audio_url}
             onProgress={handleProgress}
             onResumeConfirmed={() => {
               lastSavedRef.current = 0;

@@ -26,7 +26,7 @@ export function VideoPlayer({ src, poster, title, onProgress, initialProgress = 
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
-  const hideTimer = useRef<ReturnType<typeof setTimeout>>();
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(initialProgress);
@@ -87,7 +87,7 @@ export function VideoPlayer({ src, poster, title, onProgress, initialProgress = 
     const onDurationChange = () => setDuration(video.duration);
     const onPlay = () => setPlaying(true);
     const onPause = () => setPlaying(false);
-    const onProgress = () => {
+    const onBufferProgress = () => {
       if (video.buffered.length > 0 && video.duration) {
         setBuffered((video.buffered.end(video.buffered.length - 1) / video.duration) * 100);
       }
@@ -97,14 +97,14 @@ export function VideoPlayer({ src, poster, title, onProgress, initialProgress = 
     video.addEventListener("durationchange", onDurationChange);
     video.addEventListener("play", onPlay);
     video.addEventListener("pause", onPause);
-    video.addEventListener("progress", onProgress);
+    video.addEventListener("progress", onBufferProgress);
 
     return () => {
       video.removeEventListener("timeupdate", onTimeUpdate);
       video.removeEventListener("durationchange", onDurationChange);
       video.removeEventListener("play", onPlay);
       video.removeEventListener("pause", onPause);
-      video.removeEventListener("progress", onProgress);
+      video.removeEventListener("progress", onBufferProgress);
     };
   }, [onProgress]);
 

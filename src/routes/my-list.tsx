@@ -60,7 +60,7 @@ function MyListInner() {
           <Link
             key={`${interaction.content_type}-${detail.id}`}
             to={href}
-            className="group relative flex flex-col overflow-hidden rounded-xl border border-white/5 bg-card shadow-card transition-all hover:border-primary/30 hover:shadow-card-hover hover:-translate-y-1"
+            className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-card transition-all hover:border-primary/30 hover:shadow-card-hover hover:-translate-y-1"
           >
             <div className="relative aspect-[2/3] overflow-hidden">
               <img

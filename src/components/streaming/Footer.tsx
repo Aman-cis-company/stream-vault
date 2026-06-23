@@ -1,5 +1,12 @@
 import { Link } from "react-router-dom";
-import { Twitter, Youtube, Instagram, Facebook, Github, ArrowUpRight } from "lucide-react";
+import {
+  Twitter,
+  Youtube,
+  Instagram,
+  Facebook,
+  Github,
+  ArrowUpRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -13,7 +20,7 @@ function LogoMark() {
       width={195}
       height={55}
       className="object-contain"
-      style={{ maxHeight: 55, mixBlendMode: 'screen' }}
+      style={{ maxHeight: 55, mixBlendMode: "screen" }}
     />
   );
 }
@@ -56,7 +63,13 @@ const SOCIAL = [
   { icon: Github, label: "GitHub" },
 ];
 
-const BADGES = ["4K Ultra HD", "Dolby Atmos", "HDR10", "Offline Mode", "DRM Protected"];
+const BADGES = [
+  "4K Ultra HD",
+  "Dolby Atmos",
+  "HDR10",
+  "Offline Mode",
+  "DRM Protected",
+];
 
 export function Footer() {
   const handleNewsletter = (e: React.FormEvent<HTMLFormElement>) => {
@@ -68,23 +81,31 @@ export function Footer() {
   };
 
   return (
-    <footer className="mt-24 border-t border-white/6">
+    <footer className="mt-24 border-t border-zinc-800 bg-[#07080d] text-zinc-100">
       {/* Newsletter strip */}
-      <div className="border-b border-white/6 bg-card/20">
+      <div className="border-b border-zinc-800 bg-zinc-900/20">
         <div className="flex flex-col gap-5 px-4 py-10 sm:flex-row sm:items-center sm:justify-between md:px-8 lg:px-12">
           <div>
-            <p className="text-base font-bold">Stay in the loop</p>
-            <p className="mt-1 text-sm text-muted-foreground">New releases, curated picks, and platform news.</p>
+            <p className="text-base font-bold text-zinc-100">Stay in the loop</p>
+            <p className="mt-1 text-sm text-zinc-400">
+              New releases, curated picks, and platform news.
+            </p>
           </div>
-          <form onSubmit={handleNewsletter} className="flex w-full max-w-sm gap-2">
+          <form
+            onSubmit={handleNewsletter}
+            className="flex w-full max-w-sm gap-2"
+          >
             <Input
               type="email"
               placeholder="your@email.com"
               required
-              className="flex-1 h-10 rounded-xl border-border/60 bg-secondary/40 focus:border-primary/50"
+              className="flex-1 h-10 rounded-xl border-zinc-800 bg-zinc-900/60 text-white placeholder:text-zinc-500 focus:border-primary/50"
               aria-label="Email"
             />
-            <Button type="submit" className="h-10 px-5 rounded-xl font-semibold shadow-glow-sm shrink-0">
+            <Button
+              type="submit"
+              className="h-10 px-5 rounded-xl font-semibold shadow-glow-sm shrink-0"
+            >
               Subscribe
             </Button>
           </form>
@@ -92,7 +113,7 @@ export function Footer() {
       </div>
 
       {/* Main footer */}
-      <div className="bg-card/10">
+      <div className="bg-[#0b0c13]/30">
         <div className="grid gap-10 px-4 py-14 md:grid-cols-2 lg:grid-cols-5 md:px-8 lg:px-12">
           {/* Brand column */}
           <div className="lg:col-span-2">
@@ -101,8 +122,10 @@ export function Footer() {
                 <LogoMark />
               </div>
             </Link>
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              Premium entertainment for India and beyond. Stream thousands of films and series in stunning 4K HDR. Over 2.4 million subscribers worldwide.
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-zinc-400">
+              Premium entertainment for India and beyond. Stream thousands of
+              films and series in stunning 4K HDR. Over 2.4 million subscribers
+              worldwide.
             </p>
 
             {/* Social links */}
@@ -112,7 +135,7 @@ export function Footer() {
                   key={s.label}
                   href="#"
                   aria-label={s.label}
-                  className="inline-flex size-9 items-center justify-center rounded-xl border border-border/50 text-muted-foreground transition-all hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
+                  className="inline-flex size-9 items-center justify-center rounded-xl border border-zinc-800 text-zinc-400 transition-all hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
                 >
                   <s.icon className="size-3.5" />
                 </a>
@@ -124,7 +147,7 @@ export function Footer() {
               {BADGES.map((b) => (
                 <span
                   key={b}
-                  className="inline-flex items-center rounded-lg bg-secondary/60 border border-border/40 px-2.5 py-0.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide"
+                  className="inline-flex items-center rounded-lg bg-zinc-900/60 border border-zinc-800 px-2.5 py-0.5 text-[10px] font-semibold text-zinc-400 uppercase tracking-wide"
                 >
                   {b}
                 </span>
@@ -135,7 +158,7 @@ export function Footer() {
           {/* Nav columns */}
           {COLS.map((c) => (
             <div key={c.title}>
-              <h3 className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground/70 mb-4">
+              <h3 className="text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 mb-4">
                 {c.title}
               </h3>
               <ul className="space-y-3">
@@ -143,7 +166,7 @@ export function Footer() {
                   <li key={label}>
                     <Link
                       to={to}
-                      className="group text-sm text-muted-foreground transition-colors hover:text-foreground flex items-center gap-1"
+                      className="group text-sm text-zinc-400 transition-colors hover:text-zinc-100 flex items-center gap-1"
                     >
                       {label}
                       <ArrowUpRight className="size-3 opacity-0 -translate-y-0.5 translate-x-0.5 transition-all group-hover:opacity-100 group-hover:translate-y-0 group-hover:translate-x-0" />
@@ -156,16 +179,37 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-white/5 py-5">
+        <div className="border-t border-zinc-800 py-5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between md:px-8 lg:px-12">
-            <p className="text-xs text-muted-foreground/60">
-              © {new Date().getFullYear()} StreamVault, Inc. All rights reserved. Prices shown in Indian Rupees (₹).
+            <p className="text-xs text-zinc-500">
+              © {new Date().getFullYear()} StreamVault, Inc. All rights
+              reserved. Prices shown in Indian Rupees (₹).
             </p>
-            <div className="flex flex-wrap gap-4 text-xs text-muted-foreground/60">
-              <a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-foreground transition-colors">Terms of Service</a>
-              <Link to="/record-keeping" className="hover:text-foreground transition-colors">18 U.S.C. § 2257</Link>
-              <a href="#" className="hover:text-foreground transition-colors">Help Center</a>
+            <div className="flex flex-wrap gap-4 text-xs text-zinc-500">
+              <Link
+                to="/privacy"
+                className="hover:text-zinc-100 transition-colors"
+              >
+                Privacy Policy
+              </Link>
+              <Link
+                to="/terms"
+                className="hover:text-zinc-100 transition-colors"
+              >
+                Terms of Service
+              </Link>
+              <Link
+                to="/record-keeping"
+                className="hover:text-zinc-100 transition-colors"
+              >
+                18 U.S.C. § 2257
+              </Link>
+              <Link
+                to="/help"
+                className="hover:text-zinc-100 transition-colors"
+              >
+                Help Center
+              </Link>
             </div>
           </div>
         </div>

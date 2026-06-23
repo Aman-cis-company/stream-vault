@@ -5,12 +5,13 @@ import {
   useRef,
   useCallback,
 } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { TitleCard } from "@/components/streaming/TitleCard";
 import { apiClient } from "@/services/api";
 import { mapMovieToTitle } from "@/lib/movies";
 import { fetchSeriesList, seriesThumbnail } from "@/lib/series";
+import { DUMMY_MOVIES, DUMMY_SERIES } from "@/lib/mock-data";
 import type { Title } from "@/lib/mock-data";
 import type { BackendMovie } from "@/store/slices/moviesSlice";
 import type { Category } from "@/store/slices/categoriesSlice";
@@ -36,7 +37,7 @@ function SeriesCard({ series }: { series: BackendSeries }) {
   return (
     <Link
       to={`/series/${series.id}`}
-      className="group relative flex flex-col rounded-xl overflow-hidden bg-white/5 border border-white/8 hover:border-white/20 transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl"
+      className="group relative flex flex-col rounded-xl overflow-hidden bg-card border border-border hover:border-primary/30 transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl"
     >
       {/* Poster */}
       <div className="relative aspect-[2/3] overflow-hidden bg-black/30">
@@ -65,14 +66,14 @@ function SeriesCard({ series }: { series: BackendSeries }) {
 
       {/* Info */}
       <div className="p-3 flex-1 flex flex-col gap-1">
-        <h3 className="text-sm font-semibold text-white leading-tight line-clamp-2 group-hover:text-primary transition-colors">
+        <h3 className="text-sm font-semibold text-foreground leading-tight line-clamp-2 group-hover:text-primary transition-colors">
           {series.title}
         </h3>
-        <div className="flex items-center gap-1.5 text-[11px] text-white/40 flex-wrap">
+        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground flex-wrap">
           <span>{seasonCount} {seasonCount === 1 ? "Season" : "Seasons"}</span>
           {epCount !== null && epCount > 0 && (
             <>
-              <span className="size-0.5 rounded-full bg-white/25" />
+              <span className="size-0.5 rounded-full bg-muted-foreground/45" />
               <span>{epCount} Episodes</span>
             </>
           )}
@@ -106,7 +107,18 @@ export default function Library() {
   const categoryId = useParams<{ categoryId: string }>().categoryId;
   const [loading, setLoading] = useState(true);
   const [contentType, setContentType] = useState<ContentType>("movies");
-  const [query, setQuery] = useState("");
+
+  const [searchParams] = useSearchParams();
+  const qParam = searchParams.get("q");
+  const langParam = searchParams.get("language");
+  const genreParam = searchParams.get("genre");
+
+  const [query, setQuery] = useState(qParam || "");
+
+  useEffect(() => {
+    setQuery(qParam || "");
+  }, [qParam]);
+
   const initialFilter =
     categoryId && !isNaN(Number(categoryId))
       ? Number(categoryId)
@@ -122,11 +134,26 @@ export default function Library() {
         apiClient.get("/movies?status=published&limit=200"),
         fetchSeriesList({ status: "published", limit: 200 }).catch(() => [] as BackendSeries[]),
       ]);
-      setCategories(catRes.data.data.categories ?? []);
-      setAllTitles(
-        (movRes.data.data.movies as BackendMovie[]).map(mapMovieToTitle)
-      );
-      setAllSeries(Array.isArray(serRes) ? serRes : []);
+      const cats = catRes.data.data.categories ?? [];
+      setCategories(cats);
+      
+      const movs = (movRes.data.data.movies as BackendMovie[]).map(mapMovieToTitle);
+      const finalMovies = [...movs];
+      DUMMY_MOVIES.forEach((dm) => {
+        if (!movs.some(m => m.name === dm.name)) {
+          finalMovies.push(dm);
+        }
+      });
+      setAllTitles(finalMovies);
+
+      const sers = Array.isArray(serRes) ? serRes : [];
+      const finalSeries = [...sers];
+      DUMMY_SERIES.forEach((ds) => {
+        if (!sers.some(s => s.title === ds.title)) {
+          finalSeries.push(ds);
+        }
+      });
+      setAllSeries(finalSeries);
     } catch {
       // empty state
     } finally {
@@ -149,23 +176,46 @@ export default function Library() {
   useSocketEvent(SOCKET_EVENTS.CONTENT_UNPUBLISHED, load);
 
   const movieResults = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = (query || qParam || "").trim().toLowerCase();
+    const targetLang = (langParam || "").trim().toLowerCase();
+    const targetGenre = (genreParam || "").trim().toLowerCase();
+
     return allTitles.filter((t) => {
       const matchQ =
         !q ||
         t.name.toLowerCase().includes(q) ||
         t.genres.some((g) => g.toLowerCase().includes(q));
+
+      const matchLang =
+        !targetLang ||
+        t.language?.toLowerCase() === targetLang ||
+        t.language?.toLowerCase().startsWith(targetLang);
+
+      const matchGenre =
+        !targetGenre ||
+        t.genres.some((g) => g.toLowerCase() === targetGenre);
+
       const matchF =
         filter === "all" ||
         t.category === categories.find((c) => c.id === filter)?.name;
-      return matchQ && matchF;
+
+      return matchQ && matchLang && matchGenre && matchF;
     });
-  }, [query, filter, allTitles, categories]);
+  }, [query, qParam, langParam, genreParam, filter, allTitles, categories]);
 
   const seriesResults = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return allSeries.filter((s) => !q || s.title.toLowerCase().includes(q));
-  }, [query, allSeries]);
+    const q = (query || qParam || "").trim().toLowerCase();
+    const targetLang = (langParam || "").trim().toLowerCase();
+
+    return allSeries.filter((s) => {
+      const matchQ = !q || s.title.toLowerCase().includes(q);
+      const matchLang =
+        !targetLang ||
+        s.language?.toLowerCase() === targetLang ||
+        s.language?.toLowerCase().startsWith(targetLang);
+      return matchQ && matchLang;
+    });
+  }, [query, qParam, langParam, allSeries]);
 
   const results = contentType === "movies" ? movieResults : seriesResults;
 
@@ -193,17 +243,31 @@ export default function Library() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Library</h1>
-          <p className="mt-1 text-muted-foreground">Explore the full catalog.</p>
+          <p className="mt-1 text-muted-foreground">
+            {langParam || genreParam || qParam ? (
+              <span className="flex items-center gap-1.5 flex-wrap">
+                <span>Showing results for</span>
+                <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary border border-primary/20">
+                  {langParam || genreParam || qParam}
+                </span>
+                <Link to="/library" className="text-sm text-primary hover:underline font-medium">
+                  • Clear filter
+                </Link>
+              </span>
+            ) : (
+              "Explore the full catalog."
+            )}
+          </p>
         </div>
 
         {/* Content type toggle */}
-        <div className="flex items-center gap-2 border-b border-white/8 pb-4">
+        <div className="flex items-center gap-2 border-b border-border pb-4">
           <button
             onClick={() => setContentType("movies")}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
               contentType === "movies"
                 ? "bg-primary text-primary-foreground shadow-md"
-                : "text-white/50 hover:text-white hover:bg-white/8"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary"
             }`}
           >
             Movies
@@ -216,7 +280,7 @@ export default function Library() {
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
               contentType === "series"
                 ? "bg-primary text-primary-foreground shadow-md"
-                : "text-white/50 hover:text-white hover:bg-white/8"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary"
             }`}
           >
             <Tv2 className="size-3.5" />

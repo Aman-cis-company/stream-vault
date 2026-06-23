@@ -164,7 +164,7 @@ export function EmblaRow({
         <div className="flex items-center gap-2.5 min-w-0">
           {/* Vertical accent bar */}
           <div className="shrink-0 w-[3px] h-6 sm:h-7 rounded-full bg-primary shadow-[0_0_12px_theme(colors.primary/55%)]" />
-          <h2 className="text-[1.15rem] font-extrabold tracking-tight text-white sm:text-[1.35rem] truncate">
+          <h2 className="text-[1.15rem] font-extrabold tracking-tight text-foreground sm:text-[1.35rem] truncate">
             {heading}
           </h2>
           {badgeCfg && (

@@ -19,6 +19,7 @@ export interface BackendEpisode {
   createdAt: string;
   updatedAt: string;
   subtitle_url?: string | null;
+  dubbed_audio_url?: string | null;
   rating?: number | null;
 }
 
