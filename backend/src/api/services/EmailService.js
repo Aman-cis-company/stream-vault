@@ -1,168 +1,115 @@
-const nodemailer = require('nodemailer');
-const transporter = require('../../config/mail');
+const { addNotificationJob } = require('../../queue');
 const logger = require('../../config/logger');
 
-const FROM = process.env.MAIL_FROM || 'StreamVault <noreply@streamvault.com>';
-
 class EmailService {
-  async sendMail({ to, subject, html, text }) {
+  async sendMail({ to, subject, html, text, attachments }) {
     try {
-      const info = await transporter.sendMail({ from: FROM, to, subject, html, text });
-      logger.info('Email sent', { to, subject, messageId: info.messageId });
-
-      const previewUrl = nodemailer.getTestMessageUrl(info);
-      if (previewUrl) logger.info(`📬 Preview: ${previewUrl}`);
-
-      return info;
+      logger.info('Enqueuing generic email job', { to, subject });
+      return await addNotificationJob('send_email', { to, subject, html, text, attachments });
     } catch (err) {
-      logger.error('Failed to send email', { to, subject, error: err.message });
+      logger.error('Failed to enqueue generic email job', { to, subject, error: err.message });
       throw err;
     }
   }
 
   async sendPasswordResetEmail(user, resetToken) {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
-
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #e50914;">StreamVault — Password Reset</h2>
-        <p>Hello ${user.first_name},</p>
-        <p>You requested to reset your password. Click the button below to continue:</p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${resetUrl}"
-             style="background-color: #e50914; color: white; padding: 14px 28px;
-                    text-decoration: none; border-radius: 4px; font-size: 16px;">
-            Reset Password
-          </a>
-        </div>
-        <p>This link expires in <strong>1 hour</strong>.</p>
-        <p>If you did not request this, you can safely ignore this email.</p>
-        <hr style="border: 1px solid #eee; margin: 30px 0;">
-        <p style="color: #999; font-size: 12px;">StreamVault &mdash; Your ultimate streaming destination</p>
-      </div>
-    `;
-
-    return this.sendMail({
-      to: user.email,
-      subject: 'Reset your StreamVault password',
-      html,
-      text: `Reset your StreamVault password: ${resetUrl}`,
-    });
+    try {
+      logger.info('Enqueuing password reset email job', { to: user.email });
+      return await addNotificationJob('send_email_template', {
+        template: 'password_reset',
+        to: user.email,
+        data: {
+          first_name: user.first_name,
+          resetToken,
+        },
+      });
+    } catch (err) {
+      logger.error('Failed to enqueue password reset email', { to: user.email, error: err.message });
+      throw err;
+    }
   }
 
   async sendWelcomeEmail(user) {
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #e50914;">Welcome to StreamVault!</h2>
-        <p>Hello ${user.first_name},</p>
-        <p>Your account has been created successfully. Start exploring thousands of movies and shows.</p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/plans"
-             style="background-color: #e50914; color: white; padding: 14px 28px;
-                    text-decoration: none; border-radius: 4px; font-size: 16px;">
-            View Plans
-          </a>
-        </div>
-        <hr style="border: 1px solid #eee; margin: 30px 0;">
-        <p style="color: #999; font-size: 12px;">StreamVault &mdash; Your ultimate streaming destination</p>
-      </div>
-    `;
-
-    return this.sendMail({
-      to: user.email,
-      subject: 'Welcome to StreamVault!',
-      html,
-      text: `Welcome to StreamVault, ${user.first_name}! Visit ${process.env.FRONTEND_URL}/plans to subscribe.`,
-    });
+    try {
+      logger.info('Enqueuing welcome email job', { to: user.email });
+      return await addNotificationJob('send_email_template', {
+        template: 'welcome',
+        to: user.email,
+        data: {
+          first_name: user.first_name,
+        },
+      });
+    } catch (err) {
+      logger.error('Failed to enqueue welcome email', { to: user.email, error: err.message });
+      throw err;
+    }
   }
 
   async sendSubscriptionConfirmation(user, plan) {
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #e50914;">Subscription Confirmed!</h2>
-        <p>Hello ${user.first_name},</p>
-        <p>Your <strong>${plan.name}</strong> subscription is now active.</p>
-        <p>Enjoy unlimited streaming at StreamVault!</p>
-        <hr style="border: 1px solid #eee; margin: 30px 0;">
-        <p style="color: #999; font-size: 12px;">StreamVault &mdash; Your ultimate streaming destination</p>
-      </div>
-    `;
-
-    return this.sendMail({
-      to: user.email,
-      subject: `StreamVault - ${plan.name} Subscription Confirmed`,
-      html,
-      text: `Your ${plan.name} subscription is now active. Enjoy StreamVault!`,
-    });
+    try {
+      logger.info('Enqueuing subscription confirmation email job', { to: user.email });
+      return await addNotificationJob('send_email_template', {
+        template: 'subscription_confirmation',
+        to: user.email,
+        data: {
+          first_name: user.first_name,
+          plan: {
+            name: plan.name,
+          },
+        },
+      });
+    } catch (err) {
+      logger.error('Failed to enqueue subscription confirmation email', { to: user.email, error: err.message });
+      throw err;
+    }
   }
 
   async sendPaymentFailedEmail(user, planName) {
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #e50914;">Payment Failed</h2>
-        <p>Hello ${user.first_name},</p>
-        <p>We were unable to process your payment for the <strong>${planName}</strong> plan.</p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/billing"
-             style="background-color: #e50914; color: white; padding: 14px 28px;
-                    text-decoration: none; border-radius: 4px; font-size: 16px;">
-            Update Payment
-          </a>
-        </div>
-        <hr style="border: 1px solid #eee; margin: 30px 0;">
-        <p style="color: #999; font-size: 12px;">StreamVault &mdash; Your ultimate streaming destination</p>
-      </div>
-    `;
-
-    return this.sendMail({
-      to: user.email,
-      subject: 'StreamVault - Payment Failed',
-      html,
-      text: `Payment failed for ${planName}. Update your payment at ${process.env.FRONTEND_URL}/billing`,
-    });
+    try {
+      logger.info('Enqueuing payment failed email job', { to: user.email });
+      return await addNotificationJob('send_email_template', {
+        template: 'payment_failed',
+        to: user.email,
+        data: {
+          first_name: user.first_name,
+          planName,
+        },
+      });
+    } catch (err) {
+      logger.error('Failed to enqueue payment failed email', { to: user.email, error: err.message });
+      throw err;
+    }
   }
 
   async sendInvoiceEmail(user, planName, invoice, payment, pdfPath) {
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #c0392b;">Your StreamVault Invoice</h2>
-        <p>Hello ${user.first_name},</p>
-        <p>Thank you for your purchase. Your invoice <strong>${invoice.invoice_number}</strong> is attached to this email.</p>
-        
-        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-          <tr style="background-color: #f9f9f9;">
-            <th style="border: 1px solid #eee; padding: 10px; text-align: left; font-weight: bold;">Plan Name</th>
-            <td style="border: 1px solid #eee; padding: 10px;">${planName}</td>
-          </tr>
-          <tr>
-            <th style="border: 1px solid #eee; padding: 10px; text-align: left; font-weight: bold;">Amount</th>
-            <td style="border: 1px solid #eee; padding: 10px;">${invoice.currency} ${invoice.total_amount}</td>
-          </tr>
-          <tr style="background-color: #f9f9f9;">
-            <th style="border: 1px solid #eee; padding: 10px; text-align: left; font-weight: bold;">Transaction ID</th>
-            <td style="border: 1px solid #eee; padding: 10px;">${payment?.stripe_payment_intent_id || 'N/A'}</td>
-          </tr>
-        </table>
-        
-        <p>Enjoy streaming your favorite movies and shows in 4K UHD!</p>
-        <hr style="border: 1px solid #eee; margin: 30px 0;">
-        <p style="color: #999; font-size: 12px;">StreamVault &mdash; Your ultimate streaming destination</p>
-      </div>
-    `;
-
-    return this.sendMail({
-      to: user.email,
-      subject: 'Your StreamVault Invoice',
-      html,
-      text: `Thank you for your purchase. Your invoice ${invoice.invoice_number} for the ${planName} plan is attached. Total: ${invoice.currency} ${invoice.total_amount}. Transaction ID: ${payment?.stripe_payment_intent_id || 'N/A'}.`,
-      attachments: [
-        {
-          filename: `invoice-${invoice.invoice_number}.pdf`,
-          path: pdfPath,
-        }
-      ]
-    });
+    try {
+      logger.info('Enqueuing invoice email job', { to: user.email });
+      return await addNotificationJob('send_email_template', {
+        template: 'invoice',
+        to: user.email,
+        data: {
+          first_name: user.first_name,
+          email: user.email,
+          phone: user.phone,
+          planName,
+          invoice: {
+            invoice_number: invoice.invoice_number,
+            currency: invoice.currency,
+            total_amount: invoice.total_amount,
+            amount: invoice.amount,
+            tax_amount: invoice.tax_amount,
+          },
+          payment: {
+            payment_method: payment?.payment_method,
+            stripe_payment_intent_id: payment?.stripe_payment_intent_id,
+          },
+          pdfPath,
+        },
+      });
+    } catch (err) {
+      logger.error('Failed to enqueue invoice email', { to: user.email, error: err.message });
+      throw err;
+    }
   }
 }
 

@@ -197,7 +197,7 @@ const POPULAR_CHANNELS = [
     id: "StarPlus",
     name: "StarPlus",
     renderLogo: () => (
-      <svg viewBox="0 0 100 80" className="h-14 w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 100 80" className="h-20 w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M50 8 L58 28 L80 28 L62 38 L68 58 L50 46 L32 58 L38 38 L20 28 L42 28 Z" fill="#FF1E27" filter="drop-shadow(0px 0px 4px rgba(255, 30, 39, 0.6))" />
         <path d="M50 46 C45 42, 30 55, 20 60 C32 54, 45 48, 50 46 Z" fill="#FFC700" />
         <path d="M50 46 C55 42, 70 55, 80 60 C68 54, 55 48, 50 46 Z" fill="#FFC700" />
@@ -210,7 +210,7 @@ const POPULAR_CHANNELS = [
     id: "Colors",
     name: "Colors",
     renderLogo: () => (
-      <svg viewBox="0 0 120 80" className="h-14 w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 120 80" className="h-20 w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
         <text x="45" y="48" fill="#FFFFFF" fontFamily="sans-serif" fontWeight="800" fontSize="20" textAnchor="middle">colors</text>
         <path d="M82 25 C82 25, 92 10, 105 18 C112 24, 105 38, 92 35 C82 32, 82 25, 82 25 Z" fill="url(#colorsGrad)" />
         <defs>
@@ -228,7 +228,7 @@ const POPULAR_CHANNELS = [
     id: "Vijay",
     name: "Vijay",
     renderLogo: () => (
-      <svg viewBox="0 0 100 80" className="h-14 w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 100 80" className="h-20 w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M50 10 L58 30 L80 30 L62 40 L68 60 L50 48 L32 60 L38 40 L20 30 L42 30 Z" fill="#FFC700" filter="drop-shadow(0px 0px 4px rgba(255, 199, 0, 0.4))" />
         <text x="50" y="72" fill="#FFC700" fontFamily="sans-serif" fontWeight="bold" fontSize="10" textAnchor="middle">விஜய்</text>
       </svg>
@@ -238,7 +238,7 @@ const POPULAR_CHANNELS = [
     id: "StarMaa",
     name: "Star Maa",
     renderLogo: () => (
-      <svg viewBox="0 0 100 80" className="h-14 w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 100 80" className="h-20 w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M50 10 L58 30 L80 30 L62 40 L68 60 L50 48 L32 60 L38 40 L20 30 L42 30 Z" fill="#FF1E27" stroke="#FFC700" strokeWidth="1.5" />
         <text x="50" y="66" fill="#FFFFFF" fontFamily="sans-serif" fontWeight="900" fontSize="7" textAnchor="middle">Star</text>
         <text x="50" y="74" fill="#FFC700" fontFamily="sans-serif" fontWeight="900" fontSize="7.5" textAnchor="middle">మా</text>
@@ -249,7 +249,7 @@ const POPULAR_CHANNELS = [
     id: "StarPravah",
     name: "Star Pravah",
     renderLogo: () => (
-      <svg viewBox="0 0 100 80" className="h-14 w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 100 80" className="h-20 w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M50 10 L58 30 L80 30 L62 40 L68 60 L50 48 L32 60 L38 40 L20 30 L42 30 Z" fill="#005EE6" stroke="#FFC700" strokeWidth="1.5" />
         <text x="50" y="66" fill="#FFFFFF" fontFamily="sans-serif" fontWeight="900" fontSize="7" textAnchor="middle">Star</text>
         <text x="50" y="74" fill="#FFC700" fontFamily="sans-serif" fontWeight="900" fontSize="7.5" textAnchor="middle">प्रवाह</text>

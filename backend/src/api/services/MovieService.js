@@ -3,8 +3,7 @@ const path = require('path');
 const MovieRepository = require('../repositories/MovieRepository');
 const BunnyStreamService = require('./BunnyStreamService');
 const TranscodingService = require('./TranscodingService');
-const { generateSubtitles } = require('../../helpers/subtitleGenerator');
-const { dubVideo } = require('../../helpers/audioDubber');
+const { addTranscodingJob } = require('../../queue');
 const { generateUniqueSlug } = require('../../utils/slugify');
 const { getPagination } = require('../../utils/pagination');
 const { paginationMeta } = require('../../helpers/responseHelper');
@@ -112,36 +111,18 @@ class MovieService {
       updated_by: userId,
     });
 
-    // Fire-and-forget transcoding for local uploads
+    // Queue transcoding and subtitle/audio generation job for local uploads
     if (localVideoPath) {
-      const movieId = movie.id;
-      TranscodingService.transcodeAsync({
+      addTranscodingJob('transcode_movie', {
+        movieId: movie.id,
         inputPath: localVideoPath,
         outputName: localVideoOutputName,
-        onProcessing: () => MovieRepository.updateById(movieId, { transcoding_status: 'processing' }),
-        onComplete: (hlsUrl) => MovieRepository.updateById(movieId, { video_url: hlsUrl, transcoding_status: 'completed' }),
-        onError: () => MovieRepository.updateById(movieId, { transcoding_status: 'failed' }),
+        title: title,
+        slug: slug,
+        generateSubtitles: !!(files && files.video && files.video[0])
+      }).catch((err) => {
+        logger.error('Failed to enqueue movie transcoding job', { movieId: movie.id, error: err.message });
       });
-    }
-
-    // Fire-and-forget subtitle generation
-    if (files && files.video && files.video[0]) {
-      const uploadedVideoPath = files.video[0].path;
-      const titleForSub = title;
-      const slugForSub = slug;
-      const movieId = movie.id;
-      generateSubtitles(uploadedVideoPath, titleForSub, slugForSub)
-        .then(async (subUrl) => {
-          await MovieRepository.updateById(movieId, { subtitle_url: subUrl });
-          const absoluteVttPath = path.join(__dirname, '../../../', subUrl);
-          const audioUrl = await dubVideo(absoluteVttPath, slugForSub);
-          if (audioUrl) {
-            await MovieRepository.updateById(movieId, { dubbed_audio_url: audioUrl });
-          }
-        })
-        .catch((err) => {
-          logger.error('Failed to generate subtitles for movie', { movieId, error: err.message });
-        });
     }
 
     return MovieRepository.findById(movie.id);
@@ -230,34 +211,18 @@ class MovieService {
 
     await MovieRepository.updateById(id, updateData);
 
-    // Fire-and-forget transcoding for local uploads
+    // Queue transcoding and subtitle/audio generation job for local uploads
     if (localVideoPath) {
-      TranscodingService.transcodeAsync({
+      addTranscodingJob('transcode_movie', {
+        movieId: id,
         inputPath: localVideoPath,
         outputName: localVideoOutputName,
-        onProcessing: () => MovieRepository.updateById(id, { transcoding_status: 'processing' }),
-        onComplete: (hlsUrl) => MovieRepository.updateById(id, { video_url: hlsUrl, transcoding_status: 'completed' }),
-        onError: () => MovieRepository.updateById(id, { transcoding_status: 'failed' }),
+        title: updateData.title || movie.title,
+        slug: updateData.slug || movie.slug,
+        generateSubtitles: !!(files && files.video && files.video[0])
+      }).catch((err) => {
+        logger.error('Failed to enqueue movie update transcoding job', { movieId: id, error: err.message });
       });
-    }
-
-    // Fire-and-forget subtitle generation
-    if (files && files.video && files.video[0]) {
-      const uploadedVideoPath = files.video[0].path;
-      const titleForSub = updateData.title || movie.title;
-      const slugForSub = updateData.slug || movie.slug;
-      generateSubtitles(uploadedVideoPath, titleForSub, slugForSub)
-        .then(async (subUrl) => {
-          await MovieRepository.updateById(id, { subtitle_url: subUrl });
-          const absoluteVttPath = path.join(__dirname, '../../../', subUrl);
-          const audioUrl = await dubVideo(absoluteVttPath, slugForSub);
-          if (audioUrl) {
-            await MovieRepository.updateById(id, { dubbed_audio_url: audioUrl });
-          }
-        })
-        .catch((err) => {
-          logger.error('Failed to generate subtitles for movie update', { movieId: id, error: err.message });
-        });
     }
 
     return MovieRepository.findById(id);

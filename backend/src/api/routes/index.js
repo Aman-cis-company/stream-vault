@@ -17,6 +17,7 @@ const userRoutes = require('./user.routes');
 const affiliateRoutes = require('./affiliate.routes');
 const complianceRoutes = require('./compliance.routes');
 const invoiceRoutes = require('./invoice.routes');
+const internalRoutes = require('./internal.routes');
 
 // Health check
 router.get('/health', (req, res) => {
@@ -43,6 +44,7 @@ router.use('/interactions', interactionRoutes);
 router.use('/user', userRoutes);
 router.use('/affiliate', affiliateRoutes);
 router.use('/compliance', complianceRoutes);
+router.use('/internal', internalRoutes);
 router.use('/', invoiceRoutes);
 
 module.exports = router;

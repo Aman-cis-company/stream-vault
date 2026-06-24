@@ -7,7 +7,7 @@ const MESSAGES = require("../../constants/messages");
 const STATUS_CODES = require("../../constants/statusCodes");
 const logger = require("../../config/logger");
 const jwt = require("jsonwebtoken");
-const twilioConfig = require("../../config/twilio");
+const { addNotificationJob } = require("../../queue");
 const UserRepository = require("../repositories/UserRepository");
 
 class AuthController {
@@ -227,21 +227,22 @@ class AuthController {
 
       logger.info(`Generated OTP for ${phone}: ${otp}`);
 
-      // Try sending via Twilio if configured
-      if (twilioConfig.isEnabled) {
+      // Try sending via Twilio queue
+      const runSmsQueue = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER;
+
+      if (runSmsQueue) {
         try {
-          await twilioConfig.client.messages.create({
-            body: `Your StreamVault verification code is ${otp}. Expires in 5 minutes.`,
-            from: twilioConfig.phoneNumber,
+          await addNotificationJob('send_sms', {
             to: phone,
+            body: `Your StreamVault verification code is ${otp}. Expires in 5 minutes.`,
           });
-          logger.info(`OTP SMS sent successfully to ${phone}`);
+          logger.info(`OTP SMS job enqueued successfully for ${phone}`);
         } catch (smsErr) {
-          logger.error("Failed to send OTP via Twilio", { error: smsErr.message });
+          logger.error("Failed to enqueue OTP SMS job", { error: smsErr.message });
           // In development/fallback mode, allow proceeding
           if (process.env.NODE_ENV === "development") {
             console.log(`[DEVELOPMENT OTP FALLBACK] Code for ${phone}: ${otp}`);
-            return successResponse(res, "OTP generated (Twilio sandbox unverified number fallback)", {
+            return successResponse(res, "OTP generated (Enqueue failed, dev mode fallback)", {
               devMode: true,
               otp,
             });

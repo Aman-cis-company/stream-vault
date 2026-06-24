@@ -49,3 +49,16 @@ HLS Video (HTTP Live Streaming)
 3)Supported on All Devices and Browsers
 4)Apple releases the HLS in 2009
 
+---------------------Run all service of backend-----------------------------
+1. Start Services  
+npm run start:services
+
+2. Check Status
+npx pm2 list
+
+3. View Logs
+npm run logs:services
+
+4. Stop Services
+npm run stop:services
+

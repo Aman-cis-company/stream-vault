@@ -5,10 +5,18 @@ import { TitleRow } from "@/components/streaming/TitleRow";
 import { fetchMovies } from "@/lib/movies";
 import type { Title } from "@/lib/mock-data";
 import { Loader2 } from "lucide-react";
+import { useSocketEvent } from "@/hooks/useSocket";
+import { SOCKET_EVENTS } from "@/lib/socket";
 
 export default function Browse() {
   const [titles, setTitles] = useState<Title[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const refreshTitles = () => {
+    fetchMovies({ status: "published", limit: 100 })
+      .then(setTitles)
+      .catch(() => {});
+  };
 
   useEffect(() => {
     fetchMovies({ status: "published", limit: 100 })
@@ -16,6 +24,10 @@ export default function Browse() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  useSocketEvent(SOCKET_EVENTS.MOVIE_CREATED, refreshTitles);
+  useSocketEvent(SOCKET_EVENTS.MOVIE_UPDATED, refreshTitles);
+  useSocketEvent(SOCKET_EVENTS.MOVIE_DELETED, refreshTitles);
 
   return (
     <MainLayout flush>

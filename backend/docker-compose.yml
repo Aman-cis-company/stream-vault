@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: streamvault-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: streamvault
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  redis:
+    image: redis:7.0-alpine
+    container_name: streamvault-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: gateway
+    container_name: streamvault-api-gateway
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - DB_HOST=mysql
+      - REDIS_HOST=redis
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      - uploads_data:/app/uploads
+
+  transcoding-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: transcoder
+    container_name: streamvault-transcoding-service
+    restart: always
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+      - DB_HOST=mysql
+      - REDIS_HOST=redis
+      - GATEWAY_URL=http://api-gateway:5000
+    depends_on:
+      - mysql
+      - redis
+      - api-gateway
+    volumes:
+      - uploads_data:/app/uploads
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: notifier
+    container_name: streamvault-notification-service
+    restart: always
+    ports:
+      - "5002:5002"
+    environment:
+      - PORT=5002
+      - REDIS_HOST=redis
+    depends_on:
+      - redis
+    volumes:
+      - uploads_data:/app/uploads
+
+volumes:
+  mysql_data:
+  redis_data:
+  uploads_data:

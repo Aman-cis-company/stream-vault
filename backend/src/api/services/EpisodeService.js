@@ -4,8 +4,7 @@ const EpisodeRepository = require('../repositories/EpisodeRepository');
 const SeriesRepository = require('../repositories/SeriesRepository');
 const BunnyStreamService = require('./BunnyStreamService');
 const TranscodingService = require('./TranscodingService');
-const { generateSubtitles } = require('../../helpers/subtitleGenerator');
-const { dubVideo } = require('../../helpers/audioDubber');
+const { addTranscodingJob } = require('../../queue');
 const logger = require('../../config/logger');
 const { detectVideoProvider } = require('../../utils/videoProvider');
 
@@ -90,36 +89,20 @@ class EpisodeService {
       updated_by: userId,
     });
  
-    // Fire-and-forget transcoding for local uploads
+    // Queue transcoding and subtitle/audio generation job for local uploads
     if (localVideoPath) {
-      const episodeId = episode.id;
-      TranscodingService.transcodeAsync({
-        inputPath: localVideoPath,
-        outputName: localVideoOutputName,
-        onProcessing: () => EpisodeRepository.updateById(episodeId, { transcoding_status: 'processing' }),
-        onComplete: (hlsUrl) => EpisodeRepository.updateById(episodeId, { video_url: hlsUrl, transcoding_status: 'completed' }),
-        onError: () => EpisodeRepository.updateById(episodeId, { transcoding_status: 'failed' }),
-      });
-    }
- 
-    // Fire-and-forget subtitle generation
-    if (files?.video?.[0]) {
-      const uploadedVideoPath = files.video[0].path;
       const episodeTitle = `${series.title} S${episode.season_number}E${episode.episode_number}: ${episode.title || 'Untitled'}`;
       const episodeSlug = `series-${seriesId}-s${episode.season_number}-e${episode.episode_number}`;
-      const epId = episode.id;
-      generateSubtitles(uploadedVideoPath, episodeTitle, episodeSlug)
-        .then(async (subUrl) => {
-          await EpisodeRepository.updateById(epId, { subtitle_url: subUrl });
-          const absoluteVttPath = path.join(__dirname, '../../../', subUrl);
-          const audioUrl = await dubVideo(absoluteVttPath, episodeSlug);
-          if (audioUrl) {
-            await EpisodeRepository.updateById(epId, { dubbed_audio_url: audioUrl });
-          }
-        })
-        .catch((err) => {
-          logger.error('Failed to generate subtitles for episode', { episodeId: epId, error: err.message });
-        });
+      addTranscodingJob('transcode_episode', {
+        episodeId: episode.id,
+        inputPath: localVideoPath,
+        outputName: localVideoOutputName,
+        title: episodeTitle,
+        slug: episodeSlug,
+        generateSubtitles: !!(files?.video?.[0])
+      }).catch((err) => {
+        logger.error('Failed to enqueue episode transcoding job', { episodeId: episode.id, error: err.message });
+      });
     }
  
     // Keep total_seasons in sync
@@ -182,35 +165,21 @@ class EpisodeService {
 
     await EpisodeRepository.updateById(episodeId, updateData);
 
-    // Fire-and-forget transcoding for local uploads
+    // Queue transcoding and subtitle/audio generation job for local uploads
     if (localVideoPath) {
-      TranscodingService.transcodeAsync({
-        inputPath: localVideoPath,
-        outputName: localVideoOutputName,
-        onProcessing: () => EpisodeRepository.updateById(episodeId, { transcoding_status: 'processing' }),
-        onComplete: (hlsUrl) => EpisodeRepository.updateById(episodeId, { video_url: hlsUrl, transcoding_status: 'completed' }),
-        onError: () => EpisodeRepository.updateById(episodeId, { transcoding_status: 'failed' }),
-      });
-    }
-
-    // Fire-and-forget subtitle generation
-    if (files?.video?.[0]) {
-      const uploadedVideoPath = files.video[0].path;
       const series = await SeriesRepository.findById(seriesId);
       const episodeTitle = `${series ? series.title : 'Series'} S${episode.season_number}E${episode.episode_number}: ${updateData.title || episode.title || 'Untitled'}`;
       const episodeSlug = `series-${seriesId}-s${episode.season_number}-e${episode.episode_number}`;
-      generateSubtitles(uploadedVideoPath, episodeTitle, episodeSlug)
-        .then(async (subUrl) => {
-          await EpisodeRepository.updateById(episodeId, { subtitle_url: subUrl });
-          const absoluteVttPath = path.join(__dirname, '../../../', subUrl);
-          const audioUrl = await dubVideo(absoluteVttPath, episodeSlug);
-          if (audioUrl) {
-            await EpisodeRepository.updateById(episodeId, { dubbed_audio_url: audioUrl });
-          }
-        })
-        .catch((err) => {
-          logger.error('Failed to generate subtitles for episode update', { episodeId, error: err.message });
-        });
+      addTranscodingJob('transcode_episode', {
+        episodeId,
+        inputPath: localVideoPath,
+        outputName: localVideoOutputName,
+        title: episodeTitle,
+        slug: episodeSlug,
+        generateSubtitles: !!(files?.video?.[0])
+      }).catch((err) => {
+        logger.error('Failed to enqueue episode update transcoding job', { episodeId, error: err.message });
+      });
     }
 
     return EpisodeRepository.findById(episodeId);

@@ -6,6 +6,8 @@ import { fetchMovies } from "@/lib/movies";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, SearchX, SlidersHorizontal, Loader2, Film } from "lucide-react";
+import { useSocketEvent } from "@/hooks/useSocket";
+import { SOCKET_EVENTS } from "@/lib/socket";
 
 const FILTERS: ("All" | Category)[] = ["All", "Trending", "New Releases", "Most Watched", "Recommended"];
 const PAGE = 12;
@@ -18,12 +20,22 @@ export default function Library() {
   const [visible, setVisible] = useState(PAGE);
   const sentinel = useRef<HTMLDivElement>(null);
 
+  const refreshTitles = () => {
+    fetchMovies({ status: "published", limit: 200 })
+      .then(setAllTitles)
+      .catch(() => {});
+  };
+
   useEffect(() => {
     fetchMovies({ status: "published", limit: 200 })
       .then(setAllTitles)
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  useSocketEvent(SOCKET_EVENTS.MOVIE_CREATED, refreshTitles);
+  useSocketEvent(SOCKET_EVENTS.MOVIE_UPDATED, refreshTitles);
+  useSocketEvent(SOCKET_EVENTS.MOVIE_DELETED, refreshTitles);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
