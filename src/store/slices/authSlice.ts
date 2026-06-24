@@ -30,6 +30,7 @@ interface AuthState {
 }
 
 function mapRole(name: string): Role {
+  if (name === "admin") return "admin";
   if (name === "super_admin") return "super_admin";
   if (name === "team_member") return "team_member";
   if (name === "affiliate") return "affiliate";

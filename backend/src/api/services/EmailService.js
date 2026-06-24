@@ -122,6 +122,48 @@ class EmailService {
       text: `Payment failed for ${planName}. Update your payment at ${process.env.FRONTEND_URL}/billing`,
     });
   }
+
+  async sendInvoiceEmail(user, planName, invoice, payment, pdfPath) {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #c0392b;">Your StreamVault Invoice</h2>
+        <p>Hello ${user.first_name},</p>
+        <p>Thank you for your purchase. Your invoice <strong>${invoice.invoice_number}</strong> is attached to this email.</p>
+        
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <tr style="background-color: #f9f9f9;">
+            <th style="border: 1px solid #eee; padding: 10px; text-align: left; font-weight: bold;">Plan Name</th>
+            <td style="border: 1px solid #eee; padding: 10px;">${planName}</td>
+          </tr>
+          <tr>
+            <th style="border: 1px solid #eee; padding: 10px; text-align: left; font-weight: bold;">Amount</th>
+            <td style="border: 1px solid #eee; padding: 10px;">${invoice.currency} ${invoice.total_amount}</td>
+          </tr>
+          <tr style="background-color: #f9f9f9;">
+            <th style="border: 1px solid #eee; padding: 10px; text-align: left; font-weight: bold;">Transaction ID</th>
+            <td style="border: 1px solid #eee; padding: 10px;">${payment?.stripe_payment_intent_id || 'N/A'}</td>
+          </tr>
+        </table>
+        
+        <p>Enjoy streaming your favorite movies and shows in 4K UHD!</p>
+        <hr style="border: 1px solid #eee; margin: 30px 0;">
+        <p style="color: #999; font-size: 12px;">StreamVault &mdash; Your ultimate streaming destination</p>
+      </div>
+    `;
+
+    return this.sendMail({
+      to: user.email,
+      subject: 'Your StreamVault Invoice',
+      html,
+      text: `Thank you for your purchase. Your invoice ${invoice.invoice_number} for the ${planName} plan is attached. Total: ${invoice.currency} ${invoice.total_amount}. Transaction ID: ${payment?.stripe_payment_intent_id || 'N/A'}.`,
+      attachments: [
+        {
+          filename: `invoice-${invoice.invoice_number}.pdf`,
+          path: pdfPath,
+        }
+      ]
+    });
+  }
 }
 
 module.exports = new EmailService();

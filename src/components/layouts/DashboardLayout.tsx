@@ -18,17 +18,20 @@ import {
   ChevronRight,
   Menu,
   X,
+  Receipt,
 } from "lucide-react";
 
 const NAV = [
   { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { to: "/affiliate", label: "Affiliate", icon: Users2 },
   { to: "/profile", label: "Profile & Security", icon: User },
+  { to: "/profile?tab=billing", label: "Billing & Invoices", icon: CreditCard },
   { to: "/settings/parental-controls", label: "Parental Controls", icon: Lock },
-] as const;
+];
 
 export function DashboardLayout({ children, title }: { children: ReactNode; title: string }) {
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname, search } = location;
   const { user } = useAuth();
   
   const isAdmin = pathname.startsWith("/admin");
@@ -60,6 +63,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
         { to: "/admin/movies" as const, label: "Movies & Shows", icon: Film },
         { to: "/admin/series" as const, label: "Web Series", icon: Tv },
         { to: "/admin/plans" as const, label: "Subscription Plans", icon: CreditCard },
+        { to: "/admin/billing" as const, label: "Billing Management", icon: Receipt },
       ]
     : [
         ...NAV,
@@ -95,7 +99,9 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
             </div>
 
             {items.map((n) => {
-              const active = pathname === n.to;
+              const active = n.to.includes("?")
+                ? pathname === n.to.split("?")[0] && search === "?" + n.to.split("?")[1]
+                : pathname === n.to && !search.includes("tab=billing");
               return (
                 <Link
                   key={n.to}

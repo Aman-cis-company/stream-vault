@@ -3,7 +3,15 @@ const { Op, fn, col, literal } = require('sequelize');
 
 class PaymentRepository {
   async create(data) {
-    return Payment.create(data);
+    const payment = await Payment.create(data);
+    try {
+      const InvoiceService = require('../services/InvoiceService');
+      await InvoiceService.createInvoiceFromPayment(payment);
+    } catch (err) {
+      const logger = require('../../config/logger');
+      logger.error('Failed to automatically create invoice from payment', { paymentId: payment.id, error: err.message });
+    }
+    return payment;
   }
 
   async findByStripePaymentIntentId(intentId) {

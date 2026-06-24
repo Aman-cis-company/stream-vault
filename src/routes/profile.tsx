@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Protected } from "@/components/streaming/Protected";
 import { useAuth } from "@/lib/auth";
@@ -10,11 +11,15 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Smartphone, Monitor, ShieldCheck, Loader2, User, Lock, Laptop } from "lucide-react";
+import { Billing } from "@/components/billing/Billing";
 
 export default function ProfilePage() {
+  const [searchParams] = useSearchParams();
+  const tab = searchParams.get("tab") || "profile";
+
   return (
     <Protected>
-      <Profile />
+      {tab === "billing" ? <Billing /> : <Profile />}
     </Protected>
   );
 }

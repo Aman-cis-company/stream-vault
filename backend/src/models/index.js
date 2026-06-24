@@ -17,6 +17,7 @@ const UserInteraction = require('./UserInteraction');
 const AffiliateCode = require('./AffiliateCode');
 const ReferralConversion = require('./ReferralConversion');
 const ContentComplianceRecord = require('./ContentComplianceRecord');
+const Invoice = require('./Invoice');
 
 // ── Role ↔ User ─────────────────────────────────────────────────────────────
 Role.hasMany(User, { foreignKey: 'role_id', as: 'users' });
@@ -118,6 +119,18 @@ ContentComplianceRecord.belongsTo(Movie, { foreignKey: 'movie_id', as: 'movie' }
 Episode.hasMany(ContentComplianceRecord, { foreignKey: 'episode_id', as: 'complianceRecords', onDelete: 'SET NULL' });
 ContentComplianceRecord.belongsTo(Episode, { foreignKey: 'episode_id', as: 'episode' });
 
+// ── User ↔ Invoice ──────────────────────────────────────────────────────────
+User.hasMany(Invoice, { foreignKey: 'user_id', as: 'invoices' });
+Invoice.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+// ── UserSubscription ↔ Invoice ───────────────────────────────────────────────
+UserSubscription.hasMany(Invoice, { foreignKey: 'subscription_id', as: 'invoices' });
+Invoice.belongsTo(UserSubscription, { foreignKey: 'subscription_id', as: 'subscription' });
+
+// ── Payment ↔ Invoice ────────────────────────────────────────────────────────
+Payment.hasOne(Invoice, { foreignKey: 'payment_id', as: 'invoice' });
+Invoice.belongsTo(Payment, { foreignKey: 'payment_id', as: 'payment' });
+
 module.exports = {
   sequelize,
   Sequelize,
@@ -138,4 +151,5 @@ module.exports = {
   AffiliateCode,
   ReferralConversion,
   ContentComplianceRecord,
+  Invoice,
 };

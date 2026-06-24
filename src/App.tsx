@@ -23,6 +23,7 @@ import { AgeVerificationModal } from "./components/streaming/AgeVerificationModa
 import SeriesDetail from "./routes/series.$seriesId";
 import WatchEpisode from "./routes/watch.series.$seriesId.episode.$episodeId";
 import AdminSeries from "./pages/admin/AdminSeries";
+import AdminBilling from "./pages/admin/AdminBilling";
 import MyList from "./routes/my-list";
 import Checkout from "./routes/checkout";
 import RecordKeeping from "./routes/record-keeping";
@@ -63,6 +64,7 @@ export default function App() {
         <Route path="/admin/plans" element={<AdminPlans />} />
         <Route path="/admin/series" element={<AdminSeries />} />
         <Route path="/admin/banner" element={<AdminBanner />} />
+        <Route path="/admin/billing" element={<AdminBilling />} />
         <Route path="/series/:seriesId" element={<SeriesDetail />} />
         <Route
           path="/watch/series/:seriesId/episode/:episodeId"

@@ -14,3 +14,12 @@ PERFORMANCE_CHANGES
 htaccess
 .vercel
 .env*
+
+# Prevent AI Agent Context Crashes
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.next/
+.nuxt/
+.turbo/
+*.log

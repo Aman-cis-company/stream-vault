@@ -16,6 +16,9 @@ bunny.net
 username = aman.k@cisinlabs.com
 password = Aman@1234567
 
+twillio account
+username = 7869215831amankaithwas@gmail.com
+password = Aman@123
 
 https://github.com/Aman-cis-company/stream-vault.git
 

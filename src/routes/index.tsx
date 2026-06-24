@@ -3,7 +3,7 @@ import heroBackdrop from "@/assets/hero-backdrop.jpg";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { plans, testimonials, genres } from "@/lib/mock-data";
+import { plans, testimonials, genres, DUMMY_MOVIES } from "@/lib/mock-data";
 import type { Title } from "@/lib/mock-data";
 import { TitleRow } from "@/components/streaming/TitleRow";
 import {
@@ -27,13 +27,13 @@ import {
   ArrowRight,
   Zap,
 } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import Hls from "hls.js";
 import apiClient from "@/services/api";
 import { mapMovieToTitle } from "@/lib/movies";
 import { BackendMovie } from "@/store/slices/moviesSlice";
 import { useSocketEvent } from "@/hooks/useSocket";
 import { SOCKET_EVENTS } from "@/lib/socket";
-
 
 const FEATURES = [
   { icon: Tv, title: "4K Ultra HD + HDR", desc: "Cinema-grade picture and Dolby Atmos spatial audio on every device." },
@@ -78,6 +78,61 @@ const FAQ = [
   },
 ];
 
+interface TvVideoProps {
+  src: string;
+}
+
+function TvVideo({ src }: TvVideoProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+
+    const isHls = src.includes(".m3u8") || src.includes("/hls/");
+
+    if (isHls && Hls.isSupported()) {
+      const hls = new Hls({
+        enableWorker: true,
+        maxBufferLength: 30,
+      });
+      hlsRef.current = hls;
+      hls.loadSource(src);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.play().catch(() => {});
+      });
+    } else {
+      video.src = src;
+      video.play().catch(() => {});
+    }
+
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
+  }, [src]);
+
+  return (
+    <video
+      ref={videoRef}
+      className="h-full w-full object-cover"
+      autoPlay
+      loop
+      muted
+      playsInline
+    />
+  );
+}
+
 export default function Landing() {
   const [moviesByCategory, setMoviesByCategory] = useState<Record<number, Title[]>>({});
   const [loading, setLoading] = useState(true);
@@ -112,6 +167,31 @@ export default function Landing() {
   useSocketEvent(SOCKET_EVENTS.MOVIE_DELETED, load);
   useSocketEvent(SOCKET_EVENTS.CONTENT_PUBLISHED, load);
   useSocketEvent(SOCKET_EVENTS.CONTENT_UNPUBLISHED, load);
+
+  // Combine DB movies and DUMMY_MOVIES to ensure a rich landing page
+  const dbMovies = Object.values(moviesByCategory).flat();
+  const allMovies = [...dbMovies];
+  DUMMY_MOVIES.forEach((dm) => {
+    if (!allMovies.some((m) => m.name.toLowerCase() === dm.name.toLowerCase())) {
+      allMovies.push(dm);
+    }
+  });
+
+  const trendingMovies = allMovies.filter(
+    (m) => m.category === "Trending" || m.trending === true
+  );
+
+  const newReleaseMovies = allMovies.filter(
+    (m) => m.category === "New Releases" || m.newRelease === true
+  );
+
+  // Build HLS endpoints dynamically pointing to backend HLS directories
+  const backendBase = (import.meta.env.VITE_API_URL as string || "http://localhost:5000/api/v1")
+    .replace(/\/api\/v1\/?$/, "");
+  
+  // Use distinct local HLS animation video streams
+  const tvVideoUrl = `${backendBase}/uploads/hls/video-46060afa-5de8-4053-ba36-5c11fbdba7a0/master.m3u8`; // Kung Fu Panda 4
+  const deviceVideoUrl = `${backendBase}/uploads/hls/video-6b288930-5418-41e6-87e5-4ab73f76c6a8/master.m3u8`; // Toy Story 5
 
   return (
     <MainLayout flush>
@@ -169,7 +249,7 @@ export default function Landing() {
         <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background to-transparent" />
       </section>
 
-      <div className="mx-auto max-w-7xl space-y-20 px-4 py-16 sm:px-6">
+      <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6">
 
         {/* ── Features ── */}
         <section>
@@ -209,7 +289,7 @@ export default function Landing() {
               <Link to="/browse">View all <ArrowRight className="ml-1 size-4" /></Link>
             </Button>
           </div>
-          <TitleRow heading="" titles={moviesByCategory[3]} />
+          <TitleRow heading="" titles={trendingMovies} />
         </section>
 
         {/* ── New Releases ── */}
@@ -226,7 +306,40 @@ export default function Landing() {
               <Link to="/library">Browse all <ArrowRight className="ml-1 size-4" /></Link>
             </Button>
           </div>
-          <TitleRow heading="" titles={Object.values(moviesByCategory).flat().filter((t) => t.newRelease)} />
+          <TitleRow heading="" titles={newReleaseMovies} />
+        </section>
+
+        {/* ── Enjoy on TV Section (Netflix Style) ── */}
+        <section className="grid gap-8 lg:grid-cols-2 lg:gap-14 items-center">
+          <div className="order-2 lg:order-1 relative flex flex-col items-center">
+            {/* Ambient Backlight Glow matching Netflix/modern streaming feel */}
+            <div className="absolute -inset-6 rounded-3xl bg-primary/20 opacity-30 blur-3xl animate-glow-pulse" />
+            
+            {/* TV Screen Container */}
+            <div className="relative w-full max-w-[500px] aspect-[16/9] overflow-hidden rounded-xl border-[12px] border-[#18181f] bg-black shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95)] ring-1 ring-white/10">
+              <TvVideo src={tvVideoUrl} />
+              {/* Screen Glare reflection overlay */}
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10" />
+            </div>
+            
+            {/* TV Stand Neck */}
+            <div className="w-24 h-4 bg-[#121218] border-t border-white/5 relative z-10 shadow-lg" />
+            
+            {/* TV Stand Base */}
+            <div className="w-40 h-2 bg-[#18181f] rounded-full relative z-10 shadow-xl" />
+          </div>
+          
+          <div className="order-1 lg:order-2">
+            <Badge className="mb-4 bg-primary/15 text-primary border-primary/30 hover:bg-primary/15">
+              Smart TV Streaming
+            </Badge>
+            <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+              Enjoy on your TV
+            </h2>
+            <p className="mt-4 text-muted-foreground leading-relaxed text-base">
+              Watch on Smart TVs, PlayStation, Xbox, Chromecast, Apple TV, Blu-ray players, and more. Our high-fidelity player delivers native 4K HDR playback and Dolby Atmos spatial audio for the ultimate theater experience right in your living room.
+            </p>
+          </div>
         </section>
 
         {/* ── Browse by Genre ── */}
@@ -385,23 +498,20 @@ export default function Landing() {
             <div className="relative">
               {/* Outer glow ring */}
               <div className="absolute -inset-3 rounded-3xl bg-gradient-to-br from-primary/20 via-transparent to-transparent blur-2xl" />
-              <div className="relative overflow-hidden rounded-2xl border border-border/60 shadow-[0_30px_80px_-15px_rgba(0,0,0,0.8)]">
-                <img
-                  src="https://picsum.photos/seed/svdevice1/600/400"
-                  alt="Watch on any device"
-                  className="w-full object-cover"
-                  loading="lazy"
-                />
+              <div className="relative overflow-hidden rounded-2xl border border-border/60 shadow-[0_30px_80px_-15px_rgba(0,0,0,0.8)] bg-black">
+                <div className="w-full aspect-[16/10] overflow-hidden bg-black">
+                  <TvVideo src={deviceVideoUrl} />
+                </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
                 <div className="absolute bottom-4 left-4 right-4">
                   <div className="rounded-2xl bg-black/55 backdrop-blur-xl p-3.5 border border-white/10 shadow-xl">
                     <div className="flex items-center gap-3">
                       <div className="size-11 rounded-xl overflow-hidden shrink-0 ring-1 ring-white/10">
-                        <img src="https://picsum.photos/seed/svposter15/44/44" alt="" className="size-full object-cover" />
+                        <img src="https://picsum.photos/seed/svposter16/44/44" alt="" className="size-full object-cover" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-white truncate">Neon Requiem</p>
-                        <p className="text-[10px] text-white/50 mt-0.5">Season 2, Episode 4</p>
+                        <p className="text-xs font-bold text-white truncate">Toy Story 5</p>
+                        <p className="text-[10px] text-white/50 mt-0.5">Disney Original</p>
                         <div className="mt-1.5 h-[3px] rounded-full bg-white/15">
                           <div className="h-full w-2/5 rounded-full bg-primary shadow-[0_0_8px_rgba(192,57,43,0.6)]" />
                         </div>
