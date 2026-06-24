@@ -18,6 +18,21 @@ class EpisodeController {
   async getAll(req, res) {
     try {
       const episodes = await EpisodeService.getBySeriesId(req.params.seriesId);
+
+      const { checkUserSubscription } = require('../helpers/subscriptionChecker');
+      const isSubscribed = await checkUserSubscription(req.user);
+      if (!isSubscribed) {
+        episodes.forEach(ep => {
+          if (ep.setDataValue) {
+            ep.setDataValue('video_url', null);
+            ep.setDataValue('provider_video_id', null);
+          } else {
+            ep.video_url = null;
+            ep.provider_video_id = null;
+          }
+        });
+      }
+
       return successResponse(res, MESSAGES.EPISODES_FETCHED, { episodes });
     } catch (err) {
       logger.error('EpisodeController.getAll error', { error: err.message });
@@ -29,6 +44,19 @@ class EpisodeController {
   async getById(req, res) {
     try {
       const episode = await EpisodeService.getById(req.params.seriesId, req.params.episodeId);
+
+      const { checkUserSubscription } = require('../helpers/subscriptionChecker');
+      const isSubscribed = await checkUserSubscription(req.user);
+      if (!isSubscribed && episode) {
+        if (episode.setDataValue) {
+          episode.setDataValue('video_url', null);
+          episode.setDataValue('provider_video_id', null);
+        } else {
+          episode.video_url = null;
+          episode.provider_video_id = null;
+        }
+      }
+
       return successResponse(res, MESSAGES.EPISODE_FETCHED, { episode });
     } catch (err) {
       logger.error('EpisodeController.getById error', { error: err.message });

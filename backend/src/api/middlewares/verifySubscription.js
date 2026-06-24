@@ -16,9 +16,10 @@ const verifySubscription = async (req, res, next) => {
     }
 
     const userRole = req.user.role ? req.user.role.name : null;
+    const staffRoles = ['super_admin', 'admin', 'content_manager', 'finance_manager', 'affiliate_manager', 'support_agent', 'team_member'];
 
     // Staff bypass
-    if (userRole === ROLES.SUPER_ADMIN || userRole === ROLES.TEAM_MEMBER) {
+    if (userRole && staffRoles.includes(userRole)) {
       return next();
     }
 

@@ -1124,6 +1124,7 @@ function WatchInner() {
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [subscription, setSubscription] = useState<any>(null);
+  const [subscriptionLoaded, setSubscriptionLoaded] = useState(false);
 
   useEffect(() => {
     apiClient.get("/stripe/subscription-status")
@@ -1134,6 +1135,9 @@ function WatchInner() {
       })
       .catch((err) => {
         console.error("Failed to load subscription status", err);
+      })
+      .finally(() => {
+        setSubscriptionLoaded(true);
       });
   }, []);
 
@@ -1260,7 +1264,31 @@ function WatchInner() {
 
       {/* ── Video Player ── */}
       <div className="w-full bg-black shadow-2xl">
-        {(title.transcoding_status === "pending" || title.transcoding_status === "processing") ? (
+        {!subscriptionLoaded ? (
+          <div className="relative w-full aspect-video bg-black flex items-center justify-center">
+            <Loader2 className="size-8 animate-spin text-white/30" />
+          </div>
+        ) : (!user || ((user.role === "subscriber" || user.role === "affiliate") && !subscription)) ? (
+          <div className="relative w-full aspect-video bg-black flex flex-col items-center justify-center gap-4">
+            <img
+              src={title.backdropUrl}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover opacity-15"
+            />
+            <div className="relative z-10 text-center px-6 max-w-md">
+              <div className="size-16 rounded-full bg-destructive/10 border border-destructive/30 flex items-center justify-center mx-auto mb-4">
+                <Play className="size-6 text-destructive fill-destructive" />
+              </div>
+              <h3 className="text-white font-extrabold text-lg tracking-tight mb-2">Subscription Required</h3>
+              <p className="text-white/60 text-xs leading-relaxed mb-5">
+                Unlock this content and stream thousands of premium titles by choosing a StreamVault subscription plan.
+              </p>
+              <Button className="rounded-xl font-bold px-6 shadow-glow-sm" asChild>
+                <Link to="/pricing">Choose a Subscription Plan</Link>
+              </Button>
+            </div>
+          </div>
+        ) : (title.transcoding_status === "pending" || title.transcoding_status === "processing") ? (
           <div className="relative w-full aspect-video bg-black flex flex-col items-center justify-center gap-4">
             <img
               src={title.backdropUrl}

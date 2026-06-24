@@ -35,7 +35,7 @@ import { SOCKET_EVENTS } from "@/lib/socket";
 
 export default function AdminBilling() {
   return (
-    <Protected roles={["super_admin"]}>
+    <Protected roles={["super_admin", "admin", "finance_manager"]}>
       <AdminBillingPage />
     </Protected>
   );

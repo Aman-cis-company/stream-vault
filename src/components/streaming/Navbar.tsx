@@ -47,10 +47,8 @@ function StreamVaultLogo() {
     <img
       src={streamVaultLogo}
       alt="StreamVault"
-      width={265}
-      height={55}
-      className="object-contain"
-      style={{ maxHeight: 55, mixBlendMode: 'screen' }}
+      className="object-contain h-[30px] w-auto md:h-[44px] lg:h-[50px] transition-all"
+      style={{ mixBlendMode: 'screen' }}
     />
   );
 }
@@ -118,7 +116,7 @@ export function Navbar() {
             : "bg-gradient-to-b from-black/75 via-black/35 to-transparent border-b border-transparent"
         }`}
       >
-        <div className="flex h-[66px] w-full items-center gap-6 px-4 md:px-8 lg:px-12">
+        <div className="flex h-[66px] w-full items-center gap-2 pl-2.5 pr-4 md:gap-6 md:px-8 lg:px-12">
 
           {/* ── Logo ── */}
           <Link to="/" className="flex items-center shrink-0 group" aria-label="StreamVault home">

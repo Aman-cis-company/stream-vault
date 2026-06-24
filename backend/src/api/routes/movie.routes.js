@@ -2,23 +2,22 @@ const express = require('express');
 const router = express.Router();
 const MovieController = require('../controllers/MovieController');
 const authenticate = require('../middlewares/authenticate');
-const authorize = require('../middlewares/authorize');
+const checkPermission = require('../middlewares/checkPermission');
 const { uploadMovieFiles, handleMulterError } = require('../middlewares/upload');
 const { validateCreate, validateUpdate } = require('../validators/movie.validator');
 const tryAuthenticate = require('../middlewares/tryAuthenticate');
-const ROLES = require('../../constants/roles');
 
 // Public routes
 router.get('/', tryAuthenticate, MovieController.getAll.bind(MovieController));
-router.put('/banner', authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.TEAM_MEMBER), MovieController.updateBannerOrder.bind(MovieController));
+router.put('/banner', authenticate, checkPermission('movies:write'), MovieController.updateBannerOrder.bind(MovieController));
 router.get('/:id', tryAuthenticate, MovieController.getById.bind(MovieController));
-router.get('/:id/transcoding-status', authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.TEAM_MEMBER), MovieController.getTranscodingStatus.bind(MovieController));
+router.get('/:id/transcoding-status', authenticate, checkPermission('movies:write'), MovieController.getTranscodingStatus.bind(MovieController));
 
 // Protected routes — create/update accept multipart form data (thumbnail + video)
 router.post(
   '/',
   authenticate,
-  authorize(ROLES.SUPER_ADMIN, ROLES.TEAM_MEMBER),
+  checkPermission('movies:write'),
   uploadMovieFiles.fields([
     { name: 'thumbnail', maxCount: 1 },
     { name: 'video', maxCount: 1 },
@@ -31,7 +30,7 @@ router.post(
 router.put(
   '/:id',
   authenticate,
-  authorize(ROLES.SUPER_ADMIN, ROLES.TEAM_MEMBER),
+  checkPermission('movies:write'),
   uploadMovieFiles.fields([
     { name: 'thumbnail', maxCount: 1 },
     { name: 'video', maxCount: 1 },
@@ -44,7 +43,7 @@ router.put(
 router.delete(
   '/:id',
   authenticate,
-  authorize(ROLES.SUPER_ADMIN),
+  checkPermission('movies:write'),
   MovieController.delete.bind(MovieController)
 );
 

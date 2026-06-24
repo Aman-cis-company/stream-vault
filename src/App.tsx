@@ -24,6 +24,8 @@ import SeriesDetail from "./routes/series.$seriesId";
 import WatchEpisode from "./routes/watch.series.$seriesId.episode.$episodeId";
 import AdminSeries from "./pages/admin/AdminSeries";
 import AdminBilling from "./pages/admin/AdminBilling";
+import AdminTeam from "./pages/admin/AdminTeam";
+import AcceptInvite from "./routes/accept-invite";
 import MyList from "./routes/my-list";
 import Checkout from "./routes/checkout";
 import RecordKeeping from "./routes/record-keeping";
@@ -46,6 +48,7 @@ export default function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/accept-invite" element={<AcceptInvite />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/my-list" element={<MyList />} />
@@ -65,6 +68,7 @@ export default function App() {
         <Route path="/admin/series" element={<AdminSeries />} />
         <Route path="/admin/banner" element={<AdminBanner />} />
         <Route path="/admin/billing" element={<AdminBilling />} />
+        <Route path="/admin/team" element={<AdminTeam />} />
         <Route path="/series/:seriesId" element={<SeriesDetail />} />
         <Route
           path="/watch/series/:seriesId/episode/:episodeId"

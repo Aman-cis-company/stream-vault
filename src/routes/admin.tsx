@@ -6,6 +6,7 @@ import {
   StatCard,
 } from "@/components/layouts/DashboardLayout";
 import { Protected } from "@/components/streaming/Protected";
+import { useAuth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -45,9 +46,11 @@ import {
 import { extendedRevenueData } from "@/lib/mock-data";
 import { Loader2 } from "lucide-react";
 
+const STAFF_ROLES: Role[] = ["super_admin", "admin", "content_manager", "finance_manager", "affiliate_manager", "support_agent", "team_member"];
+
 export default function AdminPage() {
   return (
-    <Protected roles={["super_admin"]}>
+    <Protected roles={STAFF_ROLES}>
       <Admin />
     </Protected>
   );
@@ -80,6 +83,7 @@ const MANAGE_CARDS = [
     desc: "Create and manage categories that group movies for subscribers on the frontend.",
     href: "/admin/categories",
     label: "Manage Categories",
+    permission: "movies:write",
     color: "from-violet-500/10 via-violet-500/3 to-transparent border-violet-500/15 hover:border-violet-500/35 hover:shadow-[0_0_20px_rgba(139,92,246,0.1)]",
     iconBg: "bg-violet-500/10 text-violet-400 border border-violet-500/20",
     btnClass: "border-violet-500/20 text-violet-400 hover:bg-violet-500/10 hover:border-violet-500/40",
@@ -90,6 +94,7 @@ const MANAGE_CARDS = [
     desc: "Select which movies are featured on the browse page banner and set their display order.",
     href: "/admin/banner",
     label: "Manage Banner",
+    permission: "movies:write",
     color: "from-amber-500/10 via-amber-500/3 to-transparent border-amber-500/15 hover:border-amber-500/35 hover:shadow-[0_0_20px_rgba(245,158,11,0.1)]",
     iconBg: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
     btnClass: "border-amber-500/20 text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/40",
@@ -100,6 +105,7 @@ const MANAGE_CARDS = [
     desc: "Add, edit, publish or archive movies. Assign categories, upload thumbnails and videos.",
     href: "/admin/movies",
     label: "Manage Movies",
+    permission: "movies:read",
     color: "from-primary/10 via-primary/3 to-transparent border-primary/15 hover:border-primary/35 hover:shadow-[0_0_20px_rgba(225,29,72,0.1)]",
     iconBg: "bg-primary/10 text-primary border border-primary/20",
     btnClass: "border-primary/20 text-primary hover:bg-primary/10 hover:border-primary/40",
@@ -110,6 +116,7 @@ const MANAGE_CARDS = [
     desc: "Create and manage web series with multiple seasons and episodes.",
     href: "/admin/series",
     label: "Manage Series",
+    permission: "episodes:read",
     color: "from-cyan-500/10 via-cyan-500/3 to-transparent border-cyan-500/15 hover:border-cyan-500/35 hover:shadow-[0_0_20px_rgba(6,182,212,0.1)]",
     iconBg: "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
     btnClass: "border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-500/40",
@@ -120,13 +127,41 @@ const MANAGE_CARDS = [
     desc: "Manage plans, pricing tiers, and Stripe Price ID configuration.",
     href: "/admin/plans",
     label: "Manage Plans",
+    permission: "subscriptions:read",
     color: "from-emerald-500/10 via-emerald-500/3 to-transparent border-emerald-500/15 hover:border-emerald-500/35 hover:shadow-[0_0_20px_rgba(16,185,129,0.1)]",
     iconBg: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
     btnClass: "border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/40",
   },
+  {
+    icon: Users,
+    title: "Team Management",
+    desc: "Invite team members, assign RBAC roles, enable/disable accounts, and track activity logs.",
+    href: "/admin/team",
+    label: "Manage Team",
+    permission: "team:read",
+    color: "from-blue-500/10 via-blue-500/3 to-transparent border-blue-500/15 hover:border-blue-500/35 hover:shadow-[0_0_20px_rgba(59,130,246,0.1)]",
+    iconBg: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+    btnClass: "border-blue-500/20 text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/40",
+  },
 ];
 
 function Admin() {
+  const { user } = useAuth();
+  const ROLE_PERMISSIONS: Record<string, string[]> = {
+    super_admin: ["reports:read", "movies:read", "movies:write", "episodes:read", "episodes:write", "subscriptions:read", "invoices:read", "invoices:write", "team:read", "team:write", "users:read", "users:write"],
+    admin: ["reports:read", "movies:read", "movies:write", "episodes:read", "episodes:write", "subscriptions:read", "invoices:read", "invoices:write", "users:read", "users:write"],
+    content_manager: ["movies:read", "movies:write", "episodes:read", "episodes:write", "reports:read"],
+    finance_manager: ["subscriptions:read", "invoices:read", "invoices:write", "reports:read"],
+    affiliate_manager: ["affiliates:read", "affiliates:write", "reports:read"],
+    support_agent: ["users:read", "users:write", "reports:read"],
+  };
+
+  const allowedCards = MANAGE_CARDS.filter(card => {
+    if (user?.role === "super_admin") return true;
+    const permissions = ROLE_PERMISSIONS[user?.role ?? ""] ?? [];
+    return permissions.includes(card.permission);
+  });
+
   const dispatch = useDispatch<AppDispatch>();
   const { items: categories } = useSelector((s: RootState) => s.categories);
   const { items: movies } = useSelector((s: RootState) => s.movies);
@@ -459,7 +494,7 @@ function Admin() {
         {/* ── Manage ── */}
         <TabsContent value="manage" className="space-y-6">
           <div className="grid gap-5 sm:grid-cols-2">
-            {MANAGE_CARDS.map((card) => {
+            {allowedCards.map((card) => {
               const count =
                 card.href === "/admin/categories"
                   ? `${categories.length} total · ${categories.filter((c) => c.status === "active").length} active`

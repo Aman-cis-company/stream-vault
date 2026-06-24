@@ -111,6 +111,36 @@ class EmailService {
       throw err;
     }
   }
+
+  async sendTeamInvitationEmail(user, token) {
+    try {
+      logger.info('Enqueuing team invitation email job', { to: user.email });
+      const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/accept-invite?token=${token}`;
+      return await this.sendMail({
+        to: user.email,
+        subject: 'Invitation to join StreamVault Team',
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+            <h2 style="color: #7000FF;">Welcome to StreamVault!</h2>
+            <p>Hello ${user.first_name},</p>
+            <p>You have been invited to join the StreamVault Team as a member of our staff.</p>
+            <p>Please click the button below to accept the invitation, set your password, and activate your account:</p>
+            <p style="text-align: center; margin: 30px 0;">
+              <a href="${inviteLink}" style="display: inline-block; padding: 12px 24px; background-color: #7000FF; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold;">Accept Invitation & Activate</a>
+            </p>
+            <p style="color: #666; font-size: 13px;">Or copy and paste this link into your browser:</p>
+            <p style="word-break: break-all; color: #7000FF; font-size: 13px;">${inviteLink}</p>
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+            <p style="color: #999; font-size: 12px;">This invitation link will expire in 24 hours. If you did not expect this invitation, please ignore this email.</p>
+          </div>
+        `,
+        text: `Hello ${user.first_name}, You have been invited to join the StreamVault Team. Please copy and paste this link in your browser to accept the invitation and activate your account: ${inviteLink}`,
+      });
+    } catch (err) {
+      logger.error('Failed to enqueue team invitation email', { to: user.email, error: err.message });
+      throw err;
+    }
+  }
 }
 
 module.exports = new EmailService();

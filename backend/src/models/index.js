@@ -18,6 +18,8 @@ const AffiliateCode = require('./AffiliateCode');
 const ReferralConversion = require('./ReferralConversion');
 const ContentComplianceRecord = require('./ContentComplianceRecord');
 const Invoice = require('./Invoice');
+const Permission = require('./Permission');
+const ActivityLog = require('./ActivityLog');
 
 // ── Role ↔ User ─────────────────────────────────────────────────────────────
 Role.hasMany(User, { foreignKey: 'role_id', as: 'users' });
@@ -123,6 +125,18 @@ ContentComplianceRecord.belongsTo(Episode, { foreignKey: 'episode_id', as: 'epis
 User.hasMany(Invoice, { foreignKey: 'user_id', as: 'invoices' });
 Invoice.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
+// ── Role ↔ Permission (belongsToMany through role_permissions) ────────────────
+Role.belongsToMany(Permission, { through: 'role_permissions', foreignKey: 'role_id', otherKey: 'permission_id', as: 'permissions' });
+Permission.belongsToMany(Role, { through: 'role_permissions', foreignKey: 'permission_id', otherKey: 'role_id', as: 'roles' });
+
+// ── User ↔ ActivityLog ────────────────────────────────────────────────────────
+User.hasMany(ActivityLog, { foreignKey: 'user_id', as: 'activityLogs', onDelete: 'SET NULL' });
+ActivityLog.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+// ── User ↔ Inviter ───────────────────────────────────────────────────────────
+User.hasMany(User, { foreignKey: 'invited_by', as: 'invitedUsers' });
+User.belongsTo(User, { foreignKey: 'invited_by', as: 'inviter' });
+
 // ── UserSubscription ↔ Invoice ───────────────────────────────────────────────
 UserSubscription.hasMany(Invoice, { foreignKey: 'subscription_id', as: 'invoices' });
 Invoice.belongsTo(UserSubscription, { foreignKey: 'subscription_id', as: 'subscription' });
@@ -152,4 +166,6 @@ module.exports = {
   ReferralConversion,
   ContentComplianceRecord,
   Invoice,
+  Permission,
+  ActivityLog,
 };

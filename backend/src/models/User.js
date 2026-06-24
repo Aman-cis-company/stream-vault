@@ -69,6 +69,18 @@ const User = sequelize.define('User', {
     type: DataTypes.DATE,
     allowNull: true,
   },
+  invitation_token: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  invitation_expiry: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  invited_by: {
+    type: DataTypes.INTEGER.UNSIGNED,
+    allowNull: true,
+  },
 }, {
   tableName: 'users',
   underscored: true,

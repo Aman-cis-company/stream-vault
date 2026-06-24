@@ -95,6 +95,10 @@ class InvoiceController {
       const userRole = req.user.role ? (req.user.role.name || req.user.role) : '';
       const isAdmin = ['admin', 'super_admin'].includes(userRole);
       await InvoiceService.resendInvoice(id, isAdmin ? null : req.user.id);
+
+      const { logActivity } = require('../../helpers/activityLogger');
+      logActivity(req.user.id, 'invoice_resent', { invoiceId: id }, req);
+
       return res.status(200).json({
         success: true,
         message: 'Invoice email resent successfully'

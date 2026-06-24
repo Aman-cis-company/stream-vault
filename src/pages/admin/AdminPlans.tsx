@@ -27,7 +27,7 @@ import { Link } from "react-router-dom";
 
 export default function AdminPlans() {
   return (
-    <Protected roles={["super_admin"]}>
+    <Protected roles={["super_admin", "admin", "finance_manager"]}>
       <PlansPage />
     </Protected>
   );

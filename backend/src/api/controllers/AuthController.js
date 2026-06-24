@@ -46,6 +46,11 @@ class AuthController {
         password,
         !!forceLogout
       );
+
+      // Log activity
+      const { logActivity } = require('../../helpers/activityLogger');
+      logActivity(user.id, 'user_login', { email: user.email }, req);
+
       return successResponse(res, MESSAGES.LOGIN_SUCCESS, {
         user,
         accessToken,

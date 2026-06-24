@@ -17,10 +17,8 @@ function LogoMark() {
     <img
       src={streamVaultLogo}
       alt="StreamVault"
-      width={195}
-      height={55}
-      className="object-contain"
-      style={{ maxHeight: 55, mixBlendMode: "screen" }}
+      className="object-contain h-[28px] w-auto md:h-[44px] lg:h-[50px] transition-all"
+      style={{ mixBlendMode: "screen" }}
     />
   );
 }
@@ -84,7 +82,7 @@ export function Footer() {
     <footer className="mt-24 border-t border-zinc-800 bg-[#07080d] text-zinc-100">
       {/* Newsletter strip */}
       <div className="border-b border-zinc-800 bg-zinc-900/20">
-        <div className="flex flex-col gap-5 px-4 py-10 sm:flex-row sm:items-center sm:justify-between md:px-8 lg:px-12">
+        <div className="flex flex-col gap-6 px-4 py-10 text-center sm:text-left sm:flex-row sm:items-center sm:justify-between md:px-8 lg:px-12">
           <div>
             <p className="text-base font-bold text-zinc-100">Stay in the loop</p>
             <p className="mt-1 text-sm text-zinc-400">
@@ -93,7 +91,7 @@ export function Footer() {
           </div>
           <form
             onSubmit={handleNewsletter}
-            className="flex w-full max-w-sm gap-2"
+            className="flex w-full max-w-sm gap-2 mx-auto sm:mx-0"
           >
             <Input
               type="email"
@@ -114,10 +112,10 @@ export function Footer() {
 
       {/* Main footer */}
       <div className="bg-[#0b0c13]/30">
-        <div className="grid gap-10 px-4 py-14 md:grid-cols-2 lg:grid-cols-5 md:px-8 lg:px-12">
+        <div className="grid gap-10 px-4 py-14 grid-cols-2 lg:grid-cols-5 md:px-8 lg:px-12">
           {/* Brand column */}
-          <div className="lg:col-span-2">
-            <Link to="/" className="flex items-center group w-fit">
+          <div className="col-span-2 lg:col-span-2 flex flex-col items-center lg:items-start text-center lg:text-left">
+            <Link to="/" className="flex items-center group w-fit mx-auto lg:mx-0">
               <div className="transition-transform duration-200 group-hover:scale-105">
                 <LogoMark />
               </div>
@@ -129,7 +127,7 @@ export function Footer() {
             </p>
 
             {/* Social links */}
-            <div className="mt-5 flex gap-2">
+            <div className="mt-5 flex gap-2 justify-center lg:justify-start">
               {SOCIAL.map((s) => (
                 <a
                   key={s.label}
@@ -143,7 +141,7 @@ export function Footer() {
             </div>
 
             {/* Badges */}
-            <div className="mt-5 flex flex-wrap gap-1.5">
+            <div className="mt-5 flex flex-wrap gap-1.5 justify-center lg:justify-start">
               {BADGES.map((b) => (
                 <span
                   key={b}
@@ -157,7 +155,7 @@ export function Footer() {
 
           {/* Nav columns */}
           {COLS.map((c) => (
-            <div key={c.title}>
+            <div key={c.title} className="col-span-1">
               <h3 className="text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 mb-4">
                 {c.title}
               </h3>
@@ -179,13 +177,13 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-zinc-800 py-5">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between md:px-8 lg:px-12">
-            <p className="text-xs text-zinc-500">
+        <div className="border-t border-zinc-800">
+          <div className="flex flex-col gap-4 px-4 py-6 sm:px-0 sm:flex-row sm:items-center sm:justify-between md:px-8 lg:px-12">
+            <p className="text-xs text-zinc-500 text-center sm:text-left">
               © {new Date().getFullYear()} StreamVault, Inc. All rights
               reserved. Prices shown in Indian Rupees (₹).
             </p>
-            <div className="flex flex-wrap gap-4 text-xs text-zinc-500">
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-zinc-500 justify-center sm:justify-start">
               <Link
                 to="/privacy"
                 className="hover:text-zinc-100 transition-colors"

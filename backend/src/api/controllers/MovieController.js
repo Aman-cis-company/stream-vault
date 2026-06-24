@@ -12,6 +12,10 @@ class MovieController {
       const movie = await MovieService.create(req.body, req.files, req.user.id);
       socketServer.broadcast(EVENTS.MOVIE_CREATED, { movie });
       socketServer.emitToAdmins(EVENTS.DASHBOARD_STATS_UPDATED, { refresh: true });
+
+      const { logActivity } = require('../../helpers/activityLogger');
+      logActivity(req.user.id, 'movie_created', { movieId: movie.id, title: movie.title }, req);
+
       return successResponse(res, MESSAGES.MOVIE_CREATED, { movie }, STATUS_CODES.CREATED);
     } catch (err) {
       logger.error('MovieController.create error', { error: err.message });
@@ -53,6 +57,20 @@ class MovieController {
         });
       }
 
+      const { checkUserSubscription } = require('../helpers/subscriptionChecker');
+      const isSubscribed = await checkUserSubscription(req.user);
+      if (!isSubscribed) {
+        movies.forEach(movie => {
+          if (movie.setDataValue) {
+            movie.setDataValue('video_url', null);
+            movie.setDataValue('provider_video_id', null);
+          } else {
+            movie.video_url = null;
+            movie.provider_video_id = null;
+          }
+        });
+      }
+
       return successResponse(res, MESSAGES.MOVIES_FETCHED, { movies }, STATUS_CODES.OK, meta);
     } catch (err) {
       logger.error('MovieController.getAll error', { error: err.message });
@@ -86,6 +104,18 @@ class MovieController {
         }
       }
 
+      const { checkUserSubscription } = require('../helpers/subscriptionChecker');
+      const isSubscribed = await checkUserSubscription(req.user);
+      if (!isSubscribed && movie) {
+        if (movie.setDataValue) {
+          movie.setDataValue('video_url', null);
+          movie.setDataValue('provider_video_id', null);
+        } else {
+          movie.video_url = null;
+          movie.provider_video_id = null;
+        }
+      }
+
       return successResponse(res, MESSAGES.MOVIE_FETCHED, { movie });
     } catch (err) {
       logger.error('MovieController.getById error', { error: err.message });
@@ -112,6 +142,9 @@ class MovieController {
         socketServer.broadcast(EVENTS.MOVIE_UPDATED, { movie });
       }
 
+      const { logActivity } = require('../../helpers/activityLogger');
+      logActivity(req.user.id, 'movie_updated', { movieId: movie.id, title: movie.title }, req);
+
       return successResponse(res, MESSAGES.MOVIE_UPDATED, { movie });
     } catch (err) {
       logger.error('MovieController.update error', { error: err.message });
@@ -127,6 +160,10 @@ class MovieController {
       await MovieService.delete(req.params.id);
       socketServer.broadcast(EVENTS.MOVIE_DELETED, { id: req.params.id });
       socketServer.emitToAdmins(EVENTS.DASHBOARD_STATS_UPDATED, { refresh: true });
+
+      const { logActivity } = require('../../helpers/activityLogger');
+      logActivity(req.user.id, 'movie_deleted', { movieId: req.params.id }, req);
+
       return successResponse(res, MESSAGES.MOVIE_DELETED);
     } catch (err) {
       logger.error('MovieController.delete error', { error: err.message });

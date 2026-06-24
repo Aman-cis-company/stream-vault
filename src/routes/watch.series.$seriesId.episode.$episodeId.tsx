@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/store";
 import Hls from "hls.js";
 import { Protected } from "@/components/streaming/Protected";
 import { AgeRatingBadge } from "@/components/streaming/AgeRatingBadge";
@@ -845,6 +847,7 @@ export default function WatchEpisodePage() {
 function WatchEpisodeInner() {
   const { seriesId, episodeId } = useParams();
   const navigate = useNavigate();
+  const user = useSelector((s: RootState) => s.auth.user);
   const [series, setSeries] = useState<BackendSeries | null>(null);
   const [allEpisodes, setAllEpisodes] = useState<BackendEpisode[]>([]);
   const [currentEp, setCurrentEp] = useState<BackendEpisode | null>(null);
@@ -856,6 +859,7 @@ function WatchEpisodeInner() {
   const lastSavedRef = useRef(0);
 
   const [subscription, setSubscription] = useState<any>(null);
+  const [subscriptionLoaded, setSubscriptionLoaded] = useState(false);
 
   useEffect(() => {
     apiClient.get("/stripe/subscription-status")
@@ -866,6 +870,9 @@ function WatchEpisodeInner() {
       })
       .catch((err) => {
         console.error("Failed to load subscription status", err);
+      })
+      .finally(() => {
+        setSubscriptionLoaded(true);
       });
   }, []);
 
@@ -960,7 +967,31 @@ function WatchEpisodeInner() {
         {/* Player column */}
         <div className="flex-1 min-w-0">
           <div className="w-full bg-black">
-            {!resolvedVideoUrl ? (
+            {!subscriptionLoaded ? (
+              <div className="relative w-full aspect-video bg-black flex items-center justify-center">
+                <Loader2 className="size-8 animate-spin text-white/30" />
+              </div>
+            ) : (!user || ((user.role === "subscriber" || user.role === "affiliate") && !subscription)) ? (
+              <div className="relative w-full aspect-video bg-black flex flex-col items-center justify-center gap-4">
+                <img
+                  src={episodeThumbnail(currentEp)}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover opacity-15"
+                />
+                <div className="relative z-10 text-center px-6 max-w-md">
+                  <div className="size-16 rounded-full bg-destructive/10 border border-destructive/30 flex items-center justify-center mx-auto mb-4">
+                    <Play className="size-6 text-destructive fill-destructive" />
+                  </div>
+                  <h3 className="text-white font-extrabold text-lg tracking-tight mb-2">Subscription Required</h3>
+                  <p className="text-white/60 text-xs leading-relaxed mb-5">
+                    Unlock this episode and stream thousands of premium titles by choosing a StreamVault subscription plan.
+                  </p>
+                  <Button className="rounded-xl font-bold px-6 shadow-glow-sm" asChild>
+                    <Link to="/pricing">Choose a Subscription Plan</Link>
+                  </Button>
+                </div>
+              </div>
+            ) : !resolvedVideoUrl ? (
               <div className="relative w-full aspect-video bg-black flex items-center justify-center">
                 <img src={episodeThumbnail(currentEp)} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />
                 <div className="relative text-center">

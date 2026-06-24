@@ -36,7 +36,7 @@ import { Link } from "react-router-dom";
 
 export default function AdminCategories() {
   return (
-    <Protected roles={["super_admin"]}>
+    <Protected roles={["super_admin", "admin", "content_manager", "team_member"]}>
       <CategoriesPage />
     </Protected>
   );

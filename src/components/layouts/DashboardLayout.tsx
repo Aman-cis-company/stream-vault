@@ -56,18 +56,38 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
     setMobileOpen(false);
   }, [pathname]);
 
+  const ROLE_PERMISSIONS: Record<string, string[]> = {
+    super_admin: ["reports:read", "movies:read", "movies:write", "episodes:read", "episodes:write", "subscriptions:read", "invoices:read", "invoices:write", "team:read", "team:write", "users:read", "users:write"],
+    admin: ["reports:read", "movies:read", "movies:write", "episodes:read", "episodes:write", "subscriptions:read", "invoices:read", "invoices:write", "users:read", "users:write"],
+    content_manager: ["movies:read", "movies:write", "episodes:read", "episodes:write", "reports:read"],
+    finance_manager: ["subscriptions:read", "invoices:read", "invoices:write", "reports:read"],
+    affiliate_manager: ["affiliates:read", "affiliates:write", "reports:read"],
+    support_agent: ["users:read", "users:write", "reports:read"],
+  };
+
+  const hasConsoleAccess = user?.role && user.role !== "subscriber" && user.role !== "affiliate";
+
+  const allAdminItems = [
+    { to: "/admin" as const, label: "Overview", icon: Shield, permission: "reports:read" },
+    { to: "/admin/categories" as const, label: "Categories", icon: Tag, permission: "movies:write" },
+    { to: "/admin/movies" as const, label: "Movies & Shows", icon: Film, permission: "movies:read" },
+    { to: "/admin/series" as const, label: "Web Series", icon: Tv, permission: "episodes:read" },
+    { to: "/admin/plans" as const, label: "Subscription Plans", icon: CreditCard, permission: "subscriptions:read" },
+    { to: "/admin/billing" as const, label: "Billing Management", icon: Receipt, permission: "invoices:read" },
+    { to: "/admin/team" as const, label: "Team Management", icon: Users2, permission: "team:read" },
+  ];
+
+  const adminItems = allAdminItems.filter(item => {
+    if (user?.role === "super_admin") return true;
+    const permissions = ROLE_PERMISSIONS[user?.role ?? ""] ?? [];
+    return permissions.includes(item.permission);
+  });
+
   const items = isAdmin
-    ? [
-        { to: "/admin" as const, label: "Overview", icon: Shield },
-        { to: "/admin/categories" as const, label: "Categories", icon: Tag },
-        { to: "/admin/movies" as const, label: "Movies & Shows", icon: Film },
-        { to: "/admin/series" as const, label: "Web Series", icon: Tv },
-        { to: "/admin/plans" as const, label: "Subscription Plans", icon: CreditCard },
-        { to: "/admin/billing" as const, label: "Billing Management", icon: Receipt },
-      ]
+    ? adminItems
     : [
         ...NAV,
-        ...(user?.role === "admin" || user?.role === "super_admin"
+        ...(hasConsoleAccess
           ? [{ to: "/admin" as const, label: "Admin Console", icon: Shield }]
           : []),
       ];

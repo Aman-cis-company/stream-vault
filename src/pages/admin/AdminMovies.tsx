@@ -51,7 +51,7 @@ import { SOCKET_EVENTS } from "@/lib/socket";
 
 export default function AdminMovies() {
   return (
-    <Protected roles={["super_admin"]}>
+    <Protected roles={["super_admin", "admin", "content_manager", "team_member"]}>
       <MoviesPage />
     </Protected>
   );

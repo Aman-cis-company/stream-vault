@@ -415,7 +415,7 @@ function EpisodeManager({ series, onClose }: { series: BackendSeries; onClose: (
 
 export default function AdminSeries() {
   return (
-    <Protected roles={["super_admin"]}>
+    <Protected roles={["super_admin", "admin", "content_manager", "team_member"]}>
       <SeriesPage />
     </Protected>
   );

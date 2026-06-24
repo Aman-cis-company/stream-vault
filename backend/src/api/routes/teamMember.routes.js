@@ -2,15 +2,20 @@ const express = require('express');
 const router = express.Router();
 const TeamMemberController = require('../controllers/TeamMemberController');
 const authenticate = require('../middlewares/authenticate');
-const authorize = require('../middlewares/authorize');
+const checkPermission = require('../middlewares/checkPermission');
 const Joi = require('joi');
-const ROLES = require('../../constants/roles');
 
-// Inline validator for team member creation
-const createSchema = Joi.object({
+// Joi validation schemas
+const inviteSchema = Joi.object({
   first_name: Joi.string().min(2).max(100).required().label('First name'),
   last_name: Joi.string().min(2).max(100).required().label('Last name'),
   email: Joi.string().email().lowercase().required().label('Email'),
+  role_id: Joi.number().integer().positive().required().label('Role ID'),
+  phone: Joi.string().pattern(/^\+?[0-9]{7,15}$/).optional().allow('').label('Phone'),
+});
+
+const acceptInviteSchema = Joi.object({
+  token: Joi.string().required().label('Invitation Token'),
   password: Joi.string()
     .min(8)
     .max(128)
@@ -18,15 +23,13 @@ const createSchema = Joi.object({
     .required()
     .messages({ 'string.pattern.base': 'Password must contain uppercase, lowercase, number and special character.' })
     .label('Password'),
-  phone: Joi.string().pattern(/^\+?[0-9]{7,15}$/).optional().allow('').label('Phone'),
 });
 
 const updateSchema = Joi.object({
   first_name: Joi.string().min(2).max(100).optional().label('First name'),
   last_name: Joi.string().min(2).max(100).optional().label('Last name'),
   phone: Joi.string().pattern(/^\+?[0-9]{7,15}$/).optional().allow('', null).label('Phone'),
-  status: Joi.string().valid('active', 'inactive').optional().label('Status'),
-  password: Joi.string().min(8).max(128).optional().label('Password'),
+  role_id: Joi.number().integer().positive().optional().label('Role ID'),
 }).min(1);
 
 const validate = (schema) => (req, res, next) => {
@@ -39,11 +42,17 @@ const validate = (schema) => (req, res, next) => {
   next();
 };
 
-const adminOnly = [authenticate, authorize(ROLES.SUPER_ADMIN)];
+// ── Public Routes (Invitation Accept Flow) ──────────────────────────────────
+router.post('/accept-invite', validate(acceptInviteSchema), TeamMemberController.acceptInvitation.bind(TeamMemberController));
 
-router.post('/', ...adminOnly, validate(createSchema), TeamMemberController.create.bind(TeamMemberController));
-router.get('/', ...adminOnly, TeamMemberController.getAll.bind(TeamMemberController));
-router.put('/:id', ...adminOnly, validate(updateSchema), TeamMemberController.update.bind(TeamMemberController));
-router.delete('/:id', ...adminOnly, TeamMemberController.delete.bind(TeamMemberController));
+// ── Protected Routes ────────────────────────────────────────────────────────
+router.get('/', authenticate, checkPermission('team:read'), TeamMemberController.getAll.bind(TeamMemberController));
+router.post('/invite', authenticate, checkPermission('team:write'), validate(inviteSchema), TeamMemberController.invite.bind(TeamMemberController));
+router.get('/roles', authenticate, checkPermission('team:read'), TeamMemberController.getRoles.bind(TeamMemberController));
+router.get('/activity-logs', authenticate, checkPermission('reports:read'), TeamMemberController.getActivityLogs.bind(TeamMemberController));
+
+router.put('/:id', authenticate, checkPermission('team:write'), validate(updateSchema), TeamMemberController.update.bind(TeamMemberController));
+router.post('/:id/toggle-status', authenticate, checkPermission('team:write'), TeamMemberController.toggleStatus.bind(TeamMemberController));
+router.delete('/:id', authenticate, checkPermission('team:write'), TeamMemberController.delete.bind(TeamMemberController));
 
 module.exports = router;

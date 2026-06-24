@@ -6,7 +6,11 @@ export type Role =
   | "affiliate"
   | "admin"
   | "super_admin"
-  | "team_member";
+  | "team_member"
+  | "content_manager"
+  | "finance_manager"
+  | "affiliate_manager"
+  | "support_agent";
 
 export interface User {
   id: number;
@@ -34,6 +38,10 @@ function mapRole(name: string): Role {
   if (name === "super_admin") return "super_admin";
   if (name === "team_member") return "team_member";
   if (name === "affiliate") return "affiliate";
+  if (name === "content_manager") return "content_manager";
+  if (name === "finance_manager") return "finance_manager";
+  if (name === "affiliate_manager") return "affiliate_manager";
+  if (name === "support_agent") return "support_agent";
   return "subscriber";
 }
 

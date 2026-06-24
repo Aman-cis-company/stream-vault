@@ -31,7 +31,7 @@ import { SOCKET_EVENTS } from "@/lib/socket";
 
 export default function AdminBannerPage() {
   return (
-    <Protected roles={["super_admin"]}>
+    <Protected roles={["super_admin", "admin", "content_manager", "team_member"]}>
       <AdminBanner />
     </Protected>
   );
