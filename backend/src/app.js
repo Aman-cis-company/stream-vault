@@ -7,6 +7,7 @@ const path = require('path');
 const { generalLimiter } = require('./api/middlewares/rateLimiter');
 const apiRoutes = require('./api/routes/index');
 const logger = require('./config/logger');
+const VideoTokenService = require('./api/services/VideoTokenService');
 
 const app = express();
 
@@ -51,7 +52,24 @@ app.use('/uploads/thumbnails', express.static(path.join(__dirname, '../uploads/t
 }));
 
 // HLS segments & playlists: served statically for local-transcoded videos
-app.use('/uploads/hls', express.static(path.join(__dirname, '../uploads/hls'), {
+app.use('/uploads/hls', (req, res, next) => {
+  if (req.path.endsWith('master.m3u8')) {
+    const { token } = req.query;
+    if (!token) {
+      return res.status(401).json({ success: false, message: 'Unauthorized: Stream token required' });
+    }
+    const payload = VideoTokenService.verify(token);
+    if (!payload) {
+      return res.status(401).json({ success: false, message: 'Unauthorized: Invalid or expired token' });
+    }
+    // Verify that the token filename matches the requested HLS path
+    const requestedPath = '/uploads/hls' + req.path;
+    if (payload.filename !== requestedPath) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Token mismatch' });
+    }
+  }
+  next();
+}, express.static(path.join(__dirname, '../uploads/hls'), {
   maxAge: '1h',
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.m3u8')) {

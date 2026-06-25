@@ -281,7 +281,7 @@ export function Hero() {
 
     let cancelled = false;
 
-    if (current.hlsUrl.includes("/uploads/videos/")) {
+    if (current.hlsUrl.includes("/uploads/videos/") || current.hlsUrl.includes("/uploads/hls/")) {
       fetchVideoStreamUrl(current.id)
         .then((url) => {
           if (!cancelled && url) {

@@ -33,7 +33,7 @@ async function addTranscodingJob(name, data) {
   }
   try {
     const job = await transcodingQueue.add(name, data, {
-      attempts: 3,
+      attempts: 3, // bullmq retries 3 times on failure
       backoff: {
         type: 'exponential',
         delay: 10000, // wait 10s before retry

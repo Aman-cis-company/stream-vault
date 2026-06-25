@@ -49,9 +49,11 @@ class VideoController {
         return errorResponse(res, MESSAGES.VIDEO_NOT_LOCAL, STATUS_CODES.UNPROCESSABLE_ENTITY);
       }
 
-      // HLS videos are served statically — return the URL directly
+      // HLS videos are served statically — generate token and return URL with token
       if (videoUrl.startsWith('/uploads/hls/')) {
-        return successResponse(res, MESSAGES.VIDEO_TOKEN_ISSUED, { streamUrl: videoUrl, type: 'hls' });
+        const token = VideoTokenService.generate(req.user.id, videoUrl);
+        const streamUrl = `${videoUrl}?token=${token}`;
+        return successResponse(res, MESSAGES.VIDEO_TOKEN_ISSUED, { streamUrl, type: 'hls' });
       }
 
       const filename = path.basename(videoUrl);
@@ -98,9 +100,11 @@ class VideoController {
         return errorResponse(res, MESSAGES.VIDEO_NOT_LOCAL, STATUS_CODES.UNPROCESSABLE_ENTITY);
       }
 
-      // HLS videos are served statically — return the URL directly
+      // HLS videos are served statically — generate token and return URL with token
       if (videoUrl.startsWith('/uploads/hls/')) {
-        return successResponse(res, MESSAGES.VIDEO_TOKEN_ISSUED, { streamUrl: videoUrl, type: 'hls' });
+        const token = VideoTokenService.generate(req.user.id, videoUrl);
+        const streamUrl = `${videoUrl}?token=${token}`;
+        return successResponse(res, MESSAGES.VIDEO_TOKEN_ISSUED, { streamUrl, type: 'hls' });
       }
 
       const filename = path.basename(videoUrl);

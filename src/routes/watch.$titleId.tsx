@@ -1166,7 +1166,7 @@ function WatchInner() {
             .catch(() => {});
         }
 
-        if (t.hlsUrl && t.hlsUrl.includes("/uploads/videos/")) {
+        if (t.hlsUrl && (t.hlsUrl.includes("/uploads/videos/") || t.hlsUrl.includes("/uploads/hls/"))) {
           fetchVideoStreamUrl(id)
             .then((url) => { if (url) setResolvedVideoUrl(url); })
             .catch(() => {});
