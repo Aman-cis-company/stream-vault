@@ -1230,8 +1230,9 @@ function WatchInner() {
     );
   }
 
+  const isLocalVideo = !!(title.hlsUrl && (title.hlsUrl.includes("/uploads/videos/") || title.hlsUrl.includes("/uploads/hls/")));
   // Use the signed stream URL for local files, fall back to the stored URL for CDN/YouTube
-  const effectiveVideoUrl = resolvedVideoUrl ?? title.hlsUrl;
+  const effectiveVideoUrl = (isLocalVideo ? resolvedVideoUrl : title.hlsUrl) || "";
   const srcType = videoSourceType(effectiveVideoUrl);
   const youtubeId = srcType === "youtube" ? extractYouTubeId(effectiveVideoUrl) : null;
 
@@ -1265,6 +1266,10 @@ function WatchInner() {
       {/* ── Video Player ── */}
       <div className="w-full bg-black shadow-2xl">
         {!subscriptionLoaded ? (
+          <div className="relative w-full aspect-video bg-black flex items-center justify-center">
+            <Loader2 className="size-8 animate-spin text-white/30" />
+          </div>
+        ) : (isLocalVideo && !resolvedVideoUrl) ? (
           <div className="relative w-full aspect-video bg-black flex items-center justify-center">
             <Loader2 className="size-8 animate-spin text-white/30" />
           </div>

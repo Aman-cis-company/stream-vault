@@ -6,7 +6,7 @@ import {
   StatCard,
 } from "@/components/layouts/DashboardLayout";
 import { Protected } from "@/components/streaming/Protected";
-import { useAuth } from "@/lib/auth";
+import { useAuth, type Role } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

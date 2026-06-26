@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
 const ffmpeg = require('fluent-ffmpeg');
+const crypto = require('crypto');
 const ffmpegPath = require('ffmpeg-static');
 const logger = require('../../../src/config/logger');
 const { Movie, Episode } = require('../../../src/models');
@@ -24,6 +25,17 @@ const QUALITIES = [
 function transcodeQuality(inputPath, qualityDir, quality) {
   return new Promise((resolve, reject) => {
     fs.mkdirSync(qualityDir, { recursive: true });
+
+    // Generate 16-byte random key for HLS segment encryption
+    const key = crypto.randomBytes(16);
+    const keyPath = path.join(qualityDir, 'key.key');
+    fs.writeFileSync(keyPath, key);
+
+    // Write temporary key info file for FFmpeg
+    const keyInfoPath = path.join(qualityDir, 'key_info.txt');
+    const keyInfoContent = `key.key\n${keyPath}\n`;
+    fs.writeFileSync(keyInfoPath, keyInfoContent);
+
     ffmpeg(inputPath)
       .videoCodec('libx264')
       .audioCodec('aac')
@@ -34,10 +46,21 @@ function transcodeQuality(inputPath, qualityDir, quality) {
         '-hls_time 6',
         '-hls_playlist_type vod',
         `-hls_segment_filename ${path.join(qualityDir, 'seg_%03d.ts')}`,
+        `-hls_key_info_file ${keyInfoPath}`,
       ])
       .output(path.join(qualityDir, 'playlist.m3u8'))
-      .on('end', resolve)
-      .on('error', (err) => reject(err))
+      .on('end', () => {
+        try {
+          fs.unlinkSync(keyInfoPath);
+        } catch {}
+        resolve();
+      })
+      .on('error', (err) => {
+        try {
+          fs.unlinkSync(keyInfoPath);
+        } catch {}
+        reject(err);
+      })
       .run();
   });
 }

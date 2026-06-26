@@ -3,6 +3,7 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 
 const { generalLimiter } = require('./api/middlewares/rateLimiter');
 const apiRoutes = require('./api/routes/index');
@@ -53,7 +54,19 @@ app.use('/uploads/thumbnails', express.static(path.join(__dirname, '../uploads/t
 
 // HLS segments & playlists: served statically for local-transcoded videos
 app.use('/uploads/hls', (req, res, next) => {
-  if (req.path.endsWith('master.m3u8')) {
+  if (req.path.endsWith('.m3u8') || req.path.endsWith('key.key')) {
+    // Allow public display videos on landing page to bypass token verification
+    const requestParts = req.path.split('/');
+    const videoId = requestParts[1];
+    const allowedPublicVideos = [
+      'video-46060afa-5de8-4053-ba36-5c11fbdba7a0',
+      'video-6b288930-5418-41e6-87e5-4ab73f76c6a8'
+    ];
+
+    if (allowedPublicVideos.includes(videoId)) {
+      return next();
+    }
+
     const { token } = req.query;
     if (!token) {
       return res.status(401).json({ success: false, message: 'Unauthorized: Stream token required' });
@@ -62,10 +75,30 @@ app.use('/uploads/hls', (req, res, next) => {
     if (!payload) {
       return res.status(401).json({ success: false, message: 'Unauthorized: Invalid or expired token' });
     }
-    // Verify that the token filename matches the requested HLS path
-    const requestedPath = '/uploads/hls' + req.path;
-    if (payload.filename !== requestedPath) {
+
+        // Verify that the token filename matches the requested HLS directory
+    const tokenParts = payload.filename.split('/');
+    if (tokenParts[3] !== requestParts[1]) {
       return res.status(403).json({ success: false, message: 'Forbidden: Token mismatch' });
+    }
+
+    // Dynamically rewrite playlist files to propagate the token to sub-requests
+    if (req.path.endsWith('.m3u8')) {
+      const filePath = path.join(__dirname, '../uploads/hls', req.path);
+      if (fs.existsSync(filePath)) {
+        let content = fs.readFileSync(filePath, 'utf8');
+        
+        if (req.path.endsWith('master.m3u8')) {
+          // Append the token to the variant playlists
+          content = content.replace(/playlist\.m3u8/g, `playlist.m3u8?token=${token}`);
+        } else {
+          // Append the token to the key.key URI in variant playlists
+          content = content.replace(/URI="key\.key"/g, `URI="key.key?token=${token}"`);
+        }
+        
+        res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+        return res.send(content);
+      }
     }
   }
   next();
@@ -76,6 +109,8 @@ app.use('/uploads/hls', (req, res, next) => {
       res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
     } else if (filePath.endsWith('.ts')) {
       res.setHeader('Content-Type', 'video/mp2t');
+    } else if (filePath.endsWith('key.key')) {
+      res.setHeader('Content-Type', 'application/octet-stream');
     }
   },
 }));

@@ -161,32 +161,32 @@ function ThumbCard({ title, active, progress, onClick }: ThumbCardProps) {
   return (
     <button
       onClick={onClick}
-      className={`group relative shrink-0 overflow-hidden rounded-lg transition-all duration-300 ${
+      className={`group relative shrink-0 overflow-hidden rounded-xl transition-all duration-500 ease-out border ${
         active
-          ? "ring-2 ring-primary shadow-[0_0_18px_rgba(192,57,43,0.55)] scale-[1.07] opacity-100"
-          : "opacity-55 hover:opacity-85 hover:scale-[1.04]"
+          ? "border-primary shadow-[0_0_24px_rgba(192,57,43,0.45)] scale-[1.08] opacity-100 relative z-10"
+          : "border-white/5 opacity-50 hover:opacity-90 hover:scale-[1.04]"
       }`}
-      style={{ width: "clamp(72px, 9vw, 110px)", aspectRatio: "2/3" }}
+      style={{ width: "clamp(76px, 9.5vw, 115px)", aspectRatio: "2/3" }}
     >
       <img
         src={title.posterUrl}
         alt={title.name}
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
         onError={(e) => {
           (e.target as HTMLImageElement).src =
             `https://picsum.photos/seed/${title.id}/110/165`;
         }}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent" />
-      <div className="absolute inset-x-0 bottom-0 p-1.5">
-        <p className="text-[9px] font-semibold text-white leading-tight line-clamp-2 drop-shadow">
+      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-black/5 transition-all duration-300 group-hover:from-black/100" />
+      <div className="absolute inset-x-0 bottom-0 p-2.5">
+        <p className="text-[10px] font-bold text-white leading-tight line-clamp-2 drop-shadow">
           {title.name}
         </p>
       </div>
       {active && (
-        <div className="absolute inset-x-0 bottom-0 h-[3px] bg-white/15">
+        <div className="absolute inset-x-0 bottom-0 h-[3px] bg-white/10">
           <div
-            className="h-full bg-primary transition-none"
+            className="h-full bg-gradient-to-r from-primary to-amber-500 transition-none shadow-[0_0_8px_rgba(192,57,43,0.8)]"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -392,14 +392,14 @@ export function Hero() {
         className="pointer-events-none absolute inset-0 z-10"
         style={{
           background:
-            "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.60) 45%, rgba(0,0,0,0.10) 100%)",
+            "linear-gradient(to right, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.65) 45%, rgba(0,0,0,0.15) 100%)",
         }}
       />
       <div
         className="pointer-events-none absolute inset-0 z-10"
         style={{
           background:
-            "linear-gradient(to top, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.40) 35%, transparent 65%)",
+            "linear-gradient(to top, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.40) 35%, transparent 65%)",
         }}
       />
       {/* Subtle top fade for navbar blend */}
@@ -407,18 +407,18 @@ export function Hero() {
         className="pointer-events-none absolute inset-x-0 top-0 z-10 h-36"
         style={{
           background:
-            "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 100%)",
+            "linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%)",
         }}
       />
 
       {/* HD / Video quality badge */}
       {hasVideo && (
-        <div className="absolute top-20 right-6 z-30 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/40 px-2.5 py-1 backdrop-blur-sm">
-          <Hd className="size-3.5 text-white/80" />
-          <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">
-            Live
+        <div className="absolute top-24 right-8 z-30 flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3.5 py-1.5 backdrop-blur-xl shadow-2xl">
+          <Hd className="size-4 text-white/80" />
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-white/70">
+            Live Stream
           </span>
-          <span className="size-1.5 rounded-full bg-primary animate-glow-pulse" />
+          <span className="size-2 rounded-full bg-primary animate-glow-pulse" />
         </div>
       )}
 
@@ -430,17 +430,17 @@ export function Hero() {
           className="flex flex-1 flex-col justify-center max-w-2xl mt-4 animate-hero-in"
         >
           {/* Badges row */}
-          <div className="flex flex-wrap items-center gap-2 mb-5">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/50 bg-primary/20 px-3 py-1 text-xs font-bold text-primary backdrop-blur-sm shadow-[0_0_12px_rgba(192,57,43,0.3)]">
+          <div className="flex flex-wrap items-center gap-2 mb-6">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1 text-xs font-black text-primary uppercase tracking-widest backdrop-blur-md shadow-[0_0_16px_rgba(192,57,43,0.15)]">
               ✦ Featured
             </span>
             {current.newRelease && (
-              <Badge className="bg-amber-500/25 text-amber-300 border-amber-500/40 text-[10px] font-bold uppercase tracking-wide">
+              <Badge className="bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[10px] font-black uppercase tracking-wider rounded-full px-2.5">
                 New Release
               </Badge>
             )}
             {current.trending && (
-              <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/30 text-[10px] font-bold uppercase tracking-wide">
+              <Badge className="bg-orange-500/10 text-orange-300 border border-orange-500/30 text-[10px] font-black uppercase tracking-wider rounded-full px-2.5">
                 Trending
               </Badge>
             )}
@@ -448,29 +448,29 @@ export function Hero() {
 
           {/* Title */}
           <h1
-            className="text-4xl font-extrabold leading-none tracking-tight text-white sm:text-5xl lg:text-[3.75rem] drop-shadow-2xl"
-            style={{ textShadow: "0 2px 30px rgba(0,0,0,0.75)" }}
+            className="text-4xl font-black leading-none tracking-tight text-white sm:text-5xl lg:text-[4rem] drop-shadow-2xl"
+            style={{ textShadow: "0 2px 40px rgba(0,0,0,0.95)" }}
           >
             {current.name}
           </h1>
 
           {/* Meta row */}
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+          <div className="mt-3.5 flex flex-wrap items-center gap-3 text-sm">
             {current.rating > 0 && <RatingBadge rating={current.rating} />}
-            <span className="text-white/55 font-medium">{current.year}</span>
+            <span className="text-white/60 font-semibold">{current.year}</span>
             {current.durationMin > 0 && (
-              <span className="inline-flex items-center gap-1 text-white/55">
-                <Clock className="size-3 shrink-0" /> {current.durationMin}m
+              <span className="inline-flex items-center gap-1 text-white/60">
+                <Clock className="size-3.5 shrink-0" /> {current.durationMin}m
               </span>
             )}
             <Badge
               variant="secondary"
-              className="bg-white/10 text-white/70 border-white/15 font-normal text-[10px] backdrop-blur-sm"
+              className="bg-white/5 text-white/80 border border-white/10 font-bold text-[10px] backdrop-blur-xl px-2.5 py-0.5 rounded-md"
             >
               {current.maturity}
             </Badge>
             {current.genres.length > 0 && (
-              <span className="text-white/45 text-xs">
+              <span className="text-white/50 text-xs font-medium">
                 {current.genres.join(" · ")}
               </span>
             )}
@@ -478,34 +478,35 @@ export function Hero() {
 
           {/* Synopsis */}
           {current.synopsis && (
-            <p className="mt-4 max-w-lg text-sm leading-relaxed text-white/80 line-clamp-3 sm:text-base">
+            <p className="mt-4 max-w-lg text-sm leading-relaxed text-white/85 line-clamp-3 sm:text-base font-normal">
               {current.synopsis}
             </p>
           )}
 
           {/* Cast */}
           {current.cast.length > 0 && (
-            <p className="mt-2 text-xs text-white/40">
-              <span className="text-white/55 font-medium">Starring: </span>
+            <p className="mt-3.5 text-xs text-white/40 font-medium">
+              <span className="text-white/55 font-bold">Starring: </span>
               {current.cast.slice(0, 3).join(", ")}
             </p>
           )}
 
           {/* Action buttons */}
-          <div className="mt-7 flex flex-wrap items-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center gap-3.5">
             <Button
               size="lg"
-              className="bg-white text-black hover:bg-white/90 font-bold gap-2 px-7 shadow-xl text-base"
+              className="relative group overflow-hidden bg-white text-black hover:bg-white/90 font-extrabold gap-2 px-8 py-6 rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-[0_4px_24px_rgba(255,255,255,0.15)] text-base cursor-pointer"
               asChild
             >
               <Link to={`/watch/${current.id}`}>
-                <Play className="size-5 fill-black" /> Play
+                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-black/[0.02] to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                <Play className="size-5 fill-black text-black" /> Play
               </Link>
             </Button>
             <Button
               size="lg"
-              variant="ghost"
-              className="bg-white/15 hover:bg-white/25 text-white border border-white/20 backdrop-blur-md gap-2 px-7 font-semibold text-base"
+              variant="outline"
+              className="bg-white/5 hover:bg-white/10 text-white border border-white/15 backdrop-blur-md gap-2 px-8 py-6 rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] text-base cursor-pointer"
               asChild
             >
               <Link to={`/watch/${current.id}`}>
@@ -517,13 +518,13 @@ export function Hero() {
             {hasVideo && (
               <button
                 onClick={() => setVideoBgMuted((v) => !v)}
-                className="flex size-11 items-center justify-center rounded-full border border-white/25 bg-black/35 backdrop-blur-sm text-white hover:bg-white/15 transition-colors ml-1"
+                className="flex size-12 items-center justify-center rounded-full border border-white/15 bg-black/40 backdrop-blur-md text-white hover:bg-white/20 hover:scale-105 active:scale-95 transition-all ml-1 cursor-pointer"
                 aria-label={videoBgMuted ? "Unmute" : "Mute"}
               >
                 {videoBgMuted ? (
-                  <VolumeX className="size-4 text-white/65" />
+                  <VolumeX className="size-5 text-white/70" />
                 ) : (
-                  <Volume2 className="size-4 text-white" />
+                  <Volume2 className="size-5 text-white" />
                 )}
               </button>
             )}
@@ -534,7 +535,7 @@ export function Hero() {
         {movies.length > 1 && (
           <div className="flex items-end justify-start gap-4">
             {/* Thumbnail strip */}
-            <div className="hidden sm:flex items-end gap-2 overflow-x-auto scrollbar-none pb-1">
+            <div className="hidden sm:flex items-end gap-2.5 overflow-x-auto scrollbar-none pb-2">
               {movies.map((m, idx) => (
                 <ThumbCard
                   key={m.id}
@@ -562,20 +563,20 @@ export function Hero() {
             </div>
 
             {/* Nav arrows */}
-            <div className="flex items-center gap-2 shrink-0 pb-1">
+            <div className="flex items-center gap-2 shrink-0 pb-2">
               <button
                 onClick={goPrev}
-                className="flex size-10 items-center justify-center rounded-full border border-white/20 bg-black/35 backdrop-blur-sm text-white hover:bg-white/15 transition-all hover:scale-105"
+                className="flex size-11 items-center justify-center rounded-full border border-white/15 bg-black/40 backdrop-blur-md text-white hover:bg-white/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
                 aria-label="Previous"
               >
-                <ChevronLeft className="size-4" />
+                <ChevronLeft className="size-5" />
               </button>
               <button
                 onClick={goNext}
-                className="flex size-10 items-center justify-center rounded-full border border-white/20 bg-black/35 backdrop-blur-sm text-white hover:bg-white/15 transition-all hover:scale-105"
+                className="flex size-11 items-center justify-center rounded-full border border-white/15 bg-black/40 backdrop-blur-md text-white hover:bg-white/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
                 aria-label="Next"
               >
-                <ChevronRight className="size-4" />
+                <ChevronRight className="size-5" />
               </button>
             </div>
           </div>
@@ -583,9 +584,9 @@ export function Hero() {
       </div>
 
       {/* Bottom progress bar */}
-      <div className="absolute inset-x-0 bottom-0 z-30 h-[2px] bg-white/8">
+      <div className="absolute inset-x-0 bottom-0 z-30 h-[2.5px] bg-white/5">
         <div
-          className="h-full bg-primary transition-none"
+          className="h-full bg-gradient-to-r from-primary via-red-500 to-amber-500 transition-none shadow-[0_0_8px_rgba(192,57,43,0.8)]"
           style={{ width: `${progress}%` }}
         />
       </div>
