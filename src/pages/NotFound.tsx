@@ -4,7 +4,7 @@ import { Film } from "lucide-react";
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-center">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-transparent px-4 text-center">
       <div className="inline-flex size-16 items-center justify-center rounded-2xl bg-primary/15 text-primary mb-6">
         <Film className="size-8" />
       </div>

@@ -57,28 +57,64 @@ function BgVideo({ src, poster, muted }: BgVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const type = videoType(src);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
+    let observer: IntersectionObserver | null = null;
+    if (window.IntersectionObserver) {
+      observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            setVisible(entry.isIntersecting);
+          });
+        },
+        { threshold: 0.05 }
+      );
+      observer.observe(video);
+    } else {
+      setVisible(true);
+    }
+
+    return () => {
+      if (observer) {
+        observer.unobserve(video);
+        observer.disconnect();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (!visible) {
+      video.pause();
+      if (hlsRef.current) {
+        hlsRef.current.stopLoad();
+      }
+      return;
+    }
+
     if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
+      hlsRef.current.startLoad();
+      video.play().catch(() => {});
+      return;
     }
 
     if (type === "hls" && Hls.isSupported()) {
       const hls = new Hls({
         enableWorker: true,
         autoStartLoad: true,
-        capLevelToPlayerSize: false, // never cap to player size
-        startLevel: -1, // overridden immediately in MANIFEST_PARSED
-        maxBufferLength: 60, // buffer up to 60s ahead
-        maxBufferSize: 120 * 1024 * 1024, // 120 MB buffer for HD
-        maxMaxBufferLength: 120,
-        // Assume 8 Mbps bandwidth so ABR picks highest tier immediately
+        capLevelToPlayerSize: false,
+        startLevel: -1,
+        maxBufferLength: 20, // Optimized down from 60
+        maxBufferSize: 30 * 1024 * 1024, // Optimized down from 120MB
+        maxMaxBufferLength: 40,
         abrEwmaDefaultEstimate: 8_000_000,
-        testBandwidth: false, // skip initial bandwidth test
+        testBandwidth: false,
       });
       hlsRef.current = hls;
       hls.loadSource(src);
@@ -87,14 +123,13 @@ function BgVideo({ src, poster, muted }: BgVideoProps) {
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         if (hls.levels && hls.levels.length > 0) {
           const top = hls.levels.length - 1;
-          hls.currentLevel = top; // lock current segment fetch
-          hls.loadLevel = top; // lock loader
-          hls.nextLevel = top; // lock next switch
+          hls.currentLevel = top;
+          hls.loadLevel = top;
+          hls.nextLevel = top;
         }
         video.play().catch(() => {});
       });
 
-      // Prevent any automatic quality downgrade after startup
       hls.on(Hls.Events.LEVEL_SWITCHING, (_, data) => {
         if (hls.levels && data.level < hls.levels.length - 1) {
           hls.nextLevel = hls.levels.length - 1;
@@ -108,7 +143,6 @@ function BgVideo({ src, poster, muted }: BgVideoProps) {
       type === "hls" &&
       video.canPlayType("application/vnd.apple.mpegurl")
     ) {
-      // Native HLS (Safari) — browser manages quality; just play
       video.src = src;
       video.load();
       video.play().catch(() => {});
@@ -126,7 +160,7 @@ function BgVideo({ src, poster, muted }: BgVideoProps) {
         hlsRef.current = null;
       }
     };
-  }, [src, type]);
+  }, [src, type, visible]);
 
   useEffect(() => {
     if (videoRef.current) videoRef.current.muted = muted;
@@ -411,6 +445,16 @@ export function Hero() {
         }}
       />
 
+      {/* Stage spotlights for Toy Story 5 */}
+      {current.name === "Toy Story 5" && (
+        <div className="hero-spotlights pointer-events-none absolute inset-0 z-10 overflow-hidden">
+          <div className="hero-spotlight-bulb-1" />
+          <div className="hero-spotlight-bulb-2" />
+          <div className="hero-spotlight-1" />
+          <div className="hero-spotlight-2" />
+        </div>
+      )}
+
       {/* HD / Video quality badge */}
       {hasVideo && (
         <div className="absolute top-24 right-8 z-30 flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3.5 py-1.5 backdrop-blur-xl shadow-2xl">
@@ -431,18 +475,31 @@ export function Hero() {
         >
           {/* Badges row */}
           <div className="flex flex-wrap items-center gap-2 mb-6">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1 text-xs font-black text-primary uppercase tracking-widest backdrop-blur-md shadow-[0_0_16px_rgba(192,57,43,0.15)]">
-              ✦ Featured
-            </span>
-            {current.newRelease && (
-              <Badge className="bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[10px] font-black uppercase tracking-wider rounded-full px-2.5">
-                New Release
-              </Badge>
-            )}
-            {current.trending && (
-              <Badge className="bg-orange-500/10 text-orange-300 border border-orange-500/30 text-[10px] font-black uppercase tracking-wider rounded-full px-2.5">
-                Trending
-              </Badge>
+            {current.name === "Toy Story 5" ? (
+              <>
+                <span className="inline-flex items-center rounded-full bg-red-600 px-3.5 py-1 text-[10px] font-black text-white uppercase tracking-widest shadow-[0_0_12px_rgba(220,38,38,0.4)]">
+                  Kids and Family
+                </span>
+                <span className="inline-flex items-center rounded-full border border-red-500/30 bg-red-950/20 px-3.5 py-1 text-[10px] font-black text-red-400 uppercase tracking-widest backdrop-blur-md">
+                  Kids Special
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1 text-xs font-black text-primary uppercase tracking-widest backdrop-blur-md shadow-[0_0_16px_rgba(192,57,43,0.15)]">
+                  ✦ Featured
+                </span>
+                {current.newRelease && (
+                  <Badge className="bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[10px] font-black uppercase tracking-wider rounded-full px-2.5">
+                    New Release
+                  </Badge>
+                )}
+                {current.trending && (
+                  <Badge className="bg-orange-500/10 text-orange-300 border border-orange-500/30 text-[10px] font-black uppercase tracking-wider rounded-full px-2.5">
+                    Trending
+                  </Badge>
+                )}
+              </>
             )}
           </div>
 

@@ -9,6 +9,7 @@ const tryAuthenticate = require('../middlewares/tryAuthenticate');
 
 // Public routes
 router.get('/', tryAuthenticate, MovieController.getAll.bind(MovieController));
+router.get('/top-10', MovieController.getTop10.bind(MovieController));
 router.put('/banner', authenticate, checkPermission('movies:write'), MovieController.updateBannerOrder.bind(MovieController));
 router.get('/:id', tryAuthenticate, MovieController.getById.bind(MovieController));
 router.get('/:id/transcoding-status', authenticate, checkPermission('movies:write'), MovieController.getTranscodingStatus.bind(MovieController));

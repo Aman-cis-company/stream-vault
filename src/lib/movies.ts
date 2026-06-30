@@ -10,13 +10,39 @@ export function mapMovieToTitle(movie: BackendMovie): Title {
     Array.from(movie.title).reduce((acc, ch) => acc + ch.charCodeAt(0), 0) %
     360;
 
-  const poster = movie.thumbnail_url
+  let poster = movie.thumbnail_url
     ? assetUrl(movie.thumbnail_url)
     : `https://picsum.photos/seed/${movie.slug ?? movie.id}/342/513`;
 
-  const backdrop = movie.thumbnail_url
+  let backdrop = movie.thumbnail_url
     ? assetUrl(movie.thumbnail_url)
     : `https://picsum.photos/seed/${movie.slug ?? movie.id}-bg/780/440`;
+
+  // Custom high-quality assets and details for Toy Story 5
+  if (movie.title === "Toy Story 5") {
+    poster = "https://image.tmdb.org/t/p/w500/rhIRbceoE9lR4veEXuwCC2wARtG.jpg";
+    backdrop = "https://image.tmdb.org/t/p/original/3Rfvhy1Nl6sSGJwyjb0QiZzZYlB.jpg";
+  }
+
+  const categoryName = movie.category?.name ?? "Recommended";
+  const genresList: string[] = [];
+  if (movie.title === "Toy Story 5") {
+    genresList.push("Kids & Family", "Animation", "Adventure");
+  } else if (categoryName === "Animation") {
+    genresList.push("Animation", "Kids & Family");
+  } else if (categoryName === "Action") {
+    genresList.push("Action", "Thriller");
+  } else if (categoryName === "Comedy") {
+    genresList.push("Comedy", "Drama");
+  } else if (categoryName === "Horror") {
+    genresList.push("Horror", "Mystery");
+  } else if (categoryName === "Crime") {
+    genresList.push("Crime", "Thriller");
+  } else if (categoryName === "TV Shows") {
+    genresList.push("Web Series", "Drama");
+  } else {
+    genresList.push("Drama");
+  }
 
   return {
     id: String(movie.id),
@@ -26,11 +52,11 @@ export function mapMovieToTitle(movie: BackendMovie): Title {
       | "New Releases"
       | "Most Watched"
       | "Recommended",
-    genres: [],
+    genres: genresList,
     year,
     durationMin: movie.duration ? Math.round(movie.duration / 60) : 90,
     maturity: movie.content_rating ?? "PG-13",
-    rating: movie.rating ? Number(movie.rating) : 0,
+    rating: movie.title === "Toy Story 5" ? 8.9 : (movie.rating ? Number(movie.rating) : 0),
     hue,
     synopsis: movie.description ?? "",
     trending: movie.is_featured,

@@ -20,7 +20,7 @@ export default function RecordKeepingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-transparent text-foreground">
       {/* Header */}
       <header className="border-b border-border bg-card/60 backdrop-blur px-6 py-4">
         <Link to="/" className="flex items-center gap-2.5 font-bold w-fit">

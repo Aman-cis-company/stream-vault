@@ -58,10 +58,9 @@ app.use('/uploads/hls', (req, res, next) => {
     // Allow public display videos on landing page to bypass token verification
     const requestParts = req.path.split('/');
     const videoId = requestParts[1];
-    const allowedPublicVideos = [
-      'video-46060afa-5de8-4053-ba36-5c11fbdba7a0',
-      'video-6b288930-5418-41e6-87e5-4ab73f76c6a8'
-    ];
+    const allowedPublicVideos = (process.env.ALLOWED_PUBLIC_VIDEOS || 'video-46060afa-5de8-4053-ba36-5c11fbdba7a0,video-6b288930-5418-41e6-87e5-4ab73f76c6a8')
+      .split(',')
+      .map(id => id.trim());
 
     if (allowedPublicVideos.includes(videoId)) {
       return next();

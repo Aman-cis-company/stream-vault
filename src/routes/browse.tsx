@@ -4,10 +4,11 @@ import { MainLayout } from "@/components/layouts/MainLayout";
 import { Hero } from "@/components/streaming/Hero";
 import { ContentRow, SeriesContentRow, SeriesCard, EmblaRow } from "@/components/streaming/TitleRow";
 import { TitleCard } from "@/components/streaming/TitleCard";
+import { Top10Row } from "@/components/streaming/Top10Row";
 import { apiClient } from "@/services/api";
 import { mapMovieToTitle } from "@/lib/movies";
 import { fetchSeriesList } from "@/lib/series";
-import { DUMMY_MOVIES, DUMMY_SERIES } from "@/lib/mock-data";
+import { DUMMY_MOVIES, DUMMY_SERIES, TOP_10_INDIA_HINDI } from "@/lib/mock-data";
 import type { Title } from "@/lib/mock-data";
 import type { BackendMovie } from "@/store/slices/moviesSlice";
 import type { BackendSeries } from "@/lib/series";
@@ -266,15 +267,19 @@ export default function Browse() {
   const [extras, setExtras] = useState<Title[]>([]);
   const [seriesList, setSeriesList] = useState<BackendSeries[]>([]);
   const [continueWatching, setContinueWatching] = useState<any[]>([]);
+  const [top10Movies, setTop10Movies] = useState<Title[]>([]);
   const [loading, setLoading] = useState(true);
+  const [top10Loading, setTop10Loading] = useState(true);
 
   const load = useCallback(async () => {
     try {
-      const [catRes, movRes, seriesData, continueRes] = await Promise.all([
+      setTop10Loading(true);
+      const [catRes, movRes, seriesData, continueRes, top10Res] = await Promise.all([
         apiClient.get("/categories?status=active&limit=50"),
         apiClient.get("/movies?status=published&limit=100"),
         fetchSeriesList({ status: "published", limit: 50 }),
         apiClient.get("/user/continue-watching").catch(() => ({ data: { data: { continueWatching: [] } } })),
+        apiClient.get("/movies/top-10?language=Hindi").catch(() => null),
       ]);
 
       const cats: Category[] = catRes.data.data.categories ?? [];
@@ -289,6 +294,21 @@ export default function Browse() {
       });
       setSeriesList(finalSeries);
       setContinueWatching(continueRes.data.data.continueWatching ?? []);
+
+      // Process Top 10 — real data first, fill with dummy fallback
+      const top10Raw: BackendMovie[] = top10Res?.data?.data?.movies ?? [];
+      const top10Mapped = top10Raw.map(mapMovieToTitle);
+      if (top10Mapped.length < 5) {
+        const existingNames = new Set(top10Mapped.map((m) => m.name.toLowerCase()));
+        DUMMY_MOVIES.forEach((dm) => {
+          if (!existingNames.has(dm.name.toLowerCase()) && top10Mapped.length < 10) {
+            top10Mapped.push(dm);
+          }
+        });
+        setTop10Movies(top10Mapped.slice(0, 10));
+      } else {
+        setTop10Movies(top10Mapped.slice(0, 10));
+      }
 
       const byCat: Record<number, Title[]> = {};
       const rest: Title[] = [];
@@ -319,8 +339,10 @@ export default function Browse() {
       setExtras(rest);
     } catch {
       // silent — empty state
+      setTop10Movies(TOP_10_INDIA_HINDI);
     } finally {
       setLoading(false);
+      setTop10Loading(false);
     }
   }, []);
 
@@ -348,13 +370,23 @@ export default function Browse() {
   );
   const hasContent = hasCategoryContent || extras.length > 0 || seriesList.length > 0;
 
+  // Custom filters to match the screenshot sections
+  const bollywoodMovies = allMovies.filter((t) => t.language === "Hindi");
+  const actionMovies = allMovies.filter((t) => t.genres.includes("Action"));
+  const dramaMovies = allMovies.filter((t) => t.genres.includes("Drama"));
+  const kidsMovies = allMovies.filter(
+    (t) => t.category === "Animation" || t.genres.includes("Animation") || t.genres.includes("Kids & Family")
+  );
+  const comedyMovies = allMovies.filter((t) => t.genres.includes("Comedy"));
+  const latestMovies = [...allMovies].sort((a, b) => b.year - a.year);
+
   return (
     <MainLayout flush>
       {/* ── Hero ── */}
       <Hero />
 
       {/* ── Content area — full viewport width ── */}
-      <div className="relative w-full bg-background pb-20">
+      <div className="relative w-full pb-20">
 
         {/* Top gradient bleed from Hero into content */}
         <div
@@ -401,6 +433,18 @@ export default function Browse() {
               </>
             )}
 
+            {/* ── Top 10 in India Today — Hindi ── */}
+            {top10Movies.length > 0 && (
+              <>
+                <Top10Row
+                  heading="Top 10 in India Today — Hindi"
+                  titles={top10Movies}
+                  loading={top10Loading}
+                />
+                <SectionDivider />
+              </>
+            )}
+
             {/* ── Trending Now ── */}
             {trendingMovies.length > 0 && (
               <>
@@ -440,96 +484,143 @@ export default function Browse() {
               </>
             )}
 
-            {/* ── Popular Languages ── */}
-            <CustomGridRow heading="Popular Languages" seeAllHref="/library" gridColsClass="grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
-              {POPULAR_LANGUAGES.map((lang) => (
-                <Link
-                  key={lang.id}
-                  to={`/library?language=${lang.id}`}
-                  className="relative w-full overflow-hidden rounded-xl bg-zinc-900 aspect-[1.8/1] cursor-pointer group transition-all duration-300 hover:scale-[1.04] hover:ring-2 hover:ring-white/20 shadow-lg"
-                >
-                  <img
-                    src={lang.image}
-                    alt={lang.name}
-                    className="absolute right-0 top-0 h-full w-[60%] object-cover grayscale brightness-90 group-hover:scale-105 group-hover:grayscale-0 transition-all duration-500"
-                  />
-                  <div className={`absolute inset-0 bg-gradient-to-r ${lang.bgGradient} to-transparent w-[90%]`} />
-                  <div className={`absolute inset-0 ${lang.bgColor} mix-blend-multiply opacity-40`} />
-                  <div className="absolute inset-y-0 left-0 flex flex-col justify-center pl-4 z-10">
-                    <span className="text-lg font-bold text-white tracking-wide">{lang.native}</span>
-                    <span className="text-xs text-white/50 font-medium mt-0.5">{lang.name}</span>
-                  </div>
-                </Link>
-              ))}
-            </CustomGridRow>
+            {/* ── Group 1: Popular Languages, Genres, Channels with Cyan Ambient Glow ── */}
+            <div className="ambient-glow-blue space-y-1 py-4">
+              {/* Popular Languages */}
+              <CustomGridRow heading="Popular Languages" seeAllHref="/library" gridColsClass="grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+                {POPULAR_LANGUAGES.map((lang) => (
+                  <Link
+                    key={lang.id}
+                    to={`/library?language=${lang.id}`}
+                    className="relative w-full overflow-hidden rounded-xl bg-zinc-900 aspect-[1.8/1] cursor-pointer group transition-all duration-300 hover:scale-[1.04] hover:ring-2 hover:ring-white/20 shadow-lg"
+                  >
+                    <img
+                      src={lang.image}
+                      alt={lang.name}
+                      className="absolute right-0 top-0 h-full w-[60%] object-cover grayscale brightness-90 group-hover:scale-105 group-hover:grayscale-0 transition-all duration-500"
+                    />
+                    <div className={`absolute inset-0 bg-gradient-to-r ${lang.bgGradient} to-transparent w-[90%]`} />
+                    <div className={`absolute inset-0 ${lang.bgColor} mix-blend-multiply opacity-40`} />
+                    <div className="absolute inset-y-0 left-0 flex flex-col justify-center pl-4 z-10">
+                      <span className="text-lg font-bold text-white tracking-wide">{lang.native}</span>
+                      <span className="text-xs text-white/50 font-medium mt-0.5">{lang.name}</span>
+                    </div>
+                  </Link>
+                ))}
+              </CustomGridRow>
+              <SectionDivider />
+
+              {/* Popular Genres */}
+              <CustomGridRow heading="Popular Genres" gridColsClass="grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+                {POPULAR_GENRES.map((gen) => (
+                  <Link
+                    key={gen.id}
+                    to={`/library?genre=${gen.id}`}
+                    className="relative w-full overflow-hidden rounded-xl bg-zinc-900 aspect-[1.8/1] cursor-pointer group transition-all duration-300 hover:scale-[1.04] hover:ring-2 hover:ring-white/20 shadow-lg"
+                  >
+                    <img
+                      src={gen.image}
+                      alt={gen.name}
+                      className="absolute right-0 top-0 h-full w-[65%] object-cover opacity-60 grayscale group-hover:scale-105 group-hover:grayscale-0 transition-all duration-500"
+                    />
+                    <div className={`absolute inset-0 bg-gradient-to-r ${gen.bgGradient} to-transparent w-[85%]`} />
+                    <div className={`absolute inset-0 ${gen.bgColor} mix-blend-multiply opacity-55`} />
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 z-10">
+                      <span className="text-xl font-bold text-white tracking-wide">{gen.name}</span>
+                    </div>
+                  </Link>
+                ))}
+              </CustomGridRow>
+              <SectionDivider />
+
+              {/* Popular Channels */}
+              <CustomGridRow heading="Popular Channels" gridColsClass="grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+                {POPULAR_CHANNELS.map((chan) => (
+                  <Link
+                    key={chan.id}
+                    to={`/library?q=${chan.id}`}
+                    className="relative w-full overflow-hidden rounded-xl bg-[#121218] border border-white/5 aspect-[1.8/1] cursor-pointer group flex items-center justify-center transition-all duration-300 hover:scale-[1.04] hover:bg-[#161622] hover:border-white/10 shadow-lg"
+                  >
+                    <div className="transform transition-transform duration-300 group-hover:scale-110">
+                      {chan.renderLogo()}
+                    </div>
+                  </Link>
+                ))}
+              </CustomGridRow>
+            </div>
             <SectionDivider />
 
-            {/* ── Popular Genres ── */}
-            <CustomGridRow heading="Popular Genres" gridColsClass="grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
-              {POPULAR_GENRES.map((gen) => (
-                <Link
-                  key={gen.id}
-                  to={`/library?genre=${gen.id}`}
-                  className="relative w-full overflow-hidden rounded-xl bg-zinc-900 aspect-[1.8/1] cursor-pointer group transition-all duration-300 hover:scale-[1.04] hover:ring-2 hover:ring-white/20 shadow-lg"
-                >
-                  <img
-                    src={gen.image}
-                    alt={gen.name}
-                    className="absolute right-0 top-0 h-full w-[65%] object-cover opacity-60 grayscale group-hover:scale-105 group-hover:grayscale-0 transition-all duration-500"
-                  />
-                  <div className={`absolute inset-0 bg-gradient-to-r ${gen.bgGradient} to-transparent w-[85%]`} />
-                  <div className={`absolute inset-0 ${gen.bgColor} mix-blend-multiply opacity-55`} />
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 z-10">
-                    <span className="text-xl font-bold text-white tracking-wide">{gen.name}</span>
-                  </div>
-                </Link>
-              ))}
-            </CustomGridRow>
-            <SectionDivider />
-
-            {/* ── Popular Channels ── */}
-            <CustomGridRow heading="Popular Channels" gridColsClass="grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-              {POPULAR_CHANNELS.map((chan) => (
-                <Link
-                  key={chan.id}
-                  to={`/library?q=${chan.id}`}
-                  className="relative w-full overflow-hidden rounded-xl bg-[#121218] border border-white/5 aspect-[1.8/1] cursor-pointer group flex items-center justify-center transition-all duration-300 hover:scale-[1.04] hover:bg-[#161622] hover:border-white/10 shadow-lg"
-                >
-                  <div className="transform transition-transform duration-300 group-hover:scale-110">
-                    {chan.renderLogo()}
-                  </div>
-                </Link>
-              ))}
-            </CustomGridRow>
-            <SectionDivider />
-
-            {/* ── Movies by category ── */}
-            {categories.map((cat, idx) => {
-              const titles = moviesByCategory[cat.id] ?? [];
-              if (!titles.length) return null;
-              return (
-                <div key={cat.id}>
+            {/* ── Group 2: Movie Rows with Purple Ambient Glow ── */}
+            <div className="ambient-glow-purple space-y-1 py-4">
+              {/* Bollywood */}
+              {bollywoodMovies.length > 0 && (
+                <>
                   <ContentRow
-                    heading={cat.name}
-                    titles={titles}
+                    heading="Bollywood"
+                    titles={bollywoodMovies}
                     seeAllHref="/library"
                   />
-                  {idx < categories.length - 1 && <SectionDivider />}
-                </div>
-              );
-            })}
+                  <SectionDivider />
+                </>
+              )}
 
-            {/* ── Uncategorised ── */}
-            {extras.length > 0 && (
-              <>
-                <SectionDivider />
+              {/* Action */}
+              {actionMovies.length > 0 && (
+                <>
+                  <ContentRow
+                    heading="Action"
+                    titles={actionMovies}
+                    seeAllHref="/library"
+                  />
+                  <SectionDivider />
+                </>
+              )}
+
+              {/* Drama */}
+              {dramaMovies.length > 0 && (
+                <>
+                  <ContentRow
+                    heading="Drama"
+                    titles={dramaMovies}
+                    seeAllHref="/library"
+                  />
+                  <SectionDivider />
+                </>
+              )}
+
+              {/* Trending Kids */}
+              {kidsMovies.length > 0 && (
+                <>
+                  <ContentRow
+                    heading="Trending Kids"
+                    titles={kidsMovies}
+                    seeAllHref="/library"
+                  />
+                  <SectionDivider />
+                </>
+              )}
+
+              {/* Comedy */}
+              {comedyMovies.length > 0 && (
+                <>
+                  <ContentRow
+                    heading="Comedy"
+                    titles={comedyMovies}
+                    seeAllHref="/library"
+                  />
+                  <SectionDivider />
+                </>
+              )}
+
+              {/* Latest Movies */}
+              {latestMovies.length > 0 && (
                 <ContentRow
-                  heading="More Titles"
-                  titles={extras}
+                  heading="Latest Movies"
+                  titles={latestMovies}
                   seeAllHref="/library"
                 />
-              </>
-            )}
+              )}
+            </div>
 
             {/* Bottom breathing room */}
             <div className="h-8" />

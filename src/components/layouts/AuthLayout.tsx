@@ -109,7 +109,7 @@ export function AuthLayout({
       </div>
 
       {/* ── Right: form panel ── */}
-      <div className="flex flex-col min-h-screen bg-[oklch(0.08_0.012_258)] lg:border-l lg:border-white/6">
+      <div className="flex flex-col min-h-screen bg-transparent lg:border-l lg:border-white/6">
         {/* Top bar (mobile logo) */}
         <div className="flex items-center justify-between px-6 pt-6 lg:hidden">
           <Link to="/" className="flex items-center group">

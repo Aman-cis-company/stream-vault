@@ -93,7 +93,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
       ];
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-transparent">
       <Navbar />
       
       <div className={`w-full flex-1 gap-8 px-4 py-8 sm:px-6 lg:px-8 grid transition-all duration-300 ${

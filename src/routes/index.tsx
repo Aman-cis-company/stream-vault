@@ -3,9 +3,10 @@ import heroBackdrop from "@/assets/hero-backdrop.jpg";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { plans, testimonials, genres, DUMMY_MOVIES } from "@/lib/mock-data";
+import { plans, testimonials, genres, DUMMY_MOVIES, TOP_10_INDIA_HINDI } from "@/lib/mock-data";
 import type { Title } from "@/lib/mock-data";
 import { TitleRow } from "@/components/streaming/TitleRow";
+import { Top10Row } from "@/components/streaming/Top10Row";
 import {
   Accordion,
   AccordionContent,
@@ -85,14 +86,51 @@ interface TvVideoProps {
 function TvVideo({ src }: TvVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
+    let observer: IntersectionObserver | null = null;
+    if (window.IntersectionObserver) {
+      observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            setVisible(entry.isIntersecting);
+          });
+        },
+        { threshold: 0.05 }
+      );
+      observer.observe(video);
+    } else {
+      setVisible(true);
+    }
+
+    return () => {
+      if (observer) {
+        observer.unobserve(video);
+        observer.disconnect();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (!visible) {
+      video.pause();
+      if (hlsRef.current) {
+        hlsRef.current.stopLoad();
+      }
+      return;
+    }
+
     if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
+      hlsRef.current.startLoad();
+      video.play().catch(() => {});
+      return;
     }
 
     const isHls = src.includes(".m3u8") || src.includes("/hls/");
@@ -100,7 +138,9 @@ function TvVideo({ src }: TvVideoProps) {
     if (isHls && Hls.isSupported()) {
       const hls = new Hls({
         enableWorker: true,
-        maxBufferLength: 30,
+        maxBufferLength: 10,
+        maxMaxBufferLength: 15,
+        backBufferLength: 5,
       });
       hlsRef.current = hls;
       hls.loadSource(src);
@@ -119,13 +159,12 @@ function TvVideo({ src }: TvVideoProps) {
         hlsRef.current = null;
       }
     };
-  }, [src]);
+  }, [src, visible]);
 
   return (
     <video
       ref={videoRef}
       className="h-full w-full object-cover"
-      autoPlay
       loop
       muted
       playsInline
@@ -136,10 +175,17 @@ function TvVideo({ src }: TvVideoProps) {
 export default function Landing() {
   const [moviesByCategory, setMoviesByCategory] = useState<Record<number, Title[]>>({});
   const [loading, setLoading] = useState(true);
+  const [top10Movies, setTop10Movies] = useState<Title[]>([]);
+  const [top10Loading, setTop10Loading] = useState(true);
 
   const load = useCallback(async () => {
     try {
-      const movRes = await apiClient.get("/movies?status=published&limit=100");
+      const [movRes, top10Res] = await Promise.all([
+        apiClient.get("/movies?status=published&limit=100"),
+        apiClient.get("/movies/top-10?language=Hindi").catch(() => null),
+      ]);
+
+      // Process all movies by category
       const movies: BackendMovie[] = movRes.data.data.movies ?? [];
       const byCat: Record<number, Title[]> = {};
       movies.forEach((m) => {
@@ -150,10 +196,27 @@ export default function Landing() {
         }
       });
       setMoviesByCategory(byCat);
+
+      // Process Top 10 — real data first, fill with dummy fallback
+      const top10Raw: BackendMovie[] = top10Res?.data?.data?.movies ?? [];
+      const top10Mapped = top10Raw.map(mapMovieToTitle);
+      if (top10Mapped.length < 5) {
+        // Fill with dummy data if API doesn't have enough
+        const existingNames = new Set(top10Mapped.map((m) => m.name.toLowerCase()));
+        TOP_10_INDIA_HINDI.forEach((dm) => {
+          if (!existingNames.has(dm.name.toLowerCase()) && top10Mapped.length < 10) {
+            top10Mapped.push(dm);
+            existingNames.add(dm.name.toLowerCase());
+          }
+        });
+      }
+      setTop10Movies(top10Mapped.slice(0, 10));
     } catch {
-      // show empty state on API failure
+      // Fallback to dummy data on total API failure
+      setTop10Movies(TOP_10_INDIA_HINDI);
     } finally {
       setLoading(false);
+      setTop10Loading(false);
     }
   }, []);
 
@@ -228,13 +291,13 @@ export default function Landing() {
 
         <div className="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-8">
           <div className="max-w-3xl space-y-8 animate-hero-in">
-            <Badge className="inline-flex items-center gap-2 bg-primary/10 text-primary border border-primary/30 hover:bg-primary/15 shadow-[0_0_24px_rgba(192,57,43,0.15)] text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider backdrop-blur-md">
-              ✦ Now Streaming — 50,000+ Titles
-            </Badge>
+            <div className="text-xs font-black uppercase tracking-[0.25em] text-amber-500">
+              STREAM MOVIES WITH
+            </div>
             
             <h1 className="text-4xl font-black leading-[1.02] tracking-tight sm:text-5xl lg:text-6xl text-white drop-shadow-2xl">
-              Cinematic magic, <br />
-              <span className="text-gradient bg-gradient-to-r from-primary via-red-500 to-amber-500 font-extrabold">on demand.</span>
+              Stream smarter with <br />
+              <span className="text-gradient bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 font-extrabold">magic,</span> on demand.
             </h1>
             
             <p className="max-w-2xl text-lg sm:text-xl text-foreground/80 leading-relaxed font-normal">
@@ -242,15 +305,11 @@ export default function Landing() {
             </p>
             
             <div className="flex flex-wrap gap-4 items-center">
-              <Button size="lg" asChild className="relative group overflow-hidden bg-primary hover:bg-primary/95 text-white font-bold text-base px-9 py-6 rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_32px_rgba(192,57,43,0.4)]">
-                <Link to="/signup">
-                  {/* Subtle inner light reflection */}
-                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                  <Play className="mr-2.5 size-5 fill-white" /> Start Watching
-                </Link>
+              <Button size="lg" variant="outline" asChild className="text-sm font-extrabold px-8 py-5 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 hover:border-white/45 text-white transition-all duration-300">
+                <Link to="/browse">Explore Movies</Link>
               </Button>
-              <Button size="lg" variant="outline" asChild className="text-base px-8 py-6 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white backdrop-blur-md transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]">
-                <Link to="/pricing">Explore Plans</Link>
+              <Button size="lg" variant="outline" asChild className="text-sm font-extrabold px-8 py-5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 hover:border-white/35 text-white transition-all duration-300">
+                <Link to="/signup">Try for Free</Link>
               </Button>
             </div>
             
@@ -275,44 +334,49 @@ export default function Landing() {
       <div className="mx-auto max-w-7xl space-y-24 px-4 py-12 sm:px-8">
 
         {/* ── Features ── */}
-        <section className="py-8">
+        <section className="py-8 ambient-glow-blue">
           <div className="mb-14 text-center space-y-3">
-            <Badge className="bg-primary/10 text-primary border-primary/30 hover:bg-primary/15 uppercase tracking-widest text-xs px-3.5 py-1">Why StreamVault</Badge>
-            <h2 className="text-3xl font-extrabold tracking-tight sm:text-5xl text-white">Everything you need to stream smarter</h2>
+            <div className="text-xs font-black uppercase tracking-[0.2em] text-rose-500">FEATURES INDEX</div>
+            <h2 className="text-3xl font-black tracking-tight sm:text-4xl text-white">Everything you need to stream smarter</h2>
             <p className="text-muted-foreground max-w-xl mx-auto text-base">Built for people who take their entertainment seriously.</p>
           </div>
           
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {FEATURES.map((f) => (
-              <div
-                key={f.title}
-                className="group relative rounded-2xl border border-white/5 bg-gradient-to-b from-white/5 to-white/[0.01] p-8 transition-all duration-500 hover:border-primary/40 hover:-translate-y-1.5 hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.8)] backdrop-blur-sm"
-              >
-                {/* Glow effect on hover */}
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500" />
-                
-                <div className="relative inline-flex size-14 items-center justify-center rounded-xl bg-white/5 border border-white/10 text-primary transition-all duration-500 group-hover:scale-110 group-hover:border-primary/30 group-hover:bg-primary/10 group-hover:shadow-[0_0_30px_rgba(192,57,43,0.3)]">
-                  <f.icon className="size-7" />
+            {FEATURES.map((f, idx) => {
+              const screenshotTitles = [
+                "Smart streaming",
+                "Multi-device",
+                "Offline",
+                "Greater content"
+              ];
+              const displayTitle = screenshotTitles[idx] || f.title;
+              return (
+                <div
+                  key={f.title}
+                  className="group relative rounded-2xl border border-white/5 bg-gradient-to-b from-white/5 to-white/[0.01] p-8 transition-all duration-500 hover:border-primary/40 hover:-translate-y-1.5 hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.8)] backdrop-blur-sm"
+                >
+                  {/* Glow effect on hover */}
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500" />
+                  
+                  <div className="relative inline-flex size-14 items-center justify-center rounded-xl bg-white/5 border border-white/10 text-primary transition-all duration-500 group-hover:scale-110 group-hover:border-primary/30 group-hover:bg-primary/10 group-hover:shadow-[0_0_30px_rgba(192,57,43,0.3)]">
+                    <f.icon className="size-7" />
+                  </div>
+                  <h3 className="relative mt-6 font-bold text-lg text-white group-hover:text-primary transition-colors duration-300">{displayTitle}</h3>
+                  <p className="relative mt-3 text-sm text-muted-foreground leading-relaxed font-normal">{f.desc}</p>
                 </div>
-                <h3 className="relative mt-6 font-bold text-lg text-white group-hover:text-primary transition-colors duration-300">{f.title}</h3>
-                <p className="relative mt-3 text-sm text-muted-foreground leading-relaxed font-normal">{f.desc}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 
-        {/* ── Trending Now ── */}
-        <section className="py-4">
+        {/* ── Indian Movies ── */}
+        <section className="py-4 ambient-glow-purple">
           <div className="mb-6 flex items-end justify-between">
             <div className="space-y-1">
+              <div className="text-xs font-black uppercase tracking-[0.2em] text-rose-500">HOT INDIAN RELEASES - 2026</div>
               <div className="flex items-center gap-2.5">
-                <span className="relative flex size-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                  <span className="relative inline-flex rounded-full size-2.5 bg-primary"></span>
-                </span>
-                <h2 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">Trending This Week</h2>
+                <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">Indian Movies</h2>
               </div>
-              <p className="text-sm text-muted-foreground pl-5">What everyone's watching right now</p>
             </div>
             <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-primary transition-colors">
               <Link to="/browse" className="flex items-center gap-1.5 font-semibold">View all <ArrowRight className="size-4" /></Link>
@@ -321,15 +385,19 @@ export default function Landing() {
           <TitleRow heading="" titles={trendingMovies} />
         </section>
 
-        {/* ── New Releases ── */}
+        {/* ── Top Movies for You ── */}
         <section className="py-4">
+          <Top10Row heading="Top Movies for You" titles={top10Movies} loading={top10Loading} />
+        </section>
+
+        {/* ── New Releases ── */}
+        <section className="py-4 ambient-glow-blue">
           <div className="mb-6 flex items-end justify-between">
             <div className="space-y-1">
+              <div className="text-xs font-black uppercase tracking-[0.2em] text-rose-500">NEW ARRIVALS - 2026</div>
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-primary">New</span>
-                <h2 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">New Releases</h2>
+                <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">New Releases</h2>
               </div>
-              <p className="text-sm text-muted-foreground">Fresh titles added this month</p>
             </div>
             <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-primary transition-colors">
               <Link to="/library" className="flex items-center gap-1.5 font-semibold">Browse all <ArrowRight className="size-4" /></Link>
@@ -362,14 +430,44 @@ export default function Landing() {
             {/* Sleek metallic TV stand neck & base */}
             <div className="w-28 h-5 bg-gradient-to-b from-[#181822] to-[#0c0c10] border-t border-white/10 relative z-10 shadow-md" />
             <div className="w-48 h-2.5 bg-gradient-to-r from-[#1c1c28] via-[#242436] to-[#1c1c28] rounded-full relative z-10 shadow-xl border-t border-white/5" />
+            
+            {/* Surface displaying multiple synchronized devices below the TV stand */}
+            <div className="w-full mt-10 flex flex-wrap justify-center items-end gap-6 sm:gap-8 relative z-20">
+              {/* Device 1: Tablet */}
+              <div className="relative w-32 aspect-[4/3] rounded border border-zinc-700 bg-zinc-950 shadow-xl flex items-center justify-center p-0.5 overflow-hidden transition-all duration-300 hover:scale-105">
+                <TvVideo src={tvVideoUrl} />
+                <div className="absolute bottom-0 inset-x-0 h-0.5 bg-zinc-800" />
+              </div>
+
+              {/* Device 2: Folded Phone/Tablet */}
+              <div className="relative w-24 aspect-[1/1] rounded-md border border-zinc-700 bg-zinc-950 shadow-xl flex items-center justify-center p-0.5 overflow-hidden transition-all duration-300 hover:scale-105">
+                <TvVideo src={tvVideoUrl} />
+              </div>
+
+              {/* Device 3: Smartphone */}
+              <div className="relative w-14 aspect-[9/19] rounded-lg border border-zinc-800 bg-zinc-950 shadow-xl flex items-center justify-center p-0.5 overflow-hidden transition-all duration-300 hover:scale-105">
+                <TvVideo src={tvVideoUrl} />
+                <div className="absolute top-1 size-1 rounded-full bg-zinc-800" />
+              </div>
+
+              {/* Device 4: Laptop */}
+              <div className="relative flex flex-col items-center transition-all duration-300 hover:scale-105">
+                {/* Screen */}
+                <div className="w-44 aspect-[16/10] bg-zinc-950 border border-zinc-700 rounded-t-lg overflow-hidden p-0.5 shadow-xl flex items-center justify-center">
+                  <TvVideo src={tvVideoUrl} />
+                </div>
+                {/* Base */}
+                <div className="w-48 h-2 bg-[#474852] border-t border-white/50 rounded-b shadow-lg relative">
+                  <div className="absolute top-0.5 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-zinc-600 rounded-full" />
+                </div>
+              </div>
+            </div>
           </div>
           
           <div className="order-1 lg:order-2 space-y-6">
-            <Badge className="bg-primary/10 text-primary border border-primary/30 hover:bg-primary/10 text-xs px-3.5 py-1 font-semibold uppercase tracking-wider">
-              Smart TV Streaming
-            </Badge>
-            <h2 className="text-3xl font-extrabold tracking-tight sm:text-5xl text-white">
-              Enjoy on the big screen
+            <div className="text-xs font-black uppercase tracking-[0.2em] text-rose-500">DEVICES & PLAYERS</div>
+            <h2 className="text-3xl font-black tracking-tight sm:text-4xl text-white">
+               Enjoy on the big screen
             </h2>
             <p className="text-muted-foreground leading-relaxed text-lg font-normal">
               Watch on Smart TVs, PlayStation 5, Xbox Series X/S, Chromecast, Apple TV, Blu-ray players, and more. Our high-fidelity player delivers native 4K HDR playback and Dolby Atmos spatial audio for the ultimate theater experience right in your living room.
@@ -384,36 +482,65 @@ export default function Landing() {
         </section>
 
         {/* ── Browse by Genre ── */}
-        <section className="py-8">
+        <section className="py-8 ambient-glow-blue">
           <div className="mb-12 text-center space-y-3">
-            <Badge className="bg-primary/10 text-primary border-primary/30 hover:bg-primary/15 uppercase tracking-widest text-xs px-3.5 py-1">Categories</Badge>
-            <h2 className="text-3xl font-extrabold tracking-tight sm:text-5xl text-white">Browse by Genre</h2>
+            <div className="text-xs font-black uppercase tracking-[0.2em] text-rose-500">CATEGORIES</div>
+            <h2 className="text-3xl font-black tracking-tight sm:text-4xl text-white">Browse by Genre</h2>
             <p className="text-muted-foreground max-w-xl mx-auto text-base">Explore thousands of titles across every category, hand-picked for your mood.</p>
           </div>
-          <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
-            {genres.map((g) => (
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-5">
+            {/* Top 2 large wide cards */}
+            {[
+              genres.find((g) => g.name === "Horror") || genres[7],
+              genres.find((g) => g.name === "TV Shows") || genres[3],
+            ].map((g) => (
               <Link
                 key={g.name}
                 to="/library"
-                className="group relative overflow-hidden rounded-2xl aspect-[16/10] bg-card border border-white/5 shadow-2xl transition-all duration-500 hover:-translate-y-1.5 hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.85)] hover:border-primary/40"
+                className="col-span-2 md:col-span-3 relative overflow-hidden rounded-2xl aspect-[21/9] bg-card border border-white/5 shadow-2xl transition-all duration-500 hover:-translate-y-1.5 hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.85)] hover:border-primary/40 group"
               >
                 <img
                   src={`/public/images/categories/${g.src}`}
                   alt={g.name}
                   className="absolute inset-0 size-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-                  style={{ filter: "brightness(0.7) contrast(1.15)" }}
+                  style={{ filter: "brightness(0.65) contrast(1.15)" }}
                   loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10 transition-all duration-500 group-hover:from-black/95 group-hover:via-black/50" />
-                {/* Shimmer line on hover */}
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                 
-                <div className="absolute inset-x-0 bottom-0 p-5 flex flex-col justify-end">
-                  <span className="text-lg font-bold text-white drop-shadow group-hover:text-primary transition-colors duration-300">{g.name}</span>
-                  <span className="text-xs text-white/50 mt-1 font-medium transition-all group-hover:text-white/70">{g.count.toLocaleString()} titles</span>
+                <div className="absolute inset-x-0 bottom-0 p-6 flex flex-col justify-end">
+                  <span className="text-xl md:text-2xl font-black text-white drop-shadow group-hover:text-primary transition-colors duration-300">{g.name}</span>
+                  <span className="text-xs text-white/50 mt-1 font-semibold transition-all group-hover:text-white/70">{g.count.toLocaleString()} titles</span>
                 </div>
               </Link>
             ))}
+
+            {/* Bottom 6 small cards */}
+            {genres
+              .filter((g) => g.name !== "Horror" && g.name !== "TV Shows")
+              .map((g) => (
+                <Link
+                  key={g.name}
+                  to="/library"
+                  className="col-span-1 relative overflow-hidden rounded-2xl aspect-[1.1/1] bg-card border border-white/5 shadow-2xl transition-all duration-500 hover:-translate-y-1.5 hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.85)] hover:border-primary/40 group"
+                >
+                  <img
+                    src={`/public/images/categories/${g.src}`}
+                    alt={g.name}
+                    className="absolute inset-0 size-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                    style={{ filter: "brightness(0.6) contrast(1.15)" }}
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10 transition-all duration-500 group-hover:from-black/95 group-hover:via-black/50" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                  
+                  <div className="absolute inset-x-0 bottom-0 p-4 flex flex-col justify-end">
+                    <span className="text-base font-extrabold text-white drop-shadow group-hover:text-primary transition-colors duration-300">{g.name}</span>
+                    <span className="text-[10px] text-white/50 mt-0.5 font-semibold transition-all group-hover:text-white/70">{g.count.toLocaleString()} titles</span>
+                  </div>
+                </Link>
+              ))}
           </div>
         </section>
 
@@ -488,10 +615,10 @@ export default function Landing() {
         </section>
 
         {/* ── Testimonials ── */}
-        <section className="py-8">
+        <section className="py-8 ambient-glow-purple">
           <div className="mb-12 text-center space-y-3">
-            <Badge className="bg-warning/10 text-warning border border-warning/30 hover:bg-warning/15 uppercase tracking-widest text-xs px-3.5 py-1">Reviews</Badge>
-            <h2 className="text-3xl font-extrabold tracking-tight sm:text-5xl text-white">Loved by millions of viewers</h2>
+            <div className="text-xs font-black uppercase tracking-[0.2em] text-rose-500">TESTIMONIALS</div>
+            <h2 className="text-3xl font-black tracking-tight sm:text-4xl text-white">Loved by millions of viewers</h2>
             <p className="text-muted-foreground max-w-xl mx-auto text-base">Don't take our word for it — hear from our community of cinephiles.</p>
           </div>
           
@@ -539,25 +666,26 @@ export default function Landing() {
           
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-20 items-center relative z-10">
             <div className="space-y-6">
-              <Badge className="bg-primary/10 text-primary border border-primary/30 hover:bg-primary/10 text-xs px-3.5 py-1 font-semibold uppercase tracking-wider">
-                Multi-Platform Access
-              </Badge>
-              <h2 className="text-3xl font-extrabold tracking-tight sm:text-5xl text-white">Stream on any screen, anywhere</h2>
+              <div className="text-xs font-black uppercase tracking-[0.2em] text-rose-500">ANY TIME, ANY DEVICE</div>
+              <h2 className="text-3xl font-black tracking-tight sm:text-4xl text-white">Stream on any screen, Anywhere</h2>
               <p className="text-muted-foreground leading-relaxed text-base font-normal">
                 Seamless handoff across all your devices. Start a blockbuster film on your living room Smart TV, continue on your mobile device during your commute, and finish watching on your laptop — right where you left off.
               </p>
               
-              <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
-                {DEVICES.map((d) => (
+              <div className="mt-8 grid grid-cols-2 gap-4">
+                {[
+                  { label: "UHD 4K", desc: "Breathtaking clarity on every screen" },
+                  { label: "Dolby Atmos", desc: "Spatial 3D audio experience" },
+                  { label: "Offline Mode", desc: "Download and watch anywhere" },
+                  { label: "Cancel Anytime", desc: "Flexible monthly billing" }
+                ].map((f) => (
                   <div
-                    key={d.label}
-                    className="group flex items-center gap-3.5 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-4 transition-all duration-300 hover:border-primary/30 hover:bg-primary/5 hover:scale-[1.02]"
+                    key={f.label}
+                    className="group rounded-xl border border-white/5 bg-white/[0.02] px-4 py-4 transition-all duration-300 hover:border-primary/30 hover:bg-primary/5 hover:scale-[1.02]"
                   >
-                    <d.icon className="size-5 shrink-0 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3" />
-                    <div>
-                      <p className="text-xs font-bold text-white">{d.label}</p>
-                      <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 font-normal">{d.desc}</p>
-                    </div>
+                    <div className="size-2 rounded-full bg-primary mb-2 transition-all duration-300 group-hover:scale-125" />
+                    <p className="text-xs font-bold text-white">{f.label}</p>
+                    <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 font-normal">{f.desc}</p>
                   </div>
                 ))}
               </div>
@@ -601,13 +729,15 @@ export default function Landing() {
         </section>
 
         {/* ── FAQ ── */}
-        <section className="py-8">
+        <section className="py-8 ambient-glow-blue">
           <div className="mb-12 text-center space-y-3">
-            <Badge className="bg-white/5 text-muted-foreground border-white/10 hover:bg-white/10 uppercase tracking-widest text-xs px-3.5 py-1">Support</Badge>
-            <h2 className="text-3xl font-extrabold tracking-tight sm:text-5xl text-white">Frequently asked questions</h2>
+            <div className="text-xs font-black uppercase tracking-[0.2em] text-rose-500">FAQ</div>
+            <h2 className="text-3xl font-black tracking-tight sm:text-4xl text-white">Frequently asked questions</h2>
             <p className="text-muted-foreground max-w-xl mx-auto text-base">Everything you need to know before joining StreamVault.</p>
           </div>
-          <div className="mx-auto max-w-3xl">
+          <div className="mx-auto max-w-3xl relative">
+            {/* Floating Glass Orb Decoration */}
+            <div className="absolute -right-24 top-1/2 -translate-y-1/2 size-20 rounded-full bg-gradient-to-tr from-indigo-500/20 via-purple-500/25 to-pink-500/10 blur-[2px] border border-white/10 shadow-[inset_0_2px_4px_rgba(255,255,255,0.2),0_12px_24px_rgba(0,0,0,0.6)] pointer-events-none animate-float hidden lg:block z-20" />
             <Accordion type="single" collapsible className="space-y-4">
               {FAQ.map((item, i) => (
                 <AccordionItem

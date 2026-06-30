@@ -7,6 +7,54 @@ const socketServer = require('../../socket');
 const EVENTS = require('../../socket/events');
 
 class MovieController {
+  async getTop10(req, res) {
+    try {
+      const MovieRepository = require('../repositories/MovieRepository');
+      const language = req.query.language || 'Hindi';
+
+      // Try most-watched first
+      let movies = await MovieRepository.findMostWatched(10);
+
+      // Filter by language
+      movies = movies.filter(m => {
+        const lang = m.language || m.dataValues?.language;
+        return lang && lang.toLowerCase() === language.toLowerCase();
+      });
+
+      // If not enough watch data, fall back to rating + featured
+      if (movies.length < 5) {
+        const { Movie, Category } = require('../../models');
+        const { Op } = require('sequelize');
+        const fallback = await Movie.findAll({
+          where: {
+            status: 'published',
+            language: { [Op.like]: language },
+          },
+          include: [{ model: Category, as: 'category', attributes: ['id', 'name', 'slug'] }],
+          order: [
+            ['is_featured', 'DESC'],
+            ['rating', 'DESC'],
+            ['created_at', 'DESC'],
+          ],
+          limit: 10,
+        });
+        // Merge: watch-history winners first, then fill from fallback
+        const existingIds = new Set(movies.map(m => m.id));
+        for (const m of fallback) {
+          if (!existingIds.has(m.id) && movies.length < 10) {
+            movies.push(m);
+            existingIds.add(m.id);
+          }
+        }
+      }
+
+      return successResponse(res, MESSAGES.MOVIES_FETCHED, { movies: movies.slice(0, 10) });
+    } catch (err) {
+      logger.error('MovieController.getTop10 error', { error: err.message });
+      return errorResponse(res, MESSAGES.INTERNAL_ERROR, STATUS_CODES.INTERNAL_SERVER_ERROR);
+    }
+  }
+
   async create(req, res) {
     try {
       const movie = await MovieService.create(req.body, req.files, req.user.id);

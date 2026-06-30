@@ -79,7 +79,7 @@ export function Footer() {
   };
 
   return (
-    <footer className="mt-24 border-t border-zinc-800 bg-[#07080d] text-zinc-100">
+    <footer className="mt-24 border-t border-zinc-800 bg-[#07080d]/50 backdrop-blur-md text-zinc-100 ambient-glow-blue">
       {/* Newsletter strip */}
       <div className="border-b border-zinc-800 bg-zinc-900/20">
         <div className="flex flex-col gap-6 px-4 py-10 text-center sm:text-left sm:flex-row sm:items-center sm:justify-between md:px-8 lg:px-12">
