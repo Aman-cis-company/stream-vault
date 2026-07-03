@@ -15,12 +15,9 @@ import "./styles.css";
 store.subscribe(() => {
   const auth = store.getState().auth as {
     accessToken?: string;
-    refreshToken?: string;
   };
   if (auth.accessToken)
     localStorage.setItem("sv.access_token", auth.accessToken);
-  if (auth.refreshToken)
-    localStorage.setItem("sv.refresh_token", auth.refreshToken);
 });
 
 createRoot(document.getElementById("root")!).render(

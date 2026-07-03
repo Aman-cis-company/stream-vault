@@ -13,10 +13,8 @@ export function ScreenBlockOverlay({ message }: { message: string }) {
   const handleLogoutOthers = async () => {
     setLoading(true);
     try {
-      const refreshToken = localStorage.getItem("sv.refresh_token");
       const socket = getSocket();
       await apiClient.post("/auth/logout-others", {
-        refresh_token: refreshToken,
         socketId: socket.id,
       });
       toast.success("Other screens logged out successfully!");

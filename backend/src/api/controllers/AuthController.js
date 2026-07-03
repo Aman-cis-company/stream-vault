@@ -8,6 +8,7 @@ const STATUS_CODES = require("../../constants/statusCodes");
 const logger = require("../../config/logger");
 const jwt = require("jsonwebtoken");
 const { addNotificationJob } = require("../../queue");
+const twilioConfig = require("../../config/twilio");
 const UserRepository = require("../repositories/UserRepository");
 
 class AuthController {
@@ -51,10 +52,16 @@ class AuthController {
       const { logActivity } = require('../../helpers/activityLogger');
       logActivity(user.id, 'user_login', { email: user.email }, req);
 
+      res.cookie('refresh_token', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
       return successResponse(res, MESSAGES.LOGIN_SUCCESS, {
         user,
         accessToken,
-        refreshToken,
       });
     } catch (err) {
       logger.error("AuthController.login error", { error: err.message });
@@ -86,7 +93,8 @@ class AuthController {
 
   async logoutOthers(req, res) {
     try {
-      const { refresh_token, socketId } = req.body;
+      const refresh_token = req.cookies?.refresh_token || req.body?.refresh_token;
+      const { socketId } = req.body;
       await AuthService.logoutOthers(req.user.id, refresh_token, socketId);
       return successResponse(res, "Other screens logged out successfully");
     } catch (err) {
@@ -101,9 +109,19 @@ class AuthController {
 
   async refreshToken(req, res) {
     try {
-      const { refresh_token } = req.body;
+      const refresh_token = req.cookies?.refresh_token || req.body?.refresh_token;
       const tokens = await AuthService.refreshToken(refresh_token);
-      return successResponse(res, MESSAGES.TOKEN_REFRESHED, tokens);
+
+      res.cookie('refresh_token', tokens.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      return successResponse(res, MESSAGES.TOKEN_REFRESHED, {
+        accessToken: tokens.accessToken,
+      });
     } catch (err) {
       logger.error("AuthController.refreshToken error", { error: err.message });
       if (err.statusCode === 401) {
@@ -123,8 +141,15 @@ class AuthController {
 
   async logout(req, res) {
     try {
-      const { refresh_token } = req.body;
-      await AuthService.logout(refresh_token);
+      const refresh_token = req.cookies?.refresh_token || req.body?.refresh_token;
+      if (refresh_token) {
+        await AuthService.logout(refresh_token);
+      }
+      res.clearCookie('refresh_token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+      });
       return successResponse(res, MESSAGES.LOGOUT_SUCCESS);
     } catch (err) {
       logger.error("AuthController.logout error", { error: err.message });
@@ -218,6 +243,12 @@ class AuthController {
         return errorResponse(res, "Phone number is required", STATUS_CODES.BAD_REQUEST);
       }
 
+      // Sanitize phone number (if 10 digits, prepend +91 for ease of use)
+      let formattedPhone = phone.trim();
+      if (/^\d{10}$/.test(formattedPhone)) {
+        formattedPhone = `+91${formattedPhone}`;
+      }
+
       // Generate a 6-digit OTP code
       const otp = String(Math.floor(100000 + Math.random() * 900000));
       
@@ -225,29 +256,35 @@ class AuthController {
       if (!global.otpCache) {
         global.otpCache = new Map();
       }
-      global.otpCache.set(phone, {
+      global.otpCache.set(formattedPhone, {
         otp,
         expiresAt: Date.now() + 5 * 60 * 1000,
       });
 
-      logger.info(`Generated OTP for ${phone}: ${otp}`);
+      logger.info(`Generated OTP for ${formattedPhone}: ${otp}`);
 
-      // Try sending via Twilio queue
-      const runSmsQueue = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER;
-
-      if (runSmsQueue) {
+      // Try sending via Twilio directly for instant delivery
+      if (twilioConfig.isEnabled) {
         try {
-          await addNotificationJob('send_sms', {
-            to: phone,
+          // Send SMS asynchronously in the background so HTTP response is instant,
+          // but trigger Twilio request immediately without Redis/Queue queueing delays.
+          twilioConfig.client.messages.create({
             body: `Your StreamVault verification code is ${otp}. Expires in 5 minutes.`,
+            from: twilioConfig.phoneNumber,
+            to: formattedPhone,
+          }).then(message => {
+            logger.info(`OTP SMS sent successfully via Twilio directly to ${formattedPhone}`, { messageId: message.sid });
+          }).catch(err => {
+            logger.error(`Failed to send OTP SMS via Twilio directly to ${formattedPhone}`, { error: err.message });
           });
-          logger.info(`OTP SMS job enqueued successfully for ${phone}`);
+          
+          logger.info(`OTP SMS request dispatched directly to Twilio for ${formattedPhone}`);
         } catch (smsErr) {
-          logger.error("Failed to enqueue OTP SMS job", { error: smsErr.message });
+          logger.error("Failed to dispatch OTP SMS to Twilio directly", { error: smsErr.message });
           // In development/fallback mode, allow proceeding
           if (process.env.NODE_ENV === "development") {
-            console.log(`[DEVELOPMENT OTP FALLBACK] Code for ${phone}: ${otp}`);
-            return successResponse(res, "OTP generated (Enqueue failed, dev mode fallback)", {
+            console.log(`[DEVELOPMENT OTP FALLBACK] Code for ${formattedPhone}: ${otp}`);
+            return successResponse(res, "OTP generated (Direct dispatch failed, dev mode fallback)", {
               devMode: true,
               otp,
             });
@@ -256,7 +293,7 @@ class AuthController {
           }
         }
       } else {
-        console.log(`[OTP CONSOLE LOG] Code for ${phone}: ${otp}`);
+        console.log(`[OTP CONSOLE LOG] Code for ${formattedPhone}: ${otp}`);
         return successResponse(res, "OTP generated (Console Log)", {
           devMode: true,
           otp,
@@ -283,11 +320,17 @@ class AuthController {
         return errorResponse(res, "Phone number and OTP code are required", STATUS_CODES.BAD_REQUEST);
       }
 
+      // Sanitize phone number (if 10 digits, prepend +91 for ease of use)
+      let formattedPhone = phone.trim();
+      if (/^\d{10}$/.test(formattedPhone)) {
+        formattedPhone = `+91${formattedPhone}`;
+      }
+
       // Check OTP in memory cache
       if (!global.otpCache) {
         global.otpCache = new Map();
       }
-      const entry = global.otpCache.get(phone);
+      const entry = global.otpCache.get(formattedPhone);
       if (!entry) {
         return errorResponse(res, "No OTP code request found for this phone number", STATUS_CODES.BAD_REQUEST);
       }
@@ -297,39 +340,45 @@ class AuthController {
       }
 
       if (Date.now() > entry.expiresAt) {
-        global.otpCache.delete(phone);
+        global.otpCache.delete(formattedPhone);
         return errorResponse(res, "OTP code has expired", STATUS_CODES.BAD_REQUEST);
       }
 
       // Clear OTP on success
-      global.otpCache.delete(phone);
+      global.otpCache.delete(formattedPhone);
 
       // Check if user exists
-      const user = await UserRepository.findByPhone(phone);
+      const user = await UserRepository.findByPhone(formattedPhone);
       if (user) {
         // Log in the user automatically
         const { user: loggedInUser, accessToken, refreshToken } = await AuthService.loginByPhone(
-          phone,
+          formattedPhone,
           !!forceLogout
         );
+
+        res.cookie('refresh_token', refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
 
         return successResponse(res, "OTP verified and logged in successfully", {
           isNewUser: false,
           user: loggedInUser,
           accessToken,
-          refreshToken,
         });
       } else {
         // Sign a signup token valid for 15 minutes to prevent spoofing
         const signupToken = jwt.sign(
-          { phone, temp: true },
+          { phone: formattedPhone, temp: true },
           process.env.JWT_SECRET || "change-this-secret-in-production",
           { expiresIn: "15m" }
         );
 
         return successResponse(res, "OTP verified. Finish registering your account details.", {
           isNewUser: true,
-          phone,
+          phone: formattedPhone,
           signupToken,
         });
       }
@@ -389,13 +438,19 @@ class AuthController {
         false
       );
 
+      res.cookie('refresh_token', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
       return successResponse(
         res,
         "Account created and logged in successfully",
         {
           user: loggedInUser,
           accessToken,
-          refreshToken,
         },
         STATUS_CODES.CREATED
       );

@@ -1,6 +1,6 @@
 const path = require('path');
 // Load microservice .env, then fall back to root .env
-require('dotenv').config();
+require('dotenv').config({ path: path.resolve(__dirname, './.env') });
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const express = require('express');

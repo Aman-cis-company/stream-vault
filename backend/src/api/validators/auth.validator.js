@@ -71,7 +71,18 @@ const validate = (schema) => (req, res, next) => {
 module.exports = {
   validateRegister: validate(registerSchema),
   validateLogin: validate(loginSchema),
-  validateRefreshToken: validate(refreshTokenSchema),
+  validateRefreshToken: (req, res, next) => {
+    const token = req.cookies?.refresh_token || req.body?.refresh_token;
+    if (!token) {
+      return res.status(422).json({
+        success: false,
+        message: 'Validation failed.',
+        errors: [{ field: 'refresh_token', message: '"Refresh token" is required' }]
+      });
+    }
+    req.body.refresh_token = token;
+    next();
+  },
   validateForgotPassword: validate(forgotPasswordSchema),
   validateResetPassword: validate(resetPasswordSchema),
   validateUpdateProfile: validate(updateProfileSchema),

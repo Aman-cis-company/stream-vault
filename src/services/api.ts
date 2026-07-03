@@ -6,7 +6,7 @@ const BASE_URL =
 export const apiClient = axios.create({
   baseURL: BASE_URL,
   headers: { "Content-Type": "application/json" },
-  withCredentials: false,
+  withCredentials: true,
 });
 
 // Attach JWT on every request
@@ -25,23 +25,19 @@ apiClient.interceptors.response.use(
     const original = error.config;
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
-      const refreshToken = localStorage.getItem("sv.refresh_token");
-      if (refreshToken) {
-        try {
-          const { data } = await axios.post(`${BASE_URL}/auth/refresh-token`, {
-            refresh_token: refreshToken,
-          });
-          const { accessToken, refreshToken: newRefresh } = data.data;
-          localStorage.setItem("sv.access_token", accessToken);
-          localStorage.setItem("sv.refresh_token", newRefresh);
-          original.headers.Authorization = `Bearer ${accessToken}`;
-          return apiClient(original);
-        } catch {
-          localStorage.removeItem("sv.access_token");
-          localStorage.removeItem("sv.refresh_token");
-          localStorage.removeItem("sv.auth");
-          window.location.href = "/login";
-        }
+      try {
+        const { data } = await axios.post(`${BASE_URL}/auth/refresh-token`, {}, {
+          withCredentials: true,
+        });
+        const { accessToken } = data.data;
+        localStorage.setItem("sv.access_token", accessToken);
+        original.headers.Authorization = `Bearer ${accessToken}`;
+        return apiClient(original);
+      } catch {
+        localStorage.removeItem("sv.access_token");
+        localStorage.removeItem("sv.refresh_token");
+        localStorage.removeItem("sv.auth");
+        window.location.href = "/login";
       }
     }
     return Promise.reject(error);

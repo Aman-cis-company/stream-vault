@@ -114,7 +114,8 @@ class InvoicePdfService {
         
         doc.fontSize(8);
         doc.text('For queries or support, reach out to us at support@streamvault.com', 50, 480, { align: 'center' });
-        doc.text('Terms and Conditions apply. Please refer to http://localhost:3000/terms for details.', 50, 495, { align: 'center' });
+        const frontendBaseUrl = (process.env.FRONTEND_URL || 'http://localhost:3000').split(',')[0].trim();
+        doc.text(`Terms and Conditions apply. Please refer to ${frontendBaseUrl}/terms for details.`, 50, 495, { align: 'center' });
 
         doc.end();
 

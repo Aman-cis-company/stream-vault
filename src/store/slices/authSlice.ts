@@ -60,9 +60,8 @@ function buildUser(u: any): User {
   };
 }
 
-function persistTokens(access: string, refresh: string) {
+function persistTokens(access: string) {
   localStorage.setItem("sv.access_token", access);
-  localStorage.setItem("sv.refresh_token", refresh);
 }
 
 function clearTokens() {
@@ -78,9 +77,9 @@ export const loginThunk = createAsyncThunk(
   ) => {
     try {
       const { data } = await apiClient.post("/auth/login", { email, password, forceLogout });
-      const { user: u, accessToken, refreshToken } = data.data;
-      persistTokens(accessToken, refreshToken);
-      return { user: buildUser(u), accessToken, refreshToken };
+      const { user: u, accessToken } = data.data;
+      persistTokens(accessToken);
+      return { user: buildUser(u), accessToken };
     } catch (err: unknown) {
       const responseData = (err as { response?: { data?: any } })?.response?.data;
       if (responseData && responseData.code === "MAX_SCREENS_EXCEEDED") {
@@ -99,12 +98,12 @@ export const loginThunk = createAsyncThunk(
 export const phoneLoginThunk = createAsyncThunk(
   "auth/phoneLogin",
   async (
-    { user, accessToken, refreshToken }: { user: any; accessToken: string; refreshToken: string },
+    { user, accessToken }: { user: any; accessToken: string },
     { rejectWithValue }
   ) => {
     try {
-      persistTokens(accessToken, refreshToken);
-      return { user: buildUser(user), accessToken, refreshToken };
+      persistTokens(accessToken);
+      return { user: buildUser(user), accessToken };
     } catch (err: unknown) {
       return rejectWithValue("Failed to set authentication state");
     }
@@ -129,9 +128,9 @@ export const registerThunk = createAsyncThunk(
         email: formData.email,
         password: formData.password,
       });
-      const { user: u, accessToken, refreshToken } = data.data;
-      persistTokens(accessToken, refreshToken);
-      return { user: buildUser(u), accessToken, refreshToken };
+      const { user: u, accessToken } = data.data;
+      persistTokens(accessToken);
+      return { user: buildUser(u), accessToken };
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -142,13 +141,10 @@ export const registerThunk = createAsyncThunk(
 );
 
 export const logoutThunk = createAsyncThunk("auth/logout", async () => {
-  const refreshToken = localStorage.getItem("sv.refresh_token");
-  if (refreshToken) {
-    try {
-      await apiClient.post("/auth/logout", { refresh_token: refreshToken });
-    } catch {
-      // clear anyway
-    }
+  try {
+    await apiClient.post("/auth/logout", {});
+  } catch {
+    // clear anyway
   }
   clearTokens();
 });
@@ -180,8 +176,6 @@ const authSlice = createSlice({
     syncTokens: (state) => {
       if (state.accessToken)
         localStorage.setItem("sv.access_token", state.accessToken);
-      if (state.refreshToken)
-        localStorage.setItem("sv.refresh_token", state.refreshToken);
     },
   },
   extraReducers: (builder) => {
@@ -194,7 +188,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.user = payload.user;
         state.accessToken = payload.accessToken;
-        state.refreshToken = payload.refreshToken;
+        state.refreshToken = null;
         state.isAuthenticated = true;
         state.error = null;
       })
@@ -202,7 +196,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.user = payload.user;
         state.accessToken = payload.accessToken;
-        state.refreshToken = payload.refreshToken;
+        state.refreshToken = null;
         state.isAuthenticated = true;
         state.error = null;
       })
@@ -222,7 +216,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.user = payload.user;
         state.accessToken = payload.accessToken;
-        state.refreshToken = payload.refreshToken;
+        state.refreshToken = null;
         state.isAuthenticated = true;
         state.error = null;
       })

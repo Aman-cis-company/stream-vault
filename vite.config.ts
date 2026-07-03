@@ -9,9 +9,12 @@ export default defineConfig({
     port: 3000,
     host: true,
     strictPort: false,
+    allowedHosts: [
+      'vnak3000.elb.cisinlive.com'
+    ],
     proxy: {
       "/api": {
-        target: "http://localhost:5000",
+        target: "https://vnak5000.elb.cisinlive.com",
         changeOrigin: true,
       },
     },
