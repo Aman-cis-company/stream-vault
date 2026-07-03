@@ -109,7 +109,7 @@ export function AuthLayout({
       </div>
 
       {/* ── Right: form panel ── */}
-      <div className="flex flex-col min-h-screen bg-transparent lg:border-l lg:border-white/6">
+      <div className="flex flex-col min-h-screen bg-transparent lg:border-l lg:border-border dark:lg:border-white/6">
         {/* Top bar (mobile logo) */}
         <div className="flex items-center justify-between px-6 pt-6 lg:hidden">
           <Link to="/" className="flex items-center group">
@@ -122,8 +122,8 @@ export function AuthLayout({
           <div className="w-full max-w-[380px]">
             {/* Form header */}
             <div className="mb-8">
-              <h1 className="text-[26px] font-extrabold tracking-tight text-white">{title}</h1>
-              <p className="mt-1.5 text-sm text-white/50">{subtitle}</p>
+              <h1 className="text-[26px] font-extrabold tracking-tight text-foreground">{title}</h1>
+              <p className="mt-1.5 text-sm text-muted-foreground">{subtitle}</p>
             </div>
 
             {/* Form content */}
@@ -135,7 +135,7 @@ export function AuthLayout({
 
         {/* Footer */}
         <div className="px-6 pb-6 text-center">
-          <p className="text-[11px] text-white/25">
+          <p className="text-[11px] text-muted-foreground/45">
             © {new Date().getFullYear()} StreamVault · All rights reserved
           </p>
         </div>

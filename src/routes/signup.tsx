@@ -83,9 +83,17 @@ export default function SignupPage() {
       toast.success("Account created!", { description: "Welcome to StreamVault!" });
       navigate("/pricing");
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Registration failed. Please try again.";
+      let msg = "Registration failed. Please try again.";
+      if (typeof err === "string") {
+        msg = err;
+      } else if (err && typeof err === "object") {
+        if ("message" in err) {
+          msg = String((err as any).message);
+        } else {
+          const axMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+          if (axMessage) msg = axMessage;
+        }
+      }
       toast.error("Sign up failed", { description: msg });
     }
   };

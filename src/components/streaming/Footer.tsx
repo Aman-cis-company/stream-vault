@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import streamVaultLogo from "@/assets/streamvault-logo.png";
+import { useTheme } from "@/lib/theme";
 
 function LogoMark() {
   return (
@@ -79,13 +80,13 @@ export function Footer() {
   };
 
   return (
-    <footer className="mt-24 border-t border-zinc-800 bg-[#07080d]/50 backdrop-blur-md text-zinc-100 ambient-glow-blue">
+    <footer className="mt-24 border-t border-white/[0.08] bg-[#07080b] backdrop-blur-md text-zinc-400 ambient-glow-blue">
       {/* Newsletter strip */}
-      <div className="border-b border-zinc-800 bg-zinc-900/20">
+      <div className="border-b border-white/[0.08] bg-zinc-900/40">
         <div className="flex flex-col gap-6 px-4 py-10 text-center sm:text-left sm:flex-row sm:items-center sm:justify-between md:px-8 lg:px-12">
           <div>
             <p className="text-base font-bold text-zinc-100">Stay in the loop</p>
-            <p className="mt-1 text-sm text-zinc-400">
+            <p className="mt-1 text-sm text-zinc-405">
               New releases, curated picks, and platform news.
             </p>
           </div>
@@ -97,7 +98,7 @@ export function Footer() {
               type="email"
               placeholder="your@email.com"
               required
-              className="flex-1 h-10 rounded-xl border-zinc-800 bg-zinc-900/60 text-white placeholder:text-zinc-500 focus:border-primary/50"
+              className="flex-1 h-10 rounded-xl border-white/10 bg-zinc-950/60 text-white placeholder:text-zinc-500 focus:border-primary/50"
               aria-label="Email"
             />
             <Button
@@ -120,7 +121,7 @@ export function Footer() {
                 <LogoMark />
               </div>
             </Link>
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-zinc-400">
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-zinc-450">
               Premium entertainment for India and beyond. Stream thousands of
               films and series in stunning 4K HDR. Over 2.4 million subscribers
               worldwide.
@@ -133,7 +134,7 @@ export function Footer() {
                   key={s.label}
                   href="#"
                   aria-label={s.label}
-                  className="inline-flex size-9 items-center justify-center rounded-xl border border-zinc-800 text-zinc-400 transition-all hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
+                  className="inline-flex size-9 items-center justify-center rounded-xl border border-white/10 text-zinc-400 transition-all hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
                 >
                   <s.icon className="size-3.5" />
                 </a>
@@ -145,7 +146,7 @@ export function Footer() {
               {BADGES.map((b) => (
                 <span
                   key={b}
-                  className="inline-flex items-center rounded-lg bg-zinc-900/60 border border-zinc-800 px-2.5 py-0.5 text-[10px] font-semibold text-zinc-400 uppercase tracking-wide"
+                  className="inline-flex items-center rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-0.5 text-[10px] font-semibold text-zinc-400 uppercase tracking-wide"
                 >
                   {b}
                 </span>
@@ -177,7 +178,7 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-zinc-800">
+        <div className="border-t border-white/[0.08]">
           <div className="flex flex-col gap-4 px-4 py-6 sm:px-0 sm:flex-row sm:items-center sm:justify-between md:px-8 lg:px-12">
             <p className="text-xs text-zinc-500 text-center sm:text-left">
               © {new Date().getFullYear()} StreamVault, Inc. All rights

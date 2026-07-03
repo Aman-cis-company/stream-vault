@@ -65,6 +65,7 @@ export function Navbar() {
   const searchRef = useRef<HTMLInputElement>(null);
 
   const ThemeIcon = mode === "light" ? Sun : mode === "dark" ? Moon : Monitor;
+  const isLight = mode === "light" || (mode === "system" && typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: light)").matches);
 
   /* Only browse and landing pages get the transparent-to-solid scroll effect */
   const solidHeader = scrolled || (pathname !== "/browse" && pathname !== "/");
@@ -112,7 +113,7 @@ export function Navbar() {
       <header
         className={`sticky top-0 z-50 transition-all duration-500 ${
           solidHeader
-            ? "border-b border-white/[0.07] shadow-[0_1px_0_0_rgba(255,255,255,0.04),0_8px_32px_-8px_rgba(0,0,0,0.7)] backdrop-blur-2xl backdrop-saturate-[1.8] bg-[oklch(0.075_0.012_258)]/85"
+            ? "border-b border-white/[0.07] shadow-sm shadow-black/40 backdrop-blur-2xl bg-[oklch(0.075_0.012_258)]/95"
             : "bg-gradient-to-b from-black/75 via-black/35 to-transparent border-b border-transparent"
         }`}
       >
@@ -130,45 +131,51 @@ export function Navbar() {
 
           {/* ── Desktop nav ── */}
           <nav className="hidden md:flex items-center gap-0.5 flex-1">
-            {NAV_PUBLIC.map((n) => (
-              <Link
-                key={n.to}
-                to={n.to}
-                className={`relative rounded-xl px-3.5 py-2 text-[13.5px] font-semibold transition-all duration-200 ${
-                  isActive(n.to)
-                    ? "text-white bg-white/10"
-                    : "text-white/50 hover:text-white hover:bg-white/[0.07]"
-                }`}
-              >
-                {n.label}
-                {isActive(n.to) && (
-                  <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
-                )}
-              </Link>
-            ))}
+            {NAV_PUBLIC.map((n) => {
+              const active = isActive(n.to);
+              return (
+                <Link
+                  key={n.to}
+                  to={n.to}
+                  className={`relative rounded-xl px-3.5 py-2 text-[13.5px] font-bold transition-all duration-200 ${
+                    active
+                      ? "text-white bg-white/10"
+                      : "text-white/60 hover:text-white hover:bg-white/10"
+                  }`}
+                >
+                  {n.label}
+                  {active && (
+                    <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
+                  )}
+                </Link>
+              );
+            })}
 
             {/* Separator */}
             {isAuthenticated && (
               <span className="mx-1.5 h-4 w-px bg-white/[0.12] rounded-full" />
             )}
 
-            {isAuthenticated && NAV_AUTH.map((n) => (
-              <Link
-                key={n.to}
-                to={n.to}
-                className={`relative rounded-xl px-3.5 py-2 text-[13.5px] font-semibold transition-all duration-200 inline-flex items-center gap-1.5 ${
-                  isActive(n.to)
-                    ? "text-white bg-white/10"
-                    : "text-white/50 hover:text-white hover:bg-white/[0.07]"
-                }`}
-              >
-                <n.icon className="size-3.5" />
-                {n.label}
-                {isActive(n.to) && (
-                  <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
-                )}
-              </Link>
-            ))}
+            {isAuthenticated && NAV_AUTH.map((n) => {
+              const active = isActive(n.to);
+              return (
+                <Link
+                  key={n.to}
+                  to={n.to}
+                  className={`relative rounded-xl px-3.5 py-2 text-[13.5px] font-bold transition-all duration-200 inline-flex items-center gap-1.5 ${
+                    active
+                      ? "text-white bg-white/10"
+                      : "text-white/60 hover:text-white hover:bg-white/10"
+                  }`}
+                >
+                  <n.icon className="size-3.5" />
+                  {n.label}
+                  {active && (
+                    <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
+                  )}
+                </Link>
+              );
+            })}
           </nav>
 
           {/* ── Right cluster ── */}
@@ -188,7 +195,7 @@ export function Navbar() {
                     value={searchVal}
                     onChange={(e) => setSearchVal(e.target.value)}
                     placeholder="Search titles…"
-                    className="h-9 w-[220px] rounded-xl border border-white/12 bg-white/8 pl-8.5 pr-14 text-[13px] text-white placeholder:text-white/35 outline-none focus:border-white/25 focus:bg-white/10 transition-all"
+                    className="h-9 w-[220px] rounded-xl border border-white/12 bg-white/8 text-white placeholder:text-white/35 focus:border-white/25 focus:bg-white/10 pl-8.5 pr-14 text-[13px] outline-none transition-all"
                   />
                   <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
                     <kbd className="hidden sm:inline-flex h-5 items-center rounded border border-white/15 bg-white/8 px-1.5 font-mono text-[10px] text-white/35">
@@ -257,7 +264,7 @@ export function Navbar() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="ml-0.5 flex items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.05] px-2 py-1.5 transition-all duration-200 hover:bg-white/[0.09] hover:border-white/[0.16] focus:outline-none"
+                    className="ml-0.5 flex items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.05] hover:bg-white/[0.09] hover:border-white/[0.16] text-white/80 px-2 py-1.5 transition-all duration-200 focus:outline-none cursor-pointer"
                     aria-label="Account menu"
                   >
                     <span
@@ -268,14 +275,14 @@ export function Navbar() {
                     >
                       {user!.name.charAt(0).toUpperCase()}
                     </span>
-                    <span className="hidden lg:block text-[13px] font-semibold text-white/80 max-w-[96px] truncate">
+                    <span className="hidden lg:block text-[13px] font-semibold max-w-[96px] truncate">
                       {user!.name.split(" ")[0]}
                     </span>
                     <ChevronDown className="size-3 text-white/30 shrink-0" />
                   </button>
                 </DropdownMenuTrigger>
 
-                <DropdownMenuContent align="end" className="w-64 rounded-2xl p-1.5 border-white/[0.09]">
+                <DropdownMenuContent align="end" className="w-64 rounded-2xl p-1.5 border-border dark:border-white/[0.09]">
                   {/* User info header */}
                   <DropdownMenuLabel className="px-3 py-3">
                     <div className="flex items-center gap-3">
@@ -288,13 +295,13 @@ export function Navbar() {
                         {user!.name.charAt(0).toUpperCase()}
                       </span>
                       <div className="min-w-0">
-                        <p className="font-bold text-sm text-white truncate">{user!.name}</p>
-                        <p className="text-[11px] font-normal text-white/40 truncate">{user!.email}</p>
+                        <p className="font-bold text-sm text-foreground dark:text-white truncate">{user!.name}</p>
+                        <p className="text-[11px] font-normal text-muted-foreground truncate">{user!.email}</p>
                       </div>
                     </div>
                   </DropdownMenuLabel>
 
-                  <DropdownMenuSeparator className="mx-2 bg-white/[0.07]" />
+                  <DropdownMenuSeparator className="mx-2 bg-border dark:bg-white/[0.07]" />
 
                   <DropdownMenuItem asChild className="rounded-xl mx-0.5 text-[13px] gap-2.5">
                     <Link to="/dashboard">
@@ -324,7 +331,7 @@ export function Navbar() {
 
                   {user!.role === "admin" && (
                     <>
-                      <DropdownMenuSeparator className="mx-2 bg-white/[0.07]" />
+                      <DropdownMenuSeparator className="mx-2 bg-border dark:bg-white/[0.07]" />
                       <DropdownMenuItem asChild className="rounded-xl mx-0.5 text-[13px] gap-2.5">
                         <Link to="/admin" className="text-primary">
                           <Shield className="size-3.5" /> Admin Console
@@ -333,7 +340,7 @@ export function Navbar() {
                     </>
                   )}
 
-                  <DropdownMenuSeparator className="mx-2 bg-white/[0.07]" />
+                  <DropdownMenuSeparator className="mx-2 bg-border dark:bg-white/[0.07]" />
                   <DropdownMenuItem
                     className="rounded-xl mx-0.5 text-[13px] gap-2.5 text-destructive focus:text-destructive focus:bg-destructive/10"
                     onClick={() => { logout().finally(() => navigate("/")); }}
@@ -368,7 +375,7 @@ export function Navbar() {
 
             {/* Mobile hamburger */}
             <button
-              className="md:hidden size-9 flex items-center justify-center rounded-xl text-white/60 hover:text-white hover:bg-white/[0.08] transition-all"
+              className="md:hidden size-9 flex items-center justify-center rounded-xl text-white/60 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
               aria-label="Menu"
               onClick={() => setMobileOpen((o) => !o)}
             >
@@ -403,7 +410,7 @@ export function Navbar() {
                 <Link
                   key={n.to}
                   to={n.to}
-                  className={`flex items-center rounded-xl px-4 py-3 text-[13.5px] font-semibold transition-colors ${
+                  className={`flex items-center rounded-xl px-4 py-3 text-[13.5px] font-bold transition-colors ${
                     isActive(n.to)
                       ? "bg-primary/12 text-primary"
                       : "text-white/55 hover:bg-white/[0.07] hover:text-white"
@@ -420,7 +427,7 @@ export function Navbar() {
                     <Link
                       key={n.to}
                       to={n.to}
-                      className={`flex items-center gap-2.5 rounded-xl px-4 py-3 text-[13.5px] font-semibold transition-colors ${
+                      className={`flex items-center gap-2.5 rounded-xl px-4 py-3 text-[13.5px] font-bold transition-colors ${
                         isActive(n.to)
                           ? "bg-primary/12 text-primary"
                           : "text-white/55 hover:bg-white/[0.07] hover:text-white"

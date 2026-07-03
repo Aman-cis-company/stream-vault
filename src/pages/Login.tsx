@@ -53,7 +53,7 @@ export default function Login() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
         {/* Email */}
         <div className="space-y-1.5">
-          <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-white/50">
+          <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Email address
           </Label>
           <Input
@@ -61,7 +61,7 @@ export default function Login() {
             type="email"
             placeholder="you@example.com"
             autoComplete="email"
-            className="h-11 rounded-xl border-white/10 bg-white/6 text-white placeholder:text-white/30 focus:border-primary/60 focus:bg-white/8"
+            className="h-11 rounded-xl border-border bg-foreground/5 text-foreground placeholder:text-foreground/30 focus:border-primary/60 focus:bg-foreground/10 dark:border-white/10 dark:bg-white/6 dark:text-white dark:placeholder:text-white/30 dark:focus:bg-white/8"
             {...register("email")}
           />
           {errors.email && (
@@ -72,7 +72,7 @@ export default function Login() {
         {/* Password */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-white/50">
+            <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Password
             </Label>
             <Link
@@ -88,13 +88,13 @@ export default function Login() {
               type={showPw ? "text" : "password"}
               placeholder="••••••••"
               autoComplete="current-password"
-              className="h-11 rounded-xl border-white/10 bg-white/6 text-white placeholder:text-white/30 focus:border-primary/60 focus:bg-white/8 pr-11"
+              className="h-11 rounded-xl border-border bg-foreground/5 text-foreground placeholder:text-foreground/30 focus:border-primary/60 focus:bg-foreground/10 dark:border-white/10 dark:bg-white/6 dark:text-white dark:placeholder:text-white/30 dark:focus:bg-white/8 pr-11"
               {...register("password")}
             />
             <button
               type="button"
               onClick={() => setShowPw((s) => !s)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-foreground/30 hover:text-foreground/60 dark:text-white/30 dark:hover:text-white/60 transition-colors"
               aria-label="Toggle password"
             >
               {showPw ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -111,9 +111,9 @@ export default function Login() {
             id="remember"
             checked={watch("remember")}
             onCheckedChange={(v) => setValue("remember", Boolean(v))}
-            className="border-white/20 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+            className="border-neutral-300 dark:border-white/20 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
           />
-          <Label htmlFor="remember" className="text-sm font-normal text-white/45 cursor-pointer">
+          <Label htmlFor="remember" className="text-sm font-normal text-muted-foreground cursor-pointer">
             Remember me for 30 days
           </Label>
         </div>
@@ -135,7 +135,7 @@ export default function Login() {
 
       {/* Sign up link */}
       <div className="mt-8 text-center">
-        <p className="text-sm text-white/40">
+        <p className="text-sm text-muted-foreground">
           New to StreamVault?{" "}
           <Link to="/signup" className="font-bold text-primary hover:text-primary/80 transition-colors">
             Create an account

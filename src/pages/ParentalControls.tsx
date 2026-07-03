@@ -266,13 +266,13 @@ function ParentalControlsInner() {
 
       {/* Professional verification popup for Current PIN */}
       <Dialog open={showPinModal} onOpenChange={setShowPinModal}>
-        <DialogContent className="sm:max-w-md bg-[oklch(0.12_0.02_260)] border-white/10 text-white rounded-2xl shadow-2xl backdrop-blur-md">
+        <DialogContent className="sm:max-w-md bg-popover border border-border text-popover-foreground rounded-2xl shadow-2xl backdrop-blur-md">
           <DialogHeader className="flex flex-col items-center text-center space-y-3">
             <div className="flex size-14 items-center justify-center rounded-full bg-primary/10 border border-primary/20">
               <Lock className="size-6 text-primary" />
             </div>
             <DialogTitle className="text-xl font-bold tracking-tight">Verify Parental PIN</DialogTitle>
-            <DialogDescription className="text-sm text-white/60 max-w-xs">
+            <DialogDescription className="text-sm text-muted-foreground max-w-xs">
               Please enter your 4-digit parental PIN to authorize and save these changes.
             </DialogDescription>
           </DialogHeader>
@@ -288,7 +288,7 @@ function ParentalControlsInner() {
                 value={digit}
                 onChange={(e) => handleDigitChange(idx, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(idx, e)}
-                className="size-14 text-center text-xl font-bold rounded-xl bg-white/5 border-white/15 focus:border-primary focus:ring-1 focus:ring-primary text-white"
+                className="size-14 text-center text-xl font-bold rounded-xl bg-foreground/5 border-border focus:border-primary focus:ring-1 focus:ring-primary text-foreground dark:bg-white/5 dark:border-white/15 dark:text-white"
               />
             ))}
           </div>
@@ -297,7 +297,7 @@ function ParentalControlsInner() {
             <Button
               variant="ghost"
               onClick={() => setShowPinModal(false)}
-              className="text-white hover:text-white hover:bg-white/5 border border-white/10 rounded-xl"
+              className="text-foreground hover:text-foreground hover:bg-foreground/5 border border-border dark:text-white dark:hover:text-white dark:hover:bg-white/5 dark:border-white/10 rounded-xl"
             >
               Cancel
             </Button>

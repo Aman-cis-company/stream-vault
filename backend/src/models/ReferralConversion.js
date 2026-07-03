@@ -13,6 +13,12 @@ const ReferralConversion = sequelize.define('ReferralConversion', {
   tableName: 'referral_conversions',
   underscored: true,
   timestamps: true,
+  indexes: [
+    {
+      name: 'idx_referral_conversions_affiliate_status',
+      fields: ['affiliate_code_id', 'status'],
+    },
+  ],
 });
 
 module.exports = ReferralConversion;

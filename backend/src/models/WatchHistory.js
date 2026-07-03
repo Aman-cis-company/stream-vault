@@ -36,6 +36,16 @@ const WatchHistory = sequelize.define('WatchHistory', {
   tableName: 'watch_history',
   underscored: true,
   timestamps: true,
+  indexes: [
+    {
+      name: 'idx_watch_history_user_movie',
+      fields: ['user_id', 'movie_id'],
+    },
+    {
+      name: 'idx_watch_history_user_episode',
+      fields: ['user_id', 'episode_id'],
+    },
+  ],
 });
 
 module.exports = WatchHistory;

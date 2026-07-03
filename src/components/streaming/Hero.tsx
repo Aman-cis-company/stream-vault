@@ -467,14 +467,14 @@ export function Hero() {
       )}
 
       {/* Main content */}
-      <div className="relative z-20 flex h-full max-w-full flex-col justify-between px-8 pb-6 pt-24 sm:px-8">
+      <div className="relative z-20 flex h-full max-w-full flex-col justify-between px-4 pb-6 pt-20 sm:px-8 sm:pt-24">
         {/* Hero text + actions */}
         <div
           key={`content-${contentKey}`}
           className="flex flex-1 flex-col justify-center max-w-2xl mt-4 animate-hero-in"
         >
           {/* Badges row */}
-          <div className="flex flex-wrap items-center gap-2 mb-6">
+          <div className="flex flex-wrap items-center gap-2 mb-4 sm:mb-6">
             {current.name === "Toy Story 5" ? (
               <>
                 <span className="inline-flex items-center rounded-full bg-red-600 px-3.5 py-1 text-[10px] font-black text-white uppercase tracking-widest shadow-[0_0_12px_rgba(220,38,38,0.4)]">
@@ -512,7 +512,7 @@ export function Hero() {
           </h1>
 
           {/* Meta row */}
-          <div className="mt-3.5 flex flex-wrap items-center gap-3 text-sm">
+          <div className="mt-3 flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm">
             {current.rating > 0 && <RatingBadge rating={current.rating} />}
             <span className="text-white/60 font-semibold">{current.year}</span>
             {current.durationMin > 0 && (
@@ -535,39 +535,39 @@ export function Hero() {
 
           {/* Synopsis */}
           {current.synopsis && (
-            <p className="mt-4 max-w-lg text-sm leading-relaxed text-white/85 line-clamp-3 sm:text-base font-normal">
+            <p className="mt-3 sm:mt-4 max-w-lg text-sm leading-relaxed text-white/85 line-clamp-3 sm:text-base font-normal">
               {current.synopsis}
             </p>
           )}
 
           {/* Cast */}
           {current.cast.length > 0 && (
-            <p className="mt-3.5 text-xs text-white/40 font-medium">
+            <p className="mt-3 text-xs text-white/40 font-medium">
               <span className="text-white/55 font-bold">Starring: </span>
               {current.cast.slice(0, 3).join(", ")}
             </p>
           )}
 
           {/* Action buttons */}
-          <div className="mt-8 flex flex-wrap items-center gap-3.5">
+          <div className="mt-6 sm:mt-8 flex items-center gap-3 w-full sm:w-auto">
             <Button
               size="lg"
-              className="relative group overflow-hidden bg-white text-black hover:bg-white/90 font-extrabold gap-2 px-8 py-6 rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-[0_4px_24px_rgba(255,255,255,0.15)] text-base cursor-pointer"
+              className="relative group overflow-hidden bg-white text-black hover:bg-white/90 font-extrabold gap-1.5 sm:gap-2 flex-1 sm:flex-initial px-4 sm:px-8 py-4 sm:py-6 h-auto rounded-lg sm:rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-[0_4px_24px_rgba(255,255,255,0.15)] text-sm sm:text-base cursor-pointer"
               asChild
             >
               <Link to={`/watch/${current.id}`}>
                 <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-black/[0.02] to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                <Play className="size-5 fill-black text-black" /> Play
+                <Play className="size-4 sm:size-5 fill-black text-black" /> Play
               </Link>
             </Button>
             <Button
               size="lg"
               variant="outline"
-              className="bg-white/5 hover:bg-white/10 text-white border border-white/15 backdrop-blur-md gap-2 px-8 py-6 rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] text-base cursor-pointer"
+              className="bg-white/5 hover:bg-white/10 text-white border border-white/15 backdrop-blur-md gap-1.5 sm:gap-2 flex-1 sm:flex-initial px-4 sm:px-8 py-4 sm:py-6 h-auto rounded-lg sm:rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] text-sm sm:text-base cursor-pointer"
               asChild
             >
               <Link to={`/watch/${current.id}`}>
-                <Info className="size-5" /> More Info
+                <Info className="size-4 sm:size-5" /> More Info
               </Link>
             </Button>
 
@@ -575,13 +575,13 @@ export function Hero() {
             {hasVideo && (
               <button
                 onClick={() => setVideoBgMuted((v) => !v)}
-                className="flex size-12 items-center justify-center rounded-full border border-white/15 bg-black/40 backdrop-blur-md text-white hover:bg-white/20 hover:scale-105 active:scale-95 transition-all ml-1 cursor-pointer"
+                className="flex size-10 sm:size-12 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/40 backdrop-blur-md text-white hover:bg-white/20 hover:scale-105 active:scale-95 transition-all cursor-pointer"
                 aria-label={videoBgMuted ? "Unmute" : "Mute"}
               >
                 {videoBgMuted ? (
-                  <VolumeX className="size-5 text-white/70" />
+                  <VolumeX className="size-4 sm:size-5 text-white/70" />
                 ) : (
-                  <Volume2 className="size-5 text-white" />
+                  <Volume2 className="size-4 sm:size-5 text-white" />
                 )}
               </button>
             )}
@@ -590,7 +590,7 @@ export function Hero() {
 
         {/* Bottom bar — thumbnails + nav controls */}
         {movies.length > 1 && (
-          <div className="flex items-end justify-start gap-4">
+          <div className="flex items-end justify-between sm:justify-start gap-4">
             {/* Thumbnail strip */}
             <div className="hidden sm:flex items-end gap-2.5 overflow-x-auto scrollbar-none pb-2">
               {movies.map((m, idx) => (
@@ -619,21 +619,21 @@ export function Hero() {
               ))}
             </div>
 
-            {/* Nav arrows */}
+            {/* Nav arrows — visible on both desktop and mobile, positioned at the bottom right */}
             <div className="flex items-center gap-2 shrink-0 pb-2">
               <button
                 onClick={goPrev}
-                className="flex size-11 items-center justify-center rounded-full border border-white/15 bg-black/40 backdrop-blur-md text-white hover:bg-white/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                className="flex size-10 sm:size-11 items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-md text-white hover:bg-white/20 transition-all hover:scale-105 active:scale-90 active:border-primary/50 active:shadow-[0_0_12px_rgba(192,57,43,0.4)] cursor-pointer"
                 aria-label="Previous"
               >
-                <ChevronLeft className="size-5" />
+                <ChevronLeft className="size-4 sm:size-5" />
               </button>
               <button
                 onClick={goNext}
-                className="flex size-11 items-center justify-center rounded-full border border-white/15 bg-black/40 backdrop-blur-md text-white hover:bg-white/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                className="flex size-10 sm:size-11 items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-md text-white hover:bg-white/20 transition-all hover:scale-105 active:scale-90 active:border-primary/50 active:shadow-[0_0_12px_rgba(192,57,43,0.4)] cursor-pointer"
                 aria-label="Next"
               >
-                <ChevronRight className="size-5" />
+                <ChevronRight className="size-4 sm:size-5" />
               </button>
             </div>
           </div>

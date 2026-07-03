@@ -54,9 +54,17 @@ export default function Signup() {
       toast.success("Account created!", { description: "Welcome to StreamVault!" });
       navigate("/dashboard");
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Registration failed. Please try again.";
+      let msg = "Registration failed. Please try again.";
+      if (typeof err === "string") {
+        msg = err;
+      } else if (err && typeof err === "object") {
+        if ("message" in err) {
+          msg = String((err as any).message);
+        } else {
+          const axMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+          if (axMessage) msg = axMessage;
+        }
+      }
       toast.error("Sign-up failed", { description: msg });
     }
   };
@@ -66,14 +74,14 @@ export default function Signup() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
         {/* Full name */}
         <div className="space-y-1.5">
-          <Label htmlFor="name" className="text-xs font-semibold uppercase tracking-wider text-white/50">
+          <Label htmlFor="name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Full name
           </Label>
           <Input
             id="name"
             placeholder="Priya Sharma"
             autoComplete="name"
-            className="h-11 rounded-xl border-white/10 bg-white/6 text-white placeholder:text-white/30 focus:border-primary/60 focus:bg-white/8"
+            className="h-11 rounded-xl border-border bg-foreground/5 text-foreground placeholder:text-foreground/30 focus:border-primary/60 focus:bg-foreground/10 dark:border-white/10 dark:bg-white/6 dark:text-white dark:placeholder:text-white/30 dark:focus:bg-white/8"
             {...register("name")}
           />
           {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
@@ -81,7 +89,7 @@ export default function Signup() {
 
         {/* Email */}
         <div className="space-y-1.5">
-          <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-white/50">
+          <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Email address
           </Label>
           <Input
@@ -89,7 +97,7 @@ export default function Signup() {
             type="email"
             placeholder="you@example.com"
             autoComplete="email"
-            className="h-11 rounded-xl border-white/10 bg-white/6 text-white placeholder:text-white/30 focus:border-primary/60 focus:bg-white/8"
+            className="h-11 rounded-xl border-border bg-foreground/5 text-foreground placeholder:text-foreground/30 focus:border-primary/60 focus:bg-foreground/10 dark:border-white/10 dark:bg-white/6 dark:text-white dark:placeholder:text-white/30 dark:focus:bg-white/8"
             {...register("email")}
           />
           {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
@@ -97,7 +105,7 @@ export default function Signup() {
 
         {/* Password */}
         <div className="space-y-1.5">
-          <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-white/50">
+          <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Password
           </Label>
           <div className="relative">
@@ -106,13 +114,13 @@ export default function Signup() {
               type={showPw ? "text" : "password"}
               placeholder="••••••••"
               autoComplete="new-password"
-              className="h-11 rounded-xl border-white/10 bg-white/6 text-white placeholder:text-white/30 focus:border-primary/60 focus:bg-white/8 pr-11"
+              className="h-11 rounded-xl border-border bg-foreground/5 text-foreground placeholder:text-foreground/30 focus:border-primary/60 focus:bg-foreground/10 dark:border-white/10 dark:bg-white/6 dark:text-white dark:placeholder:text-white/30 dark:focus:bg-white/8 pr-11"
               {...register("password")}
             />
             <button
               type="button"
               onClick={() => setShowPw((s) => !s)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-foreground/30 hover:text-foreground/60 dark:text-white/30 dark:hover:text-white/60 transition-colors"
               aria-label="Toggle password"
             >
               {showPw ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -124,11 +132,11 @@ export default function Signup() {
                 {[0, 1, 2, 3].map((i) => (
                   <div
                     key={i}
-                    className={`h-1 flex-1 rounded-full transition-all duration-300 ${i < score ? COLORS[score] : "bg-white/10"}`}
+                    className={`h-1 flex-1 rounded-full transition-all duration-300 ${i < score ? COLORS[score] : "bg-foreground/10 dark:bg-white/10"}`}
                   />
                 ))}
               </div>
-              <p className="text-[11px] text-white/35">{LABELS[score]}</p>
+              <p className="text-[11px] text-muted-foreground">{LABELS[score]}</p>
             </div>
           )}
           {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
@@ -141,9 +149,9 @@ export default function Signup() {
               id="terms"
               checked={watch("terms")}
               onCheckedChange={(v) => setValue("terms", Boolean(v) as true, { shouldValidate: true })}
-              className="mt-0.5 border-white/20 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+              className="mt-0.5 border-neutral-300 dark:border-white/20 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
             />
-            <Label htmlFor="terms" className="text-sm font-normal text-white/45 cursor-pointer leading-relaxed">
+            <Label htmlFor="terms" className="text-sm font-normal text-muted-foreground cursor-pointer leading-relaxed">
               I agree to the{" "}
               <span className="text-primary font-semibold hover:text-primary/80 cursor-pointer transition-colors">Terms of Service</span>
               {" "}and{" "}
@@ -170,7 +178,7 @@ export default function Signup() {
 
       {/* Sign in link */}
       <div className="mt-8 text-center">
-        <p className="text-sm text-white/40">
+        <p className="text-sm text-muted-foreground">
           Already have an account?{" "}
           <Link to="/login" className="font-bold text-primary hover:text-primary/80 transition-colors">
             Sign in

@@ -67,11 +67,11 @@ export const plans: Plan[] = [
     cadence: "Monthly",
     priceInr: 299,
     perMonthInr: 299,
-    quality: "Full HD 1080p",
+    quality: "HD 720p",
     screens: 2,
     features: [
       "Stream on 2 devices",
-      "Full HD 1080p",
+      "HD 720p",
       "Unlimited movies & shows",
       "Cancel anytime",
     ],

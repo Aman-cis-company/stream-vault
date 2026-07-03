@@ -192,7 +192,7 @@ export default function Pricing() {
 
       {/* Payment dialog */}
       <Dialog open={!!selected} onOpenChange={(o) => !o && handleClose()}>
-        <DialogContent className="max-w-md rounded-2xl border-border/60 bg-[oklch(0.13_0.016_258)]">
+        <DialogContent className="max-w-md rounded-2xl border border-border bg-popover text-popover-foreground shadow-2xl">
           {step === "success" ? (
             <div className="py-8 text-center space-y-5">
               <div className="mx-auto inline-flex size-20 items-center justify-center rounded-full bg-success/12 ring-1 ring-success/25">

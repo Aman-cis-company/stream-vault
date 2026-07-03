@@ -375,7 +375,7 @@ export default function Browse() {
   const actionMovies = allMovies.filter((t) => t.genres.includes("Action"));
   const dramaMovies = allMovies.filter((t) => t.genres.includes("Drama"));
   const kidsMovies = allMovies.filter(
-    (t) => t.category === "Animation" || t.genres.includes("Animation") || t.genres.includes("Kids & Family")
+    (t) => t.genres.includes("Animation") || t.genres.includes("Kids & Family")
   );
   const comedyMovies = allMovies.filter((t) => t.genres.includes("Comedy"));
   const latestMovies = [...allMovies].sort((a, b) => b.year - a.year);

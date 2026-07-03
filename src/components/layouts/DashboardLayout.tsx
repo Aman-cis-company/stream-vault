@@ -111,7 +111,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
               )}
               <button
                 onClick={toggleCollapse}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-white/45 hover:text-white hover:bg-white/[0.08] transition-all duration-150 cursor-pointer"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-foreground/5 text-foreground/50 hover:text-foreground hover:bg-foreground/10 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white/45 dark:hover:text-white dark:hover:bg-white/[0.08] transition-all duration-150 cursor-pointer"
                 title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
               >
                 {isCollapsed ? <ChevronRight className="size-4.5" /> : <ChevronLeft className="size-4.5" />}
@@ -173,14 +173,14 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
               onClick={() => setMobileOpen(false)}
             />
             {/* Drawer content */}
-            <div className="fixed inset-y-0 left-0 flex w-[260px] flex-col bg-[oklch(0.095_0.014_258)] border-r border-white/[0.08] p-5 shadow-panel animate-in slide-in-from-left duration-200">
+            <div className="fixed inset-y-0 left-0 flex w-[260px] flex-col bg-card border-r border-border dark:bg-[oklch(0.095_0.014_258)] dark:border-white/[0.08] p-5 shadow-panel animate-in slide-in-from-left duration-200">
               <div className="flex items-center justify-between mb-6">
-                <span className="text-[15px] font-extrabold tracking-[-0.025em] text-white">
+                <span className="text-[15px] font-extrabold tracking-[-0.025em] text-foreground dark:text-white">
                   Stream<span className="text-gradient">Vault</span> Console
                 </span>
                 <button
                   onClick={() => setMobileOpen(false)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-white/[0.08] text-white/60 hover:text-white cursor-pointer"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-foreground/10 text-foreground/60 hover:text-foreground dark:hover:bg-white/[0.08] dark:text-white/60 dark:hover:text-white cursor-pointer"
                 >
                   <X className="size-4.5" />
                 </button>
@@ -214,7 +214,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
           <div className="mb-6 flex items-center gap-3">
             <button
               onClick={() => setMobileOpen(true)}
-              className="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.1] bg-white/[0.05] text-white/70 hover:text-white hover:bg-white/[0.08] cursor-pointer shrink-0"
+              className="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-foreground/5 text-foreground/70 hover:text-foreground hover:bg-foreground/10 dark:border-white/[0.1] dark:bg-white/[0.05] dark:text-white/70 dark:hover:text-white dark:hover:bg-white/[0.08] cursor-pointer shrink-0"
               aria-label="Toggle navigation"
             >
               <Menu className="size-4.5" />

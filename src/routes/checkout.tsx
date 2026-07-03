@@ -17,6 +17,65 @@ import {
   MapPin, ChevronLeft,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTheme } from "@/lib/theme";
+
+// Helper to determine if current theme is light
+function useIsLight() {
+  const { mode } = useTheme();
+  return mode === "light" || (mode === "system" && typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: light)").matches);
+}
+
+// ── Stripe Elements appearance generator ──
+const getStripeAppearance = (isLight: boolean) => ({
+  theme: (isLight ? "stripe" : "night") as any,
+  variables: {
+    colorPrimary: "#e5383b",
+    colorBackground: isLight ? "#ffffff" : "#1a1d2e",
+    colorSurface: isLight ? "#f9fafb" : "#1e2235",
+    colorText: isLight ? "#111827" : "#f5f5f7",
+    colorTextSecondary: isLight ? "#4b5563" : "#8b8fa8",
+    colorDanger: "#e5383b",
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontSizeBase: "14px",
+    spacingUnit: "5px",
+    borderRadius: "10px",
+    colorBorder: isLight ? "#e2e8f0" : "#2e3250",
+    colorInputBackground: isLight ? "#ffffff" : "#161929",
+    colorInputText: isLight ? "#111827" : "#f5f5f7",
+    colorInputPlaceholder: isLight ? "#94a3b8" : "#5a5f7d",
+  },
+  rules: {
+    ".Input": {
+      border: `1px solid ${isLight ? "#e2e8f0" : "#2e3250"}`,
+      backgroundColor: isLight ? "#ffffff" : "#161929",
+      color: isLight ? "#111827" : "#f5f5f7",
+      boxShadow: "none",
+      transition: "border-color 0.15s",
+    },
+    ".Input:focus": {
+      border: "1px solid #e5383b",
+      boxShadow: "0 0 0 2px rgba(229,56,59,0.15)",
+      outline: "none",
+    },
+    ".Input--invalid": { border: "1px solid #e5383b" },
+    ".Label": { color: isLight ? "#475569" : "#8b8fa8", fontWeight: "500", fontSize: "12px", letterSpacing: "0.05em" },
+    ".Tab": {
+      border: `1px solid ${isLight ? "#e2e8f0" : "#2e3250"}`,
+      backgroundColor: isLight ? "#ffffff" : "#161929",
+    },
+    ".Tab:hover": { border: `1px solid ${isLight ? "#cbd5e1" : "#3d4268"}` },
+    ".Tab--selected": {
+      border: "1px solid #e5383b",
+      backgroundColor: isLight ? "#fef2f2" : "#1e1022",
+    },
+    ".TabIcon--selected": { fill: "#e5383b" },
+    ".TabLabel--selected": { color: "#e5383b" },
+    ".Block": {
+      backgroundColor: isLight ? "#ffffff" : "#161929",
+      border: `1px solid ${isLight ? "#e2e8f0" : "#2e3250"}`,
+    },
+  },
+});
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,55 +98,46 @@ interface BillingDetails {
   country: string;
 }
 
-// ── Stripe Elements appearance ────────────────────────────────────────────────
-
-const STRIPE_APPEARANCE = {
-  theme: "night" as const,
-  variables: {
-    colorPrimary: "#e5383b",
-    colorBackground: "#1a1d2e",
-    colorSurface: "#1e2235",
-    colorText: "#f5f5f7",
-    colorTextSecondary: "#8b8fa8",
-    colorDanger: "#e5383b",
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-    fontSizeBase: "14px",
-    spacingUnit: "5px",
-    borderRadius: "10px",
-    colorBorder: "#2e3250",
-    colorInputBackground: "#161929",
-    colorInputText: "#f5f5f7",
-    colorInputPlaceholder: "#5a5f7d",
-  },
-  rules: {
-    ".Input": { border: "1px solid #2e3250", backgroundColor: "#161929", color: "#f5f5f7", boxShadow: "none", transition: "border-color 0.15s" },
-    ".Input:focus": { border: "1px solid #e5383b", boxShadow: "0 0 0 2px rgba(229,56,59,0.15)", outline: "none" },
-    ".Input--invalid": { border: "1px solid #e5383b" },
-    ".Label": { color: "#8b8fa8", fontWeight: "500", fontSize: "12px", letterSpacing: "0.05em" },
-    ".Tab": { border: "1px solid #2e3250", backgroundColor: "#161929" },
-    ".Tab:hover": { border: "1px solid #3d4268" },
-    ".Tab--selected": { border: "1px solid #e5383b", backgroundColor: "#1e1022" },
-    ".TabIcon--selected": { fill: "#e5383b" },
-    ".TabLabel--selected": { color: "#e5383b" },
-    ".Block": { backgroundColor: "#161929", border: "1px solid #2e3250" },
-  },
-};
-
 // ── Shared field style helper ─────────────────────────────────────────────────
 
-function fieldClass(invalid: boolean) {
-  return `w-full rounded-xl border bg-[#161929] px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/60 outline-none transition-all ${
-    invalid
-      ? "border-destructive focus:shadow-[0_0_0_2px_rgba(229,56,59,0.15)]"
-      : "border-[#2e3250] focus:border-primary focus:shadow-[0_0_0_2px_rgba(229,56,59,0.15)]"
+function fieldClass(invalid: boolean, isLight: boolean) {
+  return `w-full rounded-xl border px-4 py-3 text-sm outline-none transition-all ${
+    isLight
+      ? invalid
+        ? "bg-white border-destructive text-zinc-950 placeholder:text-zinc-400 focus:shadow-[0_0_0_2px_rgba(229,56,59,0.15)]"
+        : "bg-white border-zinc-200 text-zinc-950 placeholder:text-zinc-400 focus:border-primary focus:shadow-[0_0_0_2px_rgba(229,56,59,0.15)]"
+      : invalid
+        ? "bg-[#161929] border-destructive text-foreground placeholder:text-muted-foreground/60 focus:shadow-[0_0_0_2px_rgba(229,56,59,0.15)]"
+        : "bg-[#161929] border-[#2e3250] text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:shadow-[0_0_0_2px_rgba(229,56,59,0.15)]"
   }`;
 }
 
 // ── Plan Summary Sidebar ──────────────────────────────────────────────────────
 
-function PlanSummary({ intent }: { intent: IntentData }) {
+interface PlanSummaryData {
+  name: string;
+  amount: number;
+  quality: string;
+  screens: number;
+  features: string[];
+}
+
+function PlanSummary({ intent, planData }: { intent: IntentData; planData: PlanSummaryData | null }) {
   const isYearly = intent.billingCycle === "yearly";
   const perMonth = isYearly ? Math.round(intent.amount / 12) : intent.amount;
+  
+  const qualityText = planData?.quality || (intent.planId === 1 ? "HD 720p" : "Full HD 1080p");
+  const screensText = planData?.screens 
+    ? `Stream on ${planData.screens} screen${planData.screens > 1 ? "s" : ""}`
+    : (intent.planId === 3 ? "Stream on 4 screens" : "Stream on 2 screens");
+    
+  const features = planData?.features || [
+    "Cancel anytime",
+    screensText,
+    qualityText,
+    "No hidden fees"
+  ];
+
   return (
     <div className="rounded-2xl border border-border/60 bg-card/60 p-6 space-y-5">
       <div>
@@ -116,7 +166,7 @@ function PlanSummary({ intent }: { intent: IntentData }) {
         </div>
       </div>
       <ul className="space-y-2 text-sm">
-        {["Cancel anytime", "Stream on 2 screens", "Full HD 1080p", "No hidden fees"].map((f) => (
+        {features.map((f) => (
           <li key={f} className="flex items-center gap-2 text-muted-foreground">
             <Check className="size-3.5 text-success shrink-0" /> {f}
           </li>
@@ -144,6 +194,7 @@ const INDIAN_STATES = [
 ];
 
 function BillingForm({ planId, onComplete }: BillingFormProps) {
+  const isLight = useIsLight();
   const [billing, setBilling] = useState<BillingDetails>({
     name: "", line1: "", city: "", state: "", postal_code: "", country: "IN",
   });
@@ -216,7 +267,7 @@ function BillingForm({ planId, onComplete }: BillingFormProps) {
           <User className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
           <input type="text" autoComplete="name" placeholder="As it appears on your card"
             value={billing.name} onChange={set("name")} onBlur={touch("name")}
-            className={fieldClass(invalid("name")) + " pl-10"} />
+            className={fieldClass(invalid("name"), isLight) + " pl-10"} />
         </div>
         {invalid("name") && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="size-3" /> Required</p>}
       </div>
@@ -230,7 +281,7 @@ function BillingForm({ planId, onComplete }: BillingFormProps) {
           <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
           <input type="text" autoComplete="address-line1" placeholder="House / flat / street"
             value={billing.line1} onChange={set("line1")} onBlur={touch("line1")}
-            className={fieldClass(invalid("line1")) + " pl-10"} />
+            className={fieldClass(invalid("line1"), isLight) + " pl-10"} />
         </div>
         {invalid("line1") && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="size-3" /> Required</p>}
       </div>
@@ -243,7 +294,7 @@ function BillingForm({ planId, onComplete }: BillingFormProps) {
           </label>
           <input type="text" autoComplete="address-level2" placeholder="City"
             value={billing.city} onChange={set("city")} onBlur={touch("city")}
-            className={fieldClass(invalid("city"))} />
+            className={fieldClass(invalid("city"), isLight)} />
           {invalid("city") && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="size-3" /> Required</p>}
         </div>
         <div className="space-y-1.5">
@@ -251,7 +302,7 @@ function BillingForm({ planId, onComplete }: BillingFormProps) {
             State <span className="text-destructive">*</span>
           </label>
           <select value={billing.state} onChange={set("state")} onBlur={touch("state")}
-            className={fieldClass(invalid("state")) + " cursor-pointer"}>
+            className={fieldClass(invalid("state"), isLight) + " cursor-pointer"}>
             <option value="">Select state</option>
             {INDIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
@@ -267,13 +318,13 @@ function BillingForm({ planId, onComplete }: BillingFormProps) {
           </label>
           <input type="text" autoComplete="postal-code" placeholder="PIN code"
             value={billing.postal_code} onChange={set("postal_code")} onBlur={touch("postal_code")}
-            className={fieldClass(invalid("postal_code"))} />
+            className={fieldClass(invalid("postal_code"), isLight)} />
           {invalid("postal_code") && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="size-3" /> Required</p>}
         </div>
         <div className="space-y-1.5">
           <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground">Country</label>
           <select value={billing.country} onChange={set("country")}
-            className={fieldClass(false) + " cursor-pointer"}>
+            className={fieldClass(false, isLight) + " cursor-pointer"}>
             <option value="IN">India</option>
             <option value="US">United States</option>
             <option value="GB">United Kingdom</option>
@@ -310,6 +361,7 @@ interface PaymentFormProps {
 }
 
 function PaymentForm({ intent, billing, onBack }: PaymentFormProps) {
+  const isLight = useIsLight();
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
@@ -386,7 +438,7 @@ function PaymentForm({ intent, billing, onBack }: PaymentFormProps) {
       {/* Card fields */}
       <div className="space-y-1.5">
         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Card Details</p>
-        <div className={`rounded-xl border border-border/60 bg-[#161929] p-4 transition-all ${!ready ? "min-h-[140px] flex items-center justify-center" : ""}`}>
+        <div className={`rounded-xl border p-4 transition-all ${isLight ? "bg-white border-zinc-200 text-zinc-950" : "border-border/60 bg-[#161929] text-white"} ${!ready ? "min-h-[140px] flex items-center justify-center" : ""}`}>
           {!ready && <Loader2 className="size-6 animate-spin text-primary" />}
           <PaymentElement
             onReady={() => setReady(true)}
@@ -432,20 +484,55 @@ function PaymentForm({ intent, billing, onBack }: PaymentFormProps) {
 type Phase = "billing" | "payment";
 
 function CheckoutInner({ planId }: { planId: string }) {
+  const isLight = useIsLight();
   const navigate = useNavigate();
   const [phase, setPhase] = useState<Phase>("billing");
   const [intent, setIntent] = useState<IntentData | null>(null);
   const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null);
   const [billing, setBilling] = useState<BillingDetails | null>(null);
-  const [planData, setPlanData] = useState<{ name: string; amount: number } | null>(null);
+  const [planData, setPlanData] = useState<PlanSummaryData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   // Pre-fetch plan info for the sidebar while user fills billing
   useEffect(() => {
     api.get(`/stripe/plans`)
       .then(({ data }) => {
-        const plan = (data.data?.plans ?? []).find((p: { id: number }) => p.id === Number(planId));
-        if (plan) setPlanData({ name: plan.name, amount: Number(plan.price) });
+        const plan = (data.data?.plans ?? []).find((p: any) => p.id === Number(planId));
+        if (plan) {
+          const q = plan.quality;
+          const mappedQuality = q === "720" ? "HD 720p" : q === "1080" ? "Full HD 1080p" : q;
+          
+          let featuresList: string[] = [];
+          if (Array.isArray(plan.features_json)) {
+            featuresList = plan.features_json;
+          } else if (typeof plan.features_json === "string") {
+            try {
+              featuresList = JSON.parse(plan.features_json);
+            } catch (e) {
+              featuresList = [
+                "Cancel anytime",
+                `Stream on ${plan.max_screens ?? 2} screen${(plan.max_screens ?? 2) > 1 ? "s" : ""}`,
+                mappedQuality || "Full HD 1080p",
+                "No hidden fees"
+              ];
+            }
+          } else {
+            featuresList = [
+              "Cancel anytime",
+              `Stream on ${plan.max_screens ?? 2} screen${(plan.max_screens ?? 2) > 1 ? "s" : ""}`,
+              mappedQuality || "Full HD 1080p",
+              "No hidden fees"
+            ];
+          }
+
+          setPlanData({
+            name: plan.name,
+            amount: Number(plan.price),
+            quality: mappedQuality || "Full HD 1080p",
+            screens: plan.max_screens ?? 2,
+            features: featuresList,
+          });
+        }
       })
       .catch(() => {});
   }, [planId]);
@@ -476,7 +563,7 @@ function CheckoutInner({ planId }: { planId: string }) {
   }
 
   const sidebar = intent ? (
-    <PlanSummary intent={intent} />
+    <PlanSummary intent={intent} planData={planData} />
   ) : planData ? (
     // Skeleton sidebar while on billing step
     <div className="rounded-2xl border border-border/60 bg-card/60 p-6 space-y-5">
@@ -491,7 +578,7 @@ function CheckoutInner({ planId }: { planId: string }) {
         </div>
       </div>
       <ul className="space-y-2 text-sm">
-        {["Cancel anytime", "Full HD 1080p", "No hidden fees"].map((f) => (
+        {planData.features.map((f) => (
           <li key={f} className="flex items-center gap-2 text-muted-foreground">
             <Check className="size-3.5 text-success shrink-0" /> {f}
           </li>
@@ -513,7 +600,7 @@ function CheckoutInner({ planId }: { planId: string }) {
           )}
 
           {phase === "payment" && intent && stripePromise && billing && (
-            <Elements stripe={stripePromise} options={{ clientSecret: intent.clientSecret, appearance: STRIPE_APPEARANCE, loader: "auto" }}>
+            <Elements stripe={stripePromise} options={{ clientSecret: intent.clientSecret, appearance: getStripeAppearance(isLight), loader: "auto" }}>
               <PaymentForm intent={intent} billing={billing} onBack={() => setPhase("billing")} />
             </Elements>
           )}

@@ -155,22 +155,22 @@ function DashboardInner() {
                     <stop offset="100%" stopColor="oklch(0.62 0.29 14)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.22 0.016 258)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis
                   dataKey="month"
-                  stroke="oklch(0.50 0.010 258)"
+                  stroke="var(--muted-foreground)"
                   fontSize={11}
                   tickLine={false}
                   axisLine={false}
                 />
                 <Tooltip
                   contentStyle={{
-                    background: "oklch(0.13 0.016 258)",
-                    border: "1px solid oklch(0.22 0.016 258)",
+                    background: "var(--popover)",
+                    border: "1px solid var(--border)",
                     borderRadius: 12,
-                    color: "white",
+                    color: "var(--popover-foreground)",
                     fontSize: 12,
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
                   }}
                 />
                 <Area

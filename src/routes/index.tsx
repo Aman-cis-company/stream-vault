@@ -1,9 +1,9 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import heroBackdrop from "@/assets/hero-backdrop.jpg";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { plans, testimonials, genres, DUMMY_MOVIES, TOP_10_INDIA_HINDI } from "@/lib/mock-data";
+import { plans, testimonials, genres, DUMMY_MOVIES, TOP_10_INDIA_HINDI, type Plan } from "@/lib/mock-data";
 import type { Title } from "@/lib/mock-data";
 import { TitleRow } from "@/components/streaming/TitleRow";
 import { Top10Row } from "@/components/streaming/Top10Row";
@@ -27,14 +27,21 @@ import {
   Tablet,
   ArrowRight,
   Zap,
+  Shield,
+  CreditCard,
+  Lock,
+  X,
+  Tv2,
+  Crown,
 } from "lucide-react";
 import { useEffect, useState, useCallback, useRef } from "react";
 import Hls from "hls.js";
 import apiClient from "@/services/api";
-import { mapMovieToTitle } from "@/lib/movies";
+import { mapMovieToTitle, fetchPlans, type BackendPlan } from "@/lib/movies";
 import { BackendMovie } from "@/store/slices/moviesSlice";
 import { useSocketEvent } from "@/hooks/useSocket";
 import { SOCKET_EVENTS } from "@/lib/socket";
+import { useAuth } from "@/lib/auth";
 
 const FEATURES = [
   { icon: Tv, title: "4K Ultra HD + HDR", desc: "Cinema-grade picture and Dolby Atmos spatial audio on every device." },
@@ -63,7 +70,7 @@ const FAQ = [
   },
   {
     q: "What video quality is available?",
-    a: "Standard plan offers Full HD (1080p). Premium and Cinephile plans offer 4K Ultra HD with HDR10, Dolby Vision, and Dolby Atmos spatial audio where available — delivering a true cinema experience.",
+    a: "Standard plan offers HD (720p). Premium and Cinephile plans offer Full HD (1080p) streaming.",
   },
   {
     q: "Can I download titles for offline viewing?",
@@ -172,7 +179,54 @@ function TvVideo({ src }: TvVideoProps) {
   );
 }
 
+function mapBackendPlan(p: BackendPlan, index: number): Plan {
+  const cadenceMap: Record<string, Plan["cadence"]> = { monthly: "Monthly", yearly: "Yearly" };
+  const price = Number(p.price);
+  const cadence = cadenceMap[p.billing_cycle] ?? "Monthly";
+  const monthlyPrice = cadence === "Yearly" ? Math.round(price / 12) : price;
+  return {
+    id: String(p.id),
+    backendPlanId: p.id,
+    name: p.name,
+    cadence,
+    priceInr: price,
+    perMonthInr: monthlyPrice,
+    quality: p.quality
+      ? (p.quality === "720" ? "HD 720p" : p.quality === "1080" ? "Full HD 1080p" : p.quality)
+      : "Full HD 1080p",
+    screens: p.max_screens ?? 2,
+    features: Array.isArray(p.features_json)
+      ? p.features_json
+      : [`${cadence} billing`, "Unlimited streaming", "Cancel anytime"],
+    highlight: index === 1,
+  };
+}
+
 export default function Landing() {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const [plansList, setPlansList] = useState<Plan[]>(plans);
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+
+  useEffect(() => {
+    fetchPlans()
+      .then((data) => { if (data.length > 0) setPlansList(data.map(mapBackendPlan)); })
+      .catch(() => {});
+  }, []);
+
+  const handleSelectPlan = (plan: Plan) => {
+    if (!isAuthenticated) {
+      navigate("/login", { state: { returnTo: "/" } });
+      return;
+    }
+    setSelectedPlan(plan);
+  };
+
+  const handleCheckout = () => {
+    if (!selectedPlan) return;
+    navigate(`/checkout?plan_id=${selectedPlan.backendPlanId}`);
+  };
+
   const [moviesByCategory, setMoviesByCategory] = useState<Record<number, Title[]>>({});
   const [loading, setLoading] = useState(true);
   const [top10Movies, setTop10Movies] = useState<Title[]>([]);
@@ -337,7 +391,7 @@ export default function Landing() {
         <section className="py-8 ambient-glow-blue">
           <div className="mb-14 text-center space-y-3">
             <div className="text-xs font-black uppercase tracking-[0.2em] text-rose-500">FEATURES INDEX</div>
-            <h2 className="text-3xl font-black tracking-tight sm:text-4xl text-white">Everything you need to stream smarter</h2>
+            <h2 className="text-3xl font-black tracking-tight sm:text-4xl text-foreground dark:text-white">Everything you need to stream smarter</h2>
             <p className="text-muted-foreground max-w-xl mx-auto text-base">Built for people who take their entertainment seriously.</p>
           </div>
           
@@ -353,15 +407,15 @@ export default function Landing() {
               return (
                 <div
                   key={f.title}
-                  className="group relative rounded-2xl border border-white/5 bg-gradient-to-b from-white/5 to-white/[0.01] p-8 transition-all duration-500 hover:border-primary/40 hover:-translate-y-1.5 hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.8)] backdrop-blur-sm"
+                  className="group relative rounded-2xl border border-border bg-card dark:border-white/5 dark:bg-gradient-to-b dark:from-white/5 dark:to-white/[0.01] p-8 transition-all duration-500 hover:border-primary/40 hover:-translate-y-1.5 hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.8)] backdrop-blur-sm"
                 >
                   {/* Glow effect on hover */}
                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500" />
                   
-                  <div className="relative inline-flex size-14 items-center justify-center rounded-xl bg-white/5 border border-white/10 text-primary transition-all duration-500 group-hover:scale-110 group-hover:border-primary/30 group-hover:bg-primary/10 group-hover:shadow-[0_0_30px_rgba(192,57,43,0.3)]">
+                  <div className="relative inline-flex size-14 items-center justify-center rounded-xl bg-secondary border border-border text-primary transition-all duration-500 group-hover:scale-110 group-hover:border-primary/30 group-hover:bg-primary/10 group-hover:shadow-[0_0_30px_rgba(192,57,43,0.3)] dark:bg-white/5 dark:border-white/10">
                     <f.icon className="size-7" />
                   </div>
-                  <h3 className="relative mt-6 font-bold text-lg text-white group-hover:text-primary transition-colors duration-300">{displayTitle}</h3>
+                  <h3 className="relative mt-6 font-bold text-lg text-foreground dark:text-white group-hover:text-primary transition-colors duration-300">{displayTitle}</h3>
                   <p className="relative mt-3 text-sm text-muted-foreground leading-relaxed font-normal">{f.desc}</p>
                 </div>
               );
@@ -375,7 +429,7 @@ export default function Landing() {
             <div className="space-y-1">
               <div className="text-xs font-black uppercase tracking-[0.2em] text-rose-500">HOT INDIAN RELEASES - 2026</div>
               <div className="flex items-center gap-2.5">
-                <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">Indian Movies</h2>
+                <h2 className="text-2xl font-black tracking-tight text-foreground dark:text-white sm:text-3xl">Indian Movies</h2>
               </div>
             </div>
             <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-primary transition-colors">
@@ -396,7 +450,7 @@ export default function Landing() {
             <div className="space-y-1">
               <div className="text-xs font-black uppercase tracking-[0.2em] text-rose-500">NEW ARRIVALS - 2026</div>
               <div className="flex items-center gap-2">
-                <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">New Releases</h2>
+                <h2 className="text-2xl font-black tracking-tight text-foreground dark:text-white sm:text-3xl">New Releases</h2>
               </div>
             </div>
             <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-primary transition-colors">
@@ -466,7 +520,7 @@ export default function Landing() {
           
           <div className="order-1 lg:order-2 space-y-6">
             <div className="text-xs font-black uppercase tracking-[0.2em] text-rose-500">DEVICES & PLAYERS</div>
-            <h2 className="text-3xl font-black tracking-tight sm:text-4xl text-white">
+            <h2 className="text-3xl font-black tracking-tight sm:text-4xl text-foreground dark:text-white">
                Enjoy on the big screen
             </h2>
             <p className="text-muted-foreground leading-relaxed text-lg font-normal">
@@ -474,9 +528,9 @@ export default function Landing() {
             </p>
             <div className="flex flex-wrap items-center gap-4 pt-2">
               <span className="text-xs font-medium text-foreground/50 uppercase tracking-widest">Supported Formats:</span>
-              <span className="text-xs font-bold text-white/80 px-2.5 py-1 bg-white/5 border border-white/10 rounded-lg">4K UHD</span>
-              <span className="text-xs font-bold text-white/80 px-2.5 py-1 bg-white/5 border border-white/10 rounded-lg">HDR10+</span>
-              <span className="text-xs font-bold text-white/80 px-2.5 py-1 bg-white/5 border border-white/10 rounded-lg">Dolby Atmos</span>
+              <span className="text-xs font-bold text-foreground/80 dark:text-white/80 px-2.5 py-1 bg-foreground/5 dark:bg-white/5 border border-border dark:border-white/10 rounded-lg">4K UHD</span>
+              <span className="text-xs font-bold text-foreground/80 dark:text-white/80 px-2.5 py-1 bg-foreground/5 dark:bg-white/5 border border-border dark:border-white/10 rounded-lg">HDR10+</span>
+              <span className="text-xs font-bold text-foreground/80 dark:text-white/80 px-2.5 py-1 bg-foreground/5 dark:bg-white/5 border border-border dark:border-white/10 rounded-lg">Dolby Atmos</span>
             </div>
           </div>
         </section>
@@ -485,7 +539,7 @@ export default function Landing() {
         <section className="py-8 ambient-glow-blue">
           <div className="mb-12 text-center space-y-3">
             <div className="text-xs font-black uppercase tracking-[0.2em] text-rose-500">CATEGORIES</div>
-            <h2 className="text-3xl font-black tracking-tight sm:text-4xl text-white">Browse by Genre</h2>
+            <h2 className="text-3xl font-black tracking-tight sm:text-4xl text-foreground dark:text-white">Browse by Genre</h2>
             <p className="text-muted-foreground max-w-xl mx-auto text-base">Explore thousands of titles across every category, hand-picked for your mood.</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-6 gap-5">
@@ -497,7 +551,7 @@ export default function Landing() {
               <Link
                 key={g.name}
                 to="/library"
-                className="col-span-2 md:col-span-3 relative overflow-hidden rounded-2xl aspect-[21/9] bg-card border border-white/5 shadow-2xl transition-all duration-500 hover:-translate-y-1.5 hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.85)] hover:border-primary/40 group"
+                className="col-span-2 md:col-span-3 relative overflow-hidden rounded-2xl aspect-[21/9] bg-card border border-border/30 dark:border-white/5 shadow-2xl transition-all duration-500 hover:-translate-y-1.5 hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.85)] hover:border-primary/40 group"
               >
                 <img
                   src={`/public/images/categories/${g.src}`}
@@ -523,7 +577,7 @@ export default function Landing() {
                 <Link
                   key={g.name}
                   to="/library"
-                  className="col-span-1 relative overflow-hidden rounded-2xl aspect-[1.1/1] bg-card border border-white/5 shadow-2xl transition-all duration-500 hover:-translate-y-1.5 hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.85)] hover:border-primary/40 group"
+                  className="col-span-1 relative overflow-hidden rounded-2xl aspect-[1.1/1] bg-card border border-border/30 dark:border-white/5 shadow-2xl transition-all duration-500 hover:-translate-y-1.5 hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.85)] hover:border-primary/40 group"
                 >
                   <img
                     src={`/public/images/categories/${g.src}`}
@@ -545,25 +599,25 @@ export default function Landing() {
         </section>
 
         {/* ── Pricing ── */}
-        <section id="pricing" className="rounded-3xl border border-white/5 bg-gradient-to-b from-white/[0.03] to-white/[0.005] p-8 sm:p-14 backdrop-blur-md relative overflow-hidden">
+        <section id="pricing" className="rounded-3xl border border-border bg-card/40 dark:border-white/5 dark:bg-gradient-to-b dark:from-white/[0.03] to-white/[0.005] p-8 sm:p-14 backdrop-blur-md relative overflow-hidden">
           {/* Ambient Glows */}
           <div className="pointer-events-none absolute -top-40 -left-40 size-96 rounded-full bg-primary/10 blur-[120px]" />
           <div className="pointer-events-none absolute -bottom-40 -right-40 size-96 rounded-full bg-indigo-900/10 blur-[120px]" />
 
           <div className="mx-auto max-w-2xl text-center space-y-4 relative z-10">
             <Badge className="bg-success/10 text-success border border-success/30 hover:bg-success/15 uppercase tracking-widest text-xs px-3.5 py-1">Flexible Plans</Badge>
-            <h2 className="text-3xl font-extrabold tracking-tight sm:text-5xl text-white">Pick the plan that fits</h2>
+            <h2 className="text-3xl font-extrabold tracking-tight sm:text-5xl text-foreground">Pick the plan that fits</h2>
             <p className="text-muted-foreground text-base">Switch or cancel anytime. All plans include our 7-day risk-free trial.</p>
           </div>
           
           <div className="mt-14 grid gap-8 md:grid-cols-3 relative z-10">
-            {plans.map((p) => (
+            {plansList.map((p) => (
               <div
                 key={p.id}
                 className={`relative flex flex-col rounded-2xl border p-8 transition-all duration-500 ${
                   p.highlight
                     ? "border-primary bg-gradient-to-b from-primary/15 to-primary/[0.01] hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(192,57,43,0.25)]"
-                    : "border-white/5 bg-gradient-to-b from-white/5 to-white/[0.01] hover:border-white/15 hover:-translate-y-1 hover:shadow-[0_16px_40px_-10px_rgba(0,0,0,0.6)]"
+                    : "border-border bg-card dark:border-white/5 dark:bg-gradient-to-b dark:from-white/5 dark:to-white/[0.01] hover:border-zinc-350 dark:hover:border-white/15 hover:-translate-y-1 hover:shadow-[0_16px_40px_-10px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_16px_40px_-10px_rgba(0,0,0,0.6)]"
                 }`}
               >
                 {p.highlight && (
@@ -572,16 +626,18 @@ export default function Landing() {
                   </span>
                 )}
                 
-                <h3 className="font-extrabold text-xl text-white">{p.name}</h3>
+                <h3 className="font-extrabold text-xl text-foreground">{p.name}</h3>
                 
                 <div className="mt-6 flex items-end gap-1">
-                  <p className="text-5xl font-black tracking-tight text-white">₹{p.perMonthInr}</p>
-                  <span className="mb-1 text-sm font-medium text-muted-foreground">/mo</span>
+                  <p className="text-5xl font-black tracking-tight text-foreground">₹{p.cadence === "Yearly" ? p.priceInr : p.perMonthInr}</p>
+                  <span className="mb-1 text-sm font-medium text-muted-foreground">/{p.cadence === "Yearly" ? "yr" : "mo"}</span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1.5 font-medium">₹{p.priceInr} billed {p.cadence.toLowerCase()}</p>
+                <p className="text-xs text-muted-foreground mt-1.5 font-medium">
+                  {p.cadence === "Yearly" ? `₹${p.perMonthInr}/mo equivalent` : `₹${p.priceInr} billed monthly`}
+                </p>
                 
-                <div className="mt-6 rounded-xl bg-white/5 border border-white/5 px-4 py-3.5 text-sm">
-                  <span className="font-bold text-white">{p.quality}</span>
+                <div className="mt-6 rounded-xl bg-secondary border border-border dark:bg-white/5 dark:border-white/5 px-4 py-3.5 text-sm">
+                  <span className="font-bold text-foreground">{p.quality}</span>
                   <span className="text-muted-foreground"> · {p.screens} screen{p.screens > 1 ? 's' : ''}</span>
                 </div>
                 
@@ -595,15 +651,19 @@ export default function Landing() {
                 </ul>
                 
                 <Button
-                  className={`mt-8 w-full font-bold text-sm py-6 rounded-xl transition-all duration-300 hover:scale-[1.02] ${
+                  className={`mt-8 w-full font-bold text-sm py-6 rounded-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer ${
                     p.highlight 
                       ? "bg-primary hover:bg-primary/95 text-white shadow-[0_0_20px_rgba(192,57,43,0.3)]" 
-                      : "bg-white/10 border border-white/10 hover:bg-white/15 text-white"
+                      : "bg-foreground/5 border border-border hover:bg-foreground/10 text-foreground dark:bg-white/10 dark:border-white/10 dark:hover:bg-white/15 dark:text-white"
                   }`}
                   variant={p.highlight ? "default" : "secondary"}
-                  asChild
+                  onClick={() => handleSelectPlan(p)}
                 >
-                  <Link to="/signup">Start Free Trial</Link>
+                  {isAuthenticated ? (
+                    <><Zap className="mr-2 size-4" />Get {p.name}</>
+                  ) : (
+                    <><Lock className="mr-2 size-4" />Sign in to Subscribe</>
+                  )}
                 </Button>
               </div>
             ))}
@@ -614,11 +674,92 @@ export default function Landing() {
           </p>
         </section>
 
+        {/* ── Confirmation Modal ── */}
+        {selectedPlan && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="relative w-full max-w-md rounded-2xl border border-border bg-popover text-popover-foreground shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+              {/* Gradient accent top bar */}
+              <div className="h-1 w-full bg-gradient-to-r from-primary to-orange-400" />
+
+              <div className="p-6 sm:p-7">
+                <button
+                  onClick={() => setSelectedPlan(null)}
+                  className="absolute top-5 right-5 flex size-7 items-center justify-center rounded-full border border-border bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                >
+                  <X className="size-3.5" />
+                </button>
+
+                <div className="flex items-center gap-3 mb-5">
+                  <span className="flex size-10 items-center justify-center rounded-xl bg-primary/15">
+                    <CreditCard className="size-5 text-primary" />
+                  </span>
+                  <div>
+                    <h3 className="text-base font-bold text-foreground">Confirm Subscription</h3>
+                    <p className="text-xs text-muted-foreground">Review your order below</p>
+                  </div>
+                </div>
+
+                {/* Order summary */}
+                <div className="rounded-xl border border-border bg-secondary/35 dark:bg-white/5 divide-y divide-border dark:divide-white/10 overflow-hidden mb-5">
+                  <div className="flex items-center justify-between px-4 py-3 text-sm">
+                    <span className="text-muted-foreground">Plan</span>
+                    <span className="font-semibold text-foreground">{selectedPlan.name}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-3 text-sm">
+                    <span className="text-muted-foreground">Billing cycle</span>
+                    <span className="inline-flex items-center gap-1 text-foreground">
+                      {selectedPlan.cadence}
+                      {selectedPlan.cadence === "Yearly" && (
+                        <span className="rounded-full bg-success/15 px-1.5 py-0.5 text-[10px] font-semibold text-success">
+                          Save 20%
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-3 text-sm">
+                    <span className="text-muted-foreground">Trial period</span>
+                    <span className="text-success font-medium">7 days free</span>
+                  </div>
+                  <div className="flex items-center justify-between bg-secondary/60 dark:bg-white/10 px-4 py-3 font-bold text-foreground">
+                    <span>Total today</span>
+                    <span className="text-lg text-primary">₹{selectedPlan.priceInr}</span>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-muted-foreground text-center mb-5 leading-relaxed">
+                  You'll complete payment on our secure checkout page.
+                  Your card details go directly to Stripe — never stored on our servers.
+                </p>
+
+                <div className="flex flex-col gap-2.5">
+                  <Button
+                    className="h-11 w-full bg-gradient-to-r from-primary to-orange-500 font-semibold shadow-glow hover:from-primary/90 hover:to-orange-500/90 border-0 text-white cursor-pointer"
+                    onClick={handleCheckout}
+                  >
+                    <Lock className="mr-2 size-4" />Continue to Payment
+                  </Button>
+                  <Button variant="ghost" className="h-9 text-sm text-muted-foreground hover:text-foreground cursor-pointer" onClick={() => setSelectedPlan(null)}>
+                    Cancel
+                  </Button>
+                </div>
+
+                <div className="mt-4 flex items-center justify-center gap-4 text-[10px] text-muted-foreground">
+                  <span className="flex items-center gap-1"><Shield className="size-3" /> SSL Encrypted</span>
+                  <span className="size-1 rounded-full bg-foreground/10 dark:bg-white/10" />
+                  <span className="flex items-center gap-1"><Lock className="size-3" /> PCI Compliant</span>
+                  <span className="size-1 rounded-full bg-foreground/10 dark:bg-white/10" />
+                  <span className="flex items-center gap-1"><CreditCard className="size-3" /> Stripe</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Testimonials ── */}
         <section className="py-8 ambient-glow-purple">
           <div className="mb-12 text-center space-y-3">
             <div className="text-xs font-black uppercase tracking-[0.2em] text-rose-500">TESTIMONIALS</div>
-            <h2 className="text-3xl font-black tracking-tight sm:text-4xl text-white">Loved by millions of viewers</h2>
+            <h2 className="text-3xl font-black tracking-tight sm:text-4xl text-foreground dark:text-white">Loved by millions of viewers</h2>
             <p className="text-muted-foreground max-w-xl mx-auto text-base">Don't take our word for it — hear from our community of cinephiles.</p>
           </div>
           
@@ -626,10 +767,10 @@ export default function Landing() {
             {testimonials.map((t) => (
               <div
                 key={t.id}
-                className="group relative flex flex-col rounded-2xl border border-white/5 bg-gradient-to-b from-white/5 to-white/[0.01] p-8 transition-all duration-500 hover:border-primary/30 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_-10px_rgba(0,0,0,0.65)] backdrop-blur-sm"
+                className="group relative flex flex-col rounded-2xl border border-border bg-card dark:border-white/5 dark:bg-gradient-to-b dark:from-white/5 dark:to-white/[0.01] p-8 transition-all duration-500 hover:border-primary/30 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_-10px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_16px_40px_-10px_rgba(0,0,0,0.65)] backdrop-blur-sm"
               >
                 {/* Subtle double quotation mark watermark */}
-                <span className="absolute right-6 top-6 text-6xl font-serif text-white/[0.03] select-none pointer-events-none group-hover:text-primary/5 transition-colors duration-500">“</span>
+                <span className="absolute right-6 top-6 text-6xl font-serif text-foreground/[0.03] dark:text-white/[0.03] select-none pointer-events-none group-hover:text-primary/5 transition-colors duration-500">“</span>
                 
                 <div className="flex gap-1 mb-5">
                   {Array.from({ length: t.rating }).map((_, i) => (
@@ -641,15 +782,15 @@ export default function Landing() {
                   &ldquo;{t.text}&rdquo;
                 </blockquote>
                 
-                <div className="mt-6 flex items-center gap-3.5 pt-5 border-t border-white/5">
+                <div className="mt-6 flex items-center gap-3.5 pt-5 border-t border-border dark:border-white/5">
                   <img
                     src={`https://i.pravatar.cc/48?img=${t.avatarSeed}`}
                     alt={t.name}
-                    className="size-11 rounded-full object-cover ring-2 ring-white/10 group-hover:ring-primary/40 transition-all duration-500"
+                    className="size-11 rounded-full object-cover ring-2 ring-border dark:ring-white/10 group-hover:ring-primary/40 transition-all duration-500"
                     loading="lazy"
                   />
                   <div>
-                    <p className="text-sm font-extrabold text-white">{t.name}</p>
+                    <p className="text-sm font-extrabold text-foreground dark:text-white">{t.name}</p>
                     <p className="text-xs text-muted-foreground mt-0.5 font-medium">{t.role}</p>
                   </div>
                 </div>
@@ -659,7 +800,7 @@ export default function Landing() {
         </section>
 
         {/* ── Watch Anywhere ── */}
-        <section className="rounded-3xl border border-white/5 bg-gradient-to-br from-white/[0.03] to-white/[0.005] p-8 sm:p-14 overflow-hidden relative backdrop-blur-md">
+        <section className="rounded-3xl border border-border bg-card/60 dark:border-white/5 dark:bg-gradient-to-br dark:from-white/[0.03] dark:to-white/[0.005] p-8 sm:p-14 overflow-hidden relative backdrop-blur-md">
           {/* Subtle decorative glow */}
           <div className="pointer-events-none absolute -top-32 -right-32 size-80 rounded-full bg-primary/10 blur-[100px]" />
           <div className="pointer-events-none absolute -bottom-32 -left-32 size-80 rounded-full bg-indigo-900/10 blur-[100px]" />
@@ -667,7 +808,7 @@ export default function Landing() {
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-20 items-center relative z-10">
             <div className="space-y-6">
               <div className="text-xs font-black uppercase tracking-[0.2em] text-rose-500">ANY TIME, ANY DEVICE</div>
-              <h2 className="text-3xl font-black tracking-tight sm:text-4xl text-white">Stream on any screen, Anywhere</h2>
+              <h2 className="text-3xl font-black tracking-tight sm:text-4xl text-foreground dark:text-white">Stream on any screen, Anywhere</h2>
               <p className="text-muted-foreground leading-relaxed text-base font-normal">
                 Seamless handoff across all your devices. Start a blockbuster film on your living room Smart TV, continue on your mobile device during your commute, and finish watching on your laptop — right where you left off.
               </p>
@@ -681,10 +822,10 @@ export default function Landing() {
                 ].map((f) => (
                   <div
                     key={f.label}
-                    className="group rounded-xl border border-white/5 bg-white/[0.02] px-4 py-4 transition-all duration-300 hover:border-primary/30 hover:bg-primary/5 hover:scale-[1.02]"
+                    className="group rounded-xl border border-border bg-foreground/5 dark:border-white/5 dark:bg-white/[0.02] px-4 py-4 transition-all duration-300 hover:border-primary/30 hover:bg-primary/5 hover:scale-[1.02]"
                   >
                     <div className="size-2 rounded-full bg-primary mb-2 transition-all duration-300 group-hover:scale-125" />
-                    <p className="text-xs font-bold text-white">{f.label}</p>
+                    <p className="text-xs font-bold text-foreground dark:text-white">{f.label}</p>
                     <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 font-normal">{f.desc}</p>
                   </div>
                 ))}
@@ -732,20 +873,20 @@ export default function Landing() {
         <section className="py-8 ambient-glow-blue">
           <div className="mb-12 text-center space-y-3">
             <div className="text-xs font-black uppercase tracking-[0.2em] text-rose-500">FAQ</div>
-            <h2 className="text-3xl font-black tracking-tight sm:text-4xl text-white">Frequently asked questions</h2>
+            <h2 className="text-3xl font-black tracking-tight sm:text-4xl text-foreground dark:text-white">Frequently asked questions</h2>
             <p className="text-muted-foreground max-w-xl mx-auto text-base">Everything you need to know before joining StreamVault.</p>
           </div>
           <div className="mx-auto max-w-3xl relative">
             {/* Floating Glass Orb Decoration */}
-            <div className="absolute -right-24 top-1/2 -translate-y-1/2 size-20 rounded-full bg-gradient-to-tr from-indigo-500/20 via-purple-500/25 to-pink-500/10 blur-[2px] border border-white/10 shadow-[inset_0_2px_4px_rgba(255,255,255,0.2),0_12px_24px_rgba(0,0,0,0.6)] pointer-events-none animate-float hidden lg:block z-20" />
+            <div className="absolute -right-24 top-1/2 -translate-y-1/2 size-20 rounded-full bg-gradient-to-tr from-indigo-500/20 via-purple-500/25 to-pink-500/10 blur-[2px] border border-border dark:border-white/10 shadow-[inset_0_2px_4px_rgba(255,255,255,0.2),0_12px_24px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_2px_4px_rgba(255,255,255,0.2),0_12px_24px_rgba(0,0,0,0.6)] pointer-events-none animate-float hidden lg:block z-20" />
             <Accordion type="single" collapsible className="space-y-4">
               {FAQ.map((item, i) => (
                 <AccordionItem
                   key={i}
                   value={`faq-${i}`}
-                  className="rounded-2xl border border-white/5 bg-white/[0.02] px-7 transition-all duration-300 data-[state=open]:border-primary/30 data-[state=open]:bg-white/[0.04] data-[state=open]:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)]"
+                  className="rounded-2xl border border-border bg-card dark:border-white/5 dark:bg-white/[0.02] px-7 transition-all duration-300 data-[state=open]:border-primary/30 data-[state=open]:bg-secondary/40 dark:data-[state=open]:bg-white/[0.04] data-[state=open]:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.05)] dark:data-[state=open]:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)]"
                 >
-                  <AccordionTrigger className="text-left font-bold text-base hover:no-underline py-5 text-white hover:text-primary transition-colors">
+                  <AccordionTrigger className="text-left font-bold text-base hover:no-underline py-5 text-foreground hover:text-primary dark:text-white dark:hover:text-primary transition-colors">
                     {item.q}
                   </AccordionTrigger>
                   <AccordionContent className="text-muted-foreground leading-relaxed pb-6 text-sm font-normal">
@@ -768,7 +909,7 @@ export default function Landing() {
             <Badge className="bg-primary/20 text-primary border border-primary/40 shadow-[0_0_16px_rgba(192,57,43,0.15)] px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-full">
               ✦ Stream Instantly — Cancel Anytime
             </Badge>
-            <h2 className="text-4xl font-black tracking-tight sm:text-6xl text-white">
+            <h2 className="text-4xl font-black tracking-tight sm:text-6xl text-foreground dark:text-white">
               Ready to start watching?
             </h2>
             <p className="text-muted-foreground max-w-lg mx-auto text-lg leading-relaxed font-normal">
@@ -776,19 +917,19 @@ export default function Landing() {
             </p>
             
             <div className="mt-10 flex flex-wrap gap-4 justify-center items-center">
-              <Button size="lg" asChild className="relative group overflow-hidden bg-white text-black hover:bg-white/95 font-extrabold px-10 py-6 rounded-xl transition-all duration-300 hover:scale-[1.02] shadow-2xl cursor-pointer">
+              <Button size="lg" asChild className="relative group overflow-hidden bg-zinc-950 text-white hover:bg-zinc-900 dark:bg-white dark:text-black dark:hover:bg-white/95 font-extrabold px-10 py-6 rounded-xl transition-all duration-300 hover:scale-[1.02] shadow-2xl cursor-pointer border-0">
                 <Link to="/signup">
                   {/* Subtle inner light reflection */}
                   <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-black/[0.03] to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                  <Play className="mr-2.5 size-5 fill-black" /> Start Free Trial
+                  <Play className="mr-2.5 size-5 fill-white dark:fill-black text-white dark:text-black" /> Start Free Trial
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" asChild className="px-8 py-6 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white backdrop-blur-md transition-all duration-300 hover:scale-[1.02] cursor-pointer">
+              <Button size="lg" variant="outline" asChild className="px-8 py-6 rounded-xl border border-border bg-foreground/5 text-foreground hover:bg-foreground/10 dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] cursor-pointer">
                 <Link to="/pricing">Compare Plans</Link>
               </Button>
             </div>
             
-            <div className="mt-8 flex flex-wrap justify-center gap-x-8 gap-y-2 text-xs font-semibold text-white/50">
+            <div className="mt-8 flex flex-wrap justify-center gap-x-8 gap-y-2 text-xs font-semibold text-muted-foreground">
               <span>✓ UHD 4K & HDR 10+</span>
               <span>✓ Dolby Atmos Audio</span>
               <span>✓ Unlimited Downloads</span>

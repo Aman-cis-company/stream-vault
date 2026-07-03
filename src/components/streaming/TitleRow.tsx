@@ -209,10 +209,12 @@ export function EmblaRow({
           <button
             onClick={scrollPrev}
             className="ml-3 size-10 rounded-full
-              bg-black/75 border border-white/14 backdrop-blur-sm
-              flex items-center justify-center text-white
-              hover:bg-white/20 hover:border-white/32 hover:scale-110
-              active:scale-95 transition-all duration-200 shadow-xl"
+              bg-card/90 border border-border backdrop-blur-sm
+              flex items-center justify-center text-foreground
+              hover:bg-muted hover:scale-110
+              dark:bg-black/75 dark:border-white/14 dark:text-white
+              dark:hover:bg-white/20 dark:hover:border-white/32
+              active:scale-95 transition-all duration-200 shadow-xl cursor-pointer"
             aria-label="Scroll left"
           >
             <ChevronLeft className="size-5" />
@@ -246,10 +248,12 @@ export function EmblaRow({
           <button
             onClick={scrollNext}
             className="mr-3 size-10 rounded-full
-              bg-black/75 border border-white/14 backdrop-blur-sm
-              flex items-center justify-center text-white
-              hover:bg-white/20 hover:border-white/32 hover:scale-110
-              active:scale-95 transition-all duration-200 shadow-xl"
+              bg-card/90 border border-border backdrop-blur-sm
+              flex items-center justify-center text-foreground
+              hover:bg-muted hover:scale-110
+              dark:bg-black/75 dark:border-white/14 dark:text-white
+              dark:hover:bg-white/20 dark:hover:border-white/32
+              active:scale-95 transition-all duration-200 shadow-xl cursor-pointer"
             aria-label="Scroll right"
           >
             <ChevronRight className="size-5" />

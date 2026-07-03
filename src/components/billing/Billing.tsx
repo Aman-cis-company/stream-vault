@@ -222,12 +222,12 @@ export function Billing() {
               {subscription ? (
                 <div className="space-y-4">
                   <div>
-                    <h2 className="text-2xl font-extrabold tracking-tight text-white">
+                    <h2 className="text-2xl font-extrabold tracking-tight text-foreground">
                       {subscription.plan?.name || "Premium Plan"}
                     </h2>
                     <p className="text-sm text-muted-foreground mt-1">
                       Next renewal date:{" "}
-                      <span className="font-semibold text-white">
+                      <span className="font-semibold text-foreground">
                         {formatDate(subscription.end_date)}
                       </span>
                     </p>
@@ -238,7 +238,7 @@ export function Billing() {
                       <p className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">
                         Billing Price
                       </p>
-                      <p className="text-lg font-bold text-white mt-1">
+                      <p className="text-lg font-bold text-foreground mt-1">
                         {formatCurrency(subscription.plan?.price || "0.00", subscription.plan?.currency)}
                         <span className="text-xs text-muted-foreground font-normal">
                           /{subscription.plan?.billing_cycle === "yearly" ? "yr" : "mo"}
@@ -250,7 +250,7 @@ export function Billing() {
                       <p className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">
                         Payment Method
                       </p>
-                      <p className="text-sm font-bold text-white mt-1 flex items-center gap-1">
+                      <p className="text-sm font-bold text-foreground mt-1 flex items-center gap-1">
                         <CreditCard className="size-4 text-primary" />
                         {activeInvoice?.payment?.payment_method?.toUpperCase() || "CARD"}
                       </p>
@@ -326,7 +326,7 @@ export function Billing() {
         {/* Complete Payment & Invoice History */}
         <div className="rounded-2xl border border-border/60 bg-card shadow-card overflow-hidden">
           <div className="border-b border-border/60 px-6 py-4 flex items-center justify-between">
-            <h2 className="font-extrabold tracking-tight text-white flex items-center gap-2">
+            <h2 className="font-extrabold tracking-tight text-foreground flex items-center gap-2">
               <FileText className="size-4 text-primary" />
               Invoice &amp; Billing History
             </h2>
@@ -338,7 +338,7 @@ export function Billing() {
           {invoices.length === 0 ? (
             <div className="p-12 text-center">
               <AlertCircle className="size-8 text-muted-foreground mx-auto mb-3" />
-              <h3 className="font-bold text-base text-white">No Invoices Found</h3>
+              <h3 className="font-bold text-base text-foreground">No Invoices Found</h3>
               <p className="text-muted-foreground text-sm mt-1 max-w-sm mx-auto">
                 Once you complete your first subscription payment, your full billing history will appear here.
               </p>
@@ -362,16 +362,16 @@ export function Billing() {
                       key={inv.id} 
                       className="hover:bg-secondary/10 transition-colors"
                     >
-                      <td className="px-6 py-4 font-mono font-bold text-white">
+                      <td className="px-6 py-4 font-mono font-bold text-foreground">
                         {inv.invoice_number}
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
                         {formatDate(inv.issued_at)}
                       </td>
-                      <td className="px-6 py-4 font-semibold text-white">
+                      <td className="px-6 py-4 font-semibold text-foreground">
                         {inv.subscription?.plan?.name || "Premium Monthly"}
                       </td>
-                      <td className="px-6 py-4 font-bold text-white">
+                      <td className="px-6 py-4 font-bold text-foreground">
                         {formatCurrency(inv.total_amount, inv.currency)}
                       </td>
                       <td className="px-6 py-4">
