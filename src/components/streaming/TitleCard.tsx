@@ -32,7 +32,11 @@ export function TitleCard({ title, fullWidth: _fullWidth = false }: { title: Tit
         {/* Poster image — always rendered; fallback is the posterBg gradient */}
         {!imgError && title.posterUrl && (
           <img
-            src={title.posterUrl}
+            src={
+              title.posterUrl.startsWith("https://image.tmdb.org/")
+                ? title.posterUrl.replace("/t/p/original/", "/t/p/w500/")
+                : title.posterUrl
+            }
             alt={title.name}
             className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
             loading="lazy"

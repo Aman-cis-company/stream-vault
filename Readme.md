@@ -62,3 +62,13 @@ npm run logs:services
 4. Stop Services
 npm run stop:services
 
+
+
+http://vnak3000.elb.cisinlive.com
+http://vnak5000.elb.cisinlive.com
+
+
+run build on browser
+
+npm run preview
+

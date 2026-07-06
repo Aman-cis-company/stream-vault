@@ -415,14 +415,14 @@ export default function Browse() {
                       const title = mapMovieToTitle(item);
                       title.progress = item.progress;
                       return (
-                        <div key={`movie-${item.id}`} className="shrink-0" style={{ width: "clamp(145px, 12vw, 190px)" }}>
+                        <div key={`movie-${item.id}`} className="shrink-0" style={{ width: "clamp(155px, 13vw, 205px)" }}>
                           <TitleCard title={title} />
                         </div>
                       );
                     } else {
                       const seriesWithProgress = { ...item, progress: item.progress };
                       return (
-                        <div key={`series-${item.id}`} className="shrink-0" style={{ width: "clamp(145px, 12vw, 190px)" }}>
+                        <div key={`series-${item.id}`} className="shrink-0" style={{ width: "clamp(155px, 13vw, 205px)" }}>
                           <SeriesCard s={seriesWithProgress} />
                         </div>
                       );

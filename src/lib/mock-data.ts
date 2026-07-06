@@ -1123,28 +1123,6 @@ export const DUMMY_SERIES: BackendSeries[] = [
     category_id: null,
   },
   {
-    id: 105,
-    title: "Asur: Welcome to Your Dark Side",
-    description:
-      "A unique forensic thriller that pits two opposing worlds against each other: forensic science and the deep mysticism of ancient mythology.",
-    status: "published",
-    createdAt: "",
-    updatedAt: "",
-    slug: "asur",
-    episodes: [],
-    thumbnail_url:
-      "https://image.tmdb.org/t/p/original/njUrr755WzIrNfuUwQhpu2ljjH4.jpg",
-    language: "Hindi",
-    content_rating: "16+",
-    is_age_restricted: false,
-    minimum_age: 16,
-    warning_flags_json: ["violence", "mature_themes"],
-    is_featured: false,
-    total_seasons: 2,
-    release_date: "2020-03-02",
-    category_id: null,
-  },
-  {
     id: 106,
     title: "Scam 1992",
     description:

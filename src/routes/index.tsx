@@ -554,7 +554,7 @@ export default function Landing() {
                 className="col-span-2 md:col-span-3 relative overflow-hidden rounded-2xl aspect-[21/9] bg-card border border-border/30 dark:border-white/5 shadow-2xl transition-all duration-500 hover:-translate-y-1.5 hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.85)] hover:border-primary/40 group"
               >
                 <img
-                  src={`/public/images/categories/${g.src}`}
+                  src={`/images/categories/${g.src}`}
                   alt={g.name}
                   className="absolute inset-0 size-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
                   style={{ filter: "brightness(0.65) contrast(1.15)" }}
@@ -580,7 +580,7 @@ export default function Landing() {
                   className="col-span-1 relative overflow-hidden rounded-2xl aspect-[1.1/1] bg-card border border-border/30 dark:border-white/5 shadow-2xl transition-all duration-500 hover:-translate-y-1.5 hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.85)] hover:border-primary/40 group"
                 >
                   <img
-                    src={`/public/images/categories/${g.src}`}
+                    src={`/images/categories/${g.src}`}
                     alt={g.name}
                     className="absolute inset-0 size-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
                     style={{ filter: "brightness(0.6) contrast(1.15)" }}

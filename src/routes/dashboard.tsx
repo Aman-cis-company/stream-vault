@@ -267,14 +267,14 @@ function Dashboard() {
                   const title = mapMovieToTitle(item);
                   title.progress = item.progress;
                   return (
-                    <div key={`movie-${item.id}`} className="w-40 sm:w-48 shrink-0">
+                    <div key={`movie-${item.id}`} className="w-44 sm:w-52 shrink-0">
                       <TitleCard title={title} />
                     </div>
                   );
                 } else {
                   const seriesWithProgress = { ...item, progress: item.progress };
                   return (
-                    <div key={`series-${item.id}`} className="w-40 sm:w-48 shrink-0">
+                    <div key={`series-${item.id}`} className="w-44 sm:w-52 shrink-0">
                       <SeriesCard s={seriesWithProgress} />
                     </div>
                   );
@@ -369,7 +369,7 @@ function Dashboard() {
           </div>
           <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2">
             {recommended.map((t) => (
-              <div key={t.id} className="w-40 sm:w-48 shrink-0">
+              <div key={t.id} className="w-44 sm:w-52 shrink-0">
                 <TitleCard title={t} />
               </div>
             ))}

@@ -77,11 +77,11 @@ function Top10Card({ title, rank }: { title: Title; rank: number }) {
   return (
     <div
       className="relative flex flex-col shrink-0 select-none"
-      style={{ width: "200px" }}
+      style={{ width: "220px" }}
     >
       <div
         className="relative flex items-end justify-end w-full"
-        style={{ height: "220px" }}
+        style={{ height: "240px" }}
       >
         {/* Large Rank Number ── positioned behind poster edge */}
         <RankNumber rank={rank} />
@@ -99,14 +99,16 @@ function Top10Card({ title, rank }: { title: Title; rank: number }) {
             "hover:shadow-[0_20px_50px_rgba(0,0,0,0.9),0_0_0_2px_rgba(200,48,35,0.55),0_0_30px_rgba(200,48,35,0.2)]",
             "hover:z-20 group",
           ].join(" ")}
-          style={{ width: "145px", height: "215px" }}
+          style={{ width: "160px", height: "235px" }}
         >
           {/* Poster Image */}
           <img
             src={
               imgErr
                 ? `https://picsum.photos/seed/top10-${rank}/300/450`
-                : title.posterUrl
+                : title.posterUrl?.startsWith("https://image.tmdb.org/")
+                  ? title.posterUrl.replace("/t/p/original/", "/t/p/w500/")
+                  : title.posterUrl
             }
             alt={title.name}
             className="absolute inset-0 size-full object-cover transition-transform duration-600 ease-out group-hover:scale-[1.1]"
@@ -143,7 +145,7 @@ function Top10Card({ title, rank }: { title: Title; rank: number }) {
       </div>
 
       {/* Title + Subtitle centered below the poster card */}
-      <div className="mt-3.5 text-center w-[145px] ml-auto">
+      <div className="mt-3.5 text-center w-[160px] ml-auto">
         <p className="text-[14px] font-extrabold text-white leading-tight truncate hover:text-primary transition-colors">
           <Link to={title.id ? `/watch/${title.id}` : "#"}>
             {title.name}
@@ -161,8 +163,8 @@ function Top10Card({ title, rank }: { title: Title; rank: number }) {
 
 function Top10Skeleton({ index }: { index: number }) {
   return (
-    <div className="shrink-0 flex flex-col items-center relative" style={{ width: "200px" }}>
-      <div className="relative flex items-end justify-end w-full" style={{ height: "220px" }}>
+    <div className="shrink-0 flex flex-col items-center relative" style={{ width: "220px" }}>
+      <div className="relative flex items-end justify-end w-full" style={{ height: "240px" }}>
         {/* Skeleton number */}
         <div
           className="absolute -left-2 bottom-2 w-12 h-24 rounded-lg bg-white/[0.03] animate-pulse"
@@ -171,11 +173,11 @@ function Top10Skeleton({ index }: { index: number }) {
         {/* Skeleton card */}
         <div
           className="ml-auto rounded-xl bg-white/5 animate-pulse"
-          style={{ width: "145px", height: "215px", animationDelay: `${index * 100 + 50}ms` }}
+          style={{ width: "160px", height: "235px", animationDelay: `${index * 100 + 50}ms` }}
         />
       </div>
       {/* Skeleton text */}
-      <div className="mt-3.5 w-[145px] ml-auto space-y-2">
+      <div className="mt-3.5 w-[160px] ml-auto space-y-2">
         <div className="h-3.5 bg-white/5 rounded animate-pulse" style={{ animationDelay: `${index * 100 + 100}ms` }} />
         <div className="h-2.5 w-2/3 bg-white/5 rounded animate-pulse mx-auto" style={{ animationDelay: `${index * 100 + 150}ms` }} />
       </div>

@@ -14,7 +14,7 @@ function SkeletonCard() {
   return (
     <div
       className="shrink-0 rounded-xl overflow-hidden"
-      style={{ width: "clamp(145px, 12vw, 190px)", aspectRatio: "2/3" }}
+      style={{ width: "clamp(155px, 13vw, 205px)", aspectRatio: "2/3" }}
     >
       <div className="size-full bg-white/5 animate-pulse" />
     </div>
@@ -266,7 +266,7 @@ export function EmblaRow({
 
 // ── Public: movie row ─────────────────────────────────────────────────────────
 
-const CARD_W = "clamp(145px, 12vw, 190px)";
+const CARD_W = "clamp(155px, 13vw, 205px)";
 
 export function ContentRow({
   heading,
