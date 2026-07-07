@@ -25,6 +25,26 @@ class SeriesService {
       is_featured, status, total_seasons, release_date,
     } = data;
 
+    let categoryIds = [];
+    if (data.category_ids) {
+      if (Array.isArray(data.category_ids)) {
+        categoryIds = data.category_ids.map(Number).filter(Boolean);
+      } else if (typeof data.category_ids === 'string') {
+        try {
+          categoryIds = JSON.parse(data.category_ids);
+          if (!Array.isArray(categoryIds)) {
+            categoryIds = [categoryIds];
+          }
+          categoryIds = categoryIds.map(Number).filter(Boolean);
+        } catch {
+          categoryIds = data.category_ids.split(',').map(id => Number(id.trim())).filter(Boolean);
+        }
+      }
+    } else if (category_id) {
+      categoryIds = [Number(category_id)];
+    }
+    const primaryCategoryId = categoryIds[0] || category_id || null;
+
     const slug = await generateUniqueSlug(title, async (s) => !!(await SeriesRepository.findBySlug(s)));
 
     let thumbnailUrl = null;
@@ -33,7 +53,7 @@ class SeriesService {
     }
 
     const series = await SeriesRepository.create({
-      category_id: category_id || null,
+      category_id: primaryCategoryId,
       title,
       slug,
       description: description || null,
@@ -52,6 +72,10 @@ class SeriesService {
       updated_by: userId,
     });
 
+    if (categoryIds.length > 0) {
+      await series.setCategories(categoryIds);
+    }
+
     return SeriesRepository.findById(series.id);
   }
 
@@ -59,7 +83,29 @@ class SeriesService {
     const series = await SeriesRepository.findById(id);
     if (!series) { const e = new Error('Series not found'); e.statusCode = 404; throw e; }
 
+    let categoryIds = undefined;
+    if (data.category_ids !== undefined) {
+      if (data.category_ids === null || data.category_ids === '') {
+        categoryIds = [];
+      } else if (Array.isArray(data.category_ids)) {
+        categoryIds = data.category_ids.map(Number).filter(Boolean);
+      } else if (typeof data.category_ids === 'string') {
+        try {
+          categoryIds = JSON.parse(data.category_ids);
+          if (!Array.isArray(categoryIds)) {
+            categoryIds = [categoryIds];
+          }
+          categoryIds = categoryIds.map(Number).filter(Boolean);
+        } catch {
+          categoryIds = data.category_ids.split(',').map(id => Number(id.trim())).filter(Boolean);
+        }
+      }
+    }
+
     const updateData = { ...data, updated_by: userId };
+    if (categoryIds !== undefined) {
+      updateData.category_id = categoryIds[0] || null;
+    }
     if (updateData.rating === '') updateData.rating = null;
 
     if (data.title && data.title !== series.title) {
@@ -74,6 +120,14 @@ class SeriesService {
     }
 
     await SeriesRepository.updateById(id, updateData);
+
+    if (categoryIds !== undefined) {
+      const seriesInstance = await SeriesRepository.findById(id);
+      if (seriesInstance) {
+        await seriesInstance.setCategories(categoryIds);
+      }
+    }
+
     return SeriesRepository.findById(id);
   }
 

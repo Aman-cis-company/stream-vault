@@ -314,7 +314,13 @@ export default function Browse() {
       const rest: Title[] = [];
       movies.forEach((m) => {
         const mapped = mapMovieToTitle(m);
-        if (m.category_id) {
+        const categoriesList = (m as any).categories || [];
+        if (categoriesList.length > 0) {
+          categoriesList.forEach((catObj: any) => {
+            if (!byCat[catObj.id]) byCat[catObj.id] = [];
+            byCat[catObj.id].push(mapped);
+          });
+        } else if (m.category_id) {
           if (!byCat[m.category_id]) byCat[m.category_id] = [];
           byCat[m.category_id].push(mapped);
         } else {
@@ -361,7 +367,8 @@ export default function Browse() {
   useSocketEvent(SOCKET_EVENTS.CONTENT_UNPUBLISHED, load);
 
   // Derived: trending/new-release rows from all movies
-  const allMovies = Object.values(moviesByCategory).flat().concat(extras);
+  const allMoviesRaw = Object.values(moviesByCategory).flat().concat(extras);
+  const allMovies = Array.from(new Map(allMoviesRaw.map((m) => [m.id, m])).values());
   const trendingMovies = allMovies.filter((t) => t.trending);
   const newReleaseMovies = allMovies.filter((t) => t.newRelease);
 

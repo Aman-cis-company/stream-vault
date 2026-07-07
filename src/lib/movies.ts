@@ -24,25 +24,44 @@ export function mapMovieToTitle(movie: BackendMovie): Title {
     backdrop = "https://image.tmdb.org/t/p/original/3Rfvhy1Nl6sSGJwyjb0QiZzZYlB.jpg";
   }
 
-  const categoryName = movie.category?.name ?? "Recommended";
   const genresList: string[] = [];
+  const associatedCategoryNames = new Set<string>();
+  if (movie.category?.name) {
+    associatedCategoryNames.add(movie.category.name);
+  }
+  if ((movie as any).categories && Array.isArray((movie as any).categories)) {
+    (movie as any).categories.forEach((catObj: any) => {
+      if (catObj.name) {
+        associatedCategoryNames.add(catObj.name);
+      }
+    });
+  }
+  if (associatedCategoryNames.size === 0) {
+    associatedCategoryNames.add("Recommended");
+  }
+
+  associatedCategoryNames.forEach((catName) => {
+    genresList.push(catName);
+    if (catName === "Animation") {
+      genresList.push("Kids & Family");
+    } else if (catName === "Action") {
+      genresList.push("Thriller");
+    } else if (catName === "Comedy") {
+      genresList.push("Drama");
+    } else if (catName === "Horror") {
+      genresList.push("Mystery");
+    } else if (catName === "Crime") {
+      genresList.push("Thriller");
+    } else if (catName === "TV Shows") {
+      genresList.push("Web Series", "Drama");
+    }
+  });
+
   if (movie.title === "Toy Story 5") {
     genresList.push("Kids & Family", "Animation", "Adventure");
-  } else if (categoryName === "Animation") {
-    genresList.push("Animation", "Kids & Family");
-  } else if (categoryName === "Action") {
-    genresList.push("Action", "Thriller");
-  } else if (categoryName === "Comedy") {
-    genresList.push("Comedy", "Drama");
-  } else if (categoryName === "Horror") {
-    genresList.push("Horror", "Mystery");
-  } else if (categoryName === "Crime") {
-    genresList.push("Crime", "Thriller");
-  } else if (categoryName === "TV Shows") {
-    genresList.push("Web Series", "Drama");
-  } else {
-    genresList.push("Drama");
   }
+
+  const uniqueGenres = Array.from(new Set(genresList));
 
   return {
     id: String(movie.id),
@@ -52,16 +71,21 @@ export function mapMovieToTitle(movie: BackendMovie): Title {
       | "New Releases"
       | "Most Watched"
       | "Recommended",
-    genres: genresList,
+    genres: uniqueGenres,
     year,
     durationMin: movie.duration ? Math.round(movie.duration / 60) : 90,
     maturity: movie.content_rating ?? "PG-13",
     rating: movie.title === "Toy Story 5" ? 8.9 : (movie.rating ? Number(movie.rating) : (7.2 + (hue % 20) / 10)),
     hue,
     synopsis: movie.description ?? "",
-    trending: movie.is_featured,
-    newRelease: movie.status === "published" && !!movie.release_date &&
-      new Date(movie.release_date) > new Date(Date.now() - 30 * 24 * 3600 * 1000),
+    trending: movie.is_featured || Array.from(associatedCategoryNames).some(
+      (name) => name.toLowerCase() === "trending" || name.toLowerCase() === "trending now"
+    ),
+    newRelease: (movie.status === "published" && !!movie.release_date &&
+      new Date(movie.release_date) > new Date(Date.now() - 30 * 24 * 3600 * 1000)) ||
+      Array.from(associatedCategoryNames).some(
+        (name) => name.toLowerCase() === "new releases" || name.toLowerCase() === "new release"
+      ),
     posterUrl: poster,
     backdropUrl: backdrop,
     director: "",
@@ -76,6 +100,8 @@ export function mapMovieToTitle(movie: BackendMovie): Title {
     subtitle_url: movie.subtitle_url ?? null,
     dubbed_audio_url: movie.dubbed_audio_url ?? null,
     progress: movie.progress !== undefined && movie.progress !== null ? Number(movie.progress) : undefined,
+    categories: (movie as any).categories || [],
+    category_id: movie.category_id || null,
   };
 }
 

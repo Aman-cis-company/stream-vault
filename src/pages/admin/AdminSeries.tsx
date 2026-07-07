@@ -43,7 +43,7 @@ const STATUS_COLORS: Record<string, string> = {
 // ── Series form ───────────────────────────────────────────────────────────────
 
 interface SeriesForm {
-  title: string; description: string; category_id: string; status: "published" | "draft" | "archived";
+  title: string; description: string; category_id: string; category_ids: number[]; status: "published" | "draft" | "archived";
   is_featured: boolean; language: string; content_rating: ContentRating | "";
   is_age_restricted: boolean; minimum_age: string; warning_flags: WarningFlag[];
   total_seasons: string; release_date: string;
@@ -51,7 +51,7 @@ interface SeriesForm {
 }
 
 const EMPTY_SERIES: SeriesForm = {
-  title: "", description: "", category_id: "none", status: "draft",
+  title: "", description: "", category_id: "none", category_ids: [], status: "draft",
   is_featured: false, language: "", content_rating: "",
   is_age_restricted: false, minimum_age: "", warning_flags: [],
   total_seasons: "1", release_date: "",
@@ -459,8 +459,13 @@ function SeriesPage() {
 
   function openEdit(s: BackendSeries) {
     setEditing(s);
+    const seriesCats = (s as any).categories 
+      ? (s as any).categories.map((c: any) => c.id) 
+      : (s.category_id ? [s.category_id] : []);
     setForm({
-      title: s.title, description: s.description ?? "", category_id: s.category_id ? String(s.category_id) : "none",
+      title: s.title, description: s.description ?? "",
+      category_id: s.category_id ? String(s.category_id) : "none",
+      category_ids: seriesCats,
       status: s.status, is_featured: s.is_featured, language: s.language ?? "",
       content_rating: (s.content_rating ?? "") as ContentRating | "",
       is_age_restricted: s.is_age_restricted ?? false, minimum_age: s.minimum_age ? String(s.minimum_age) : "",
@@ -478,7 +483,14 @@ function SeriesPage() {
       const fd = new FormData();
       fd.append("title", form.title.trim());
       if (form.description) fd.append("description", form.description);
-      if (form.category_id !== "none") fd.append("category_id", form.category_id);
+      if (form.category_id !== "none") {
+        fd.append("category_id", form.category_id);
+      }
+      if (form.category_ids && form.category_ids.length > 0) {
+        fd.append("category_ids", JSON.stringify(form.category_ids));
+      } else if (form.category_id && form.category_id !== "none") {
+        fd.append("category_ids", JSON.stringify([Number(form.category_id)]));
+      }
       fd.append("status", form.status);
       fd.append("is_featured", String(form.is_featured));
       if (form.language) fd.append("language", form.language);
@@ -590,7 +602,11 @@ function SeriesPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-3 hidden md:table-cell text-muted-foreground text-xs">{s.category?.name ?? "—"}</td>
+                      <td className="px-6 py-3 hidden md:table-cell text-muted-foreground text-xs">
+                        {(s as any).categories && (s as any).categories.length > 0
+                          ? (s as any).categories.map((c: any) => c.name).join(", ")
+                          : (s.category?.name ?? "—")}
+                      </td>
                       <td className="px-6 py-3 hidden lg:table-cell text-muted-foreground text-xs">{s.language ?? "—"}</td>
                       <td className="px-6 py-3 hidden lg:table-cell text-xs">
                         {s.content_rating ? (
@@ -639,14 +655,31 @@ function SeriesPage() {
               <div className="space-y-2"><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Synopsis" /></div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Category</Label>
-                  <Select value={form.category_id} onValueChange={(v) => setForm({ ...form, category_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">— No category —</SelectItem>
-                      {categories.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <Label>Categories (Select Multiple)</Label>
+                  <div className="grid grid-cols-1 gap-1.5 max-h-[120px] overflow-y-auto border border-border/60 rounded-xl p-2.5 bg-secondary/10">
+                    {categories?.map((c) => (
+                      <div key={c?.id} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`category-${c?.id}`}
+                          checked={form.category_ids?.includes(c?.id)}
+                          onCheckedChange={(checked) => {
+                            const currentIds = form.category_ids || [];
+                            const nextIds = checked
+                              ? [...currentIds, c?.id]
+                              : currentIds.filter((id) => id !== c?.id);
+                            setForm({
+                              ...form,
+                              category_ids: nextIds,
+                              category_id: nextIds[0] ? String(nextIds[0]) : "none",
+                            });
+                          }}
+                        />
+                        <Label htmlFor={`category-${c?.id}`} className="font-normal text-xs cursor-pointer select-none">
+                          {c?.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Status</Label>

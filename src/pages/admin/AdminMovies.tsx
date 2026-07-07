@@ -71,6 +71,7 @@ interface MovieForm {
   title: string;
   description: string;
   category_id: string;
+  category_ids: number[];
   status: "published" | "draft" | "archived";
   is_featured: boolean;
   duration: string;
@@ -89,6 +90,7 @@ const EMPTY_FORM: MovieForm = {
   title: "",
   description: "",
   category_id: "none",
+  category_ids: [],
   status: "draft",
   is_featured: false,
   duration: "",
@@ -159,10 +161,14 @@ function MoviesPage() {
     setEditing(movie);
     const isLocal = movie.provider_name === "local";
     const isBunny = movie.provider_name === "bunny" && !movie.video_url?.startsWith("http");
+    const movieCats = (movie as any).categories 
+      ? (movie as any).categories.map((c: any) => c.id) 
+      : (movie.category_id ? [movie.category_id] : []);
     setForm({
       title: movie.title,
       description: movie.description ?? "",
       category_id: movie.category_id ? String(movie.category_id) : "none",
+      category_ids: movieCats,
       status: movie.status,
       is_featured: movie.is_featured,
       duration: movie.duration ? String(movie.duration) : "",
@@ -201,7 +207,14 @@ function MoviesPage() {
       const fd = new FormData();
       fd.append("title", form.title.trim());
       if (form.description) fd.append("description", form.description);
-      if (form.category_id && form.category_id !== "none") fd.append("category_id", form.category_id);
+      if (form.category_id && form.category_id !== "none") {
+        fd.append("category_id", form.category_id);
+      }
+      if (form.category_ids && form.category_ids.length > 0) {
+        fd.append("category_ids", JSON.stringify(form.category_ids));
+      } else if (form.category_id && form.category_id !== "none") {
+        fd.append("category_ids", JSON.stringify([Number(form.category_id)]));
+      }
       fd.append("status", form.status);
       fd.append("is_featured", String(form.is_featured));
       if (form.duration) fd.append("duration", form.duration);
@@ -386,7 +399,9 @@ function MoviesPage() {
                         </div>
                       </td>
                       <td className="px-6 py-3 hidden md:table-cell text-muted-foreground text-xs">
-                        {movie.category?.name ?? "—"}
+                        {(movie as any).categories && (movie as any).categories.length > 0
+                          ? (movie as any).categories.map((c: any) => c.name).join(", ")
+                          : (movie.category?.name ?? "—")}
                       </td>
                       <td className="px-6 py-3 hidden lg:table-cell text-muted-foreground text-xs">
                         {movie.language ?? "—"}
@@ -494,23 +509,31 @@ function MoviesPage() {
             {/* Category + Status */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Category</Label>
-                <Select
-                  value={form?.category_id}
-                  onValueChange={(v) => setForm({ ...form, category_id: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— No category —</SelectItem>
-                    {categories?.map((c) => (
-                      <SelectItem key={c?.id} value={String(c?.id)}>
+                <Label>Categories (Select Multiple)</Label>
+                <div className="grid grid-cols-1 gap-1.5 max-h-[120px] overflow-y-auto border border-border/60 rounded-xl p-2.5 bg-secondary/10">
+                  {categories?.map((c) => (
+                    <div key={c?.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`category-${c?.id}`}
+                        checked={form.category_ids?.includes(c?.id)}
+                        onCheckedChange={(checked) => {
+                          const currentIds = form.category_ids || [];
+                          const nextIds = checked
+                            ? [...currentIds, c?.id]
+                            : currentIds.filter((id) => id !== c?.id);
+                          setForm({
+                            ...form,
+                            category_ids: nextIds,
+                            category_id: nextIds[0] ? String(nextIds[0]) : "none",
+                          });
+                        }}
+                      />
+                      <Label htmlFor={`category-${c?.id}`} className="font-normal text-xs cursor-pointer select-none">
                         {c?.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      </Label>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div className="space-y-2">

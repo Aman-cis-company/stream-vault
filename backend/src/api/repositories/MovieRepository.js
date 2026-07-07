@@ -8,6 +8,7 @@ class MovieRepository {
     return Movie.findByPk(id, {
       include: [
         { model: Category, as: 'category', attributes: ['id', 'name', 'slug'] },
+        { model: Category, as: 'categories', attributes: ['id', 'name', 'slug'], through: { attributes: [] } },
         { model: User, as: 'creator', attributes: creatorAttributes },
         { model: User, as: 'updater', attributes: creatorAttributes },
       ],
@@ -43,7 +44,16 @@ class MovieRepository {
         { description: { [Op.like]: `%${search}%` } },
       ];
     }
-    if (categoryId) where.category_id = categoryId;
+    if (categoryId) {
+      where[Op.or] = [
+        { category_id: categoryId },
+        literal(`EXISTS (
+          SELECT 1 FROM movie_categories 
+          WHERE movie_categories.movie_id = Movie.id 
+          AND movie_categories.category_id = ${Number(categoryId)}
+        )`),
+      ];
+    }
     if (isFeatured !== undefined && isFeatured !== null) where.is_featured = isFeatured;
     if (isBanner !== undefined && isBanner !== null) where.is_banner = isBanner;
     if (status) where.status = status;
@@ -70,6 +80,7 @@ class MovieRepository {
       offset,
       include: [
         { model: Category, as: 'category', attributes: ['id', 'name', 'slug'] },
+        { model: Category, as: 'categories', attributes: ['id', 'name', 'slug'], through: { attributes: [] } },
       ],
       order,
     });

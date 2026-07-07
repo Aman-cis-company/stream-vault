@@ -1,5 +1,5 @@
 const { Series, Episode, Category, User } = require('../../models');
-const { Op } = require('sequelize');
+const { Op, literal } = require('sequelize');
 
 const creatorAttributes = ['id', 'first_name', 'last_name'];
 
@@ -7,6 +7,7 @@ class SeriesRepository {
   _baseInclude() {
     return [
       { model: Category, as: 'category', attributes: ['id', 'name', 'slug'] },
+      { model: Category, as: 'categories', attributes: ['id', 'name', 'slug'], through: { attributes: [] } },
       { model: User, as: 'creator', attributes: creatorAttributes },
     ];
   }
@@ -49,7 +50,16 @@ class SeriesRepository {
         { description: { [Op.like]: `%${search}%` } },
       ];
     }
-    if (categoryId) where.category_id = categoryId;
+    if (categoryId) {
+      where[Op.or] = [
+        { category_id: categoryId },
+        literal(`EXISTS (
+          SELECT 1 FROM series_categories 
+          WHERE series_categories.series_id = Series.id 
+          AND series_categories.category_id = ${Number(categoryId)}
+        )`),
+      ];
+    }
     if (status) where.status = status;
     if (isFeatured !== undefined && isFeatured !== null) where.is_featured = isFeatured;
 
@@ -69,7 +79,10 @@ class SeriesRepository {
       where: mergedWhere,
       limit,
       offset,
-      include: [{ model: Category, as: 'category', attributes: ['id', 'name', 'slug'] }],
+      include: [
+        { model: Category, as: 'category', attributes: ['id', 'name', 'slug'] },
+        { model: Category, as: 'categories', attributes: ['id', 'name', 'slug'], through: { attributes: [] } },
+      ],
       order: [['created_at', 'DESC']],
     });
   }

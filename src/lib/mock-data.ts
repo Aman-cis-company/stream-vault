@@ -41,6 +41,8 @@ export interface Title {
   transcoding_status?: "pending" | "processing" | "completed" | "failed" | null;
   subtitle_url?: string | null;
   dubbed_audio_url?: string | null;
+  categories?: { id: number; name: string; slug: string }[];
+  category_id?: number | null;
 }
 
 export interface Plan {
@@ -585,48 +587,6 @@ export const planDistribution = [
 
 export const DUMMY_MOVIES: Title[] = [
   {
-    id: "dummy-m1",
-    name: "Pathaan",
-    category: "Trending",
-    genres: ["Action", "Thriller"],
-    year: 2023,
-    durationMin: 146,
-    maturity: "UA",
-    rating: 8.4,
-    hue: 15,
-    synopsis:
-      "An Indian spy takes on a rogue mercenary leader with a deadly plan to attack India.",
-    posterUrl:
-      "https://image.tmdb.org/t/p/original/ketMlZbFHZHb6e0PhKljn2Ld1US.jpg",
-    backdropUrl:
-      "https://image.tmdb.org/t/p/original/gVAa4BPJdDCBoifZVbmKd5b1ikB.jpg",
-    director: "Siddharth Anand",
-    cast: ["Shah Rukh Khan", "Deepika Padukone", "John Abraham"],
-    hlsUrl: "",
-    language: "Hindi",
-  },
-  {
-    id: "dummy-m2",
-    name: "Jawan",
-    category: "New Releases",
-    genres: ["Action", "Thriller"],
-    year: 2023,
-    durationMin: 169,
-    maturity: "UA",
-    rating: 8.6,
-    hue: 120,
-    synopsis:
-      "A personal vendetta drives a man to rectify the wrongs in the society, with help from a group of badass women.",
-    posterUrl:
-      "https://image.tmdb.org/t/p/original/jFt1gS4BGHlK8xt76Y81Alp4dbt.jpg",
-    backdropUrl:
-      "https://image.tmdb.org/t/p/original/5LtSjMNw6j3LkG29Oa4O0iY5U8.jpg",
-    director: "Atlee",
-    cast: ["Shah Rukh Khan", "Nayanthara", "Vijay Sethupathi"],
-    hlsUrl: "",
-    language: "Hindi",
-  },
-  {
     id: "dummy-m3",
     name: "Animal",
     category: "Most Watched",
@@ -644,48 +604,6 @@ export const DUMMY_MOVIES: Title[] = [
       "https://image.tmdb.org/t/p/original/5m0hFKsriUuOs13agLU1FraJA8T.jpg",
     director: "Sandeep Reddy Vanga",
     cast: ["Ranbir Kapoor", "Anil Kapoor", "Bobby Deol", "Rashmika Mandanna"],
-    hlsUrl: "",
-    language: "Hindi",
-  },
-  {
-    id: "dummy-m4",
-    name: "Leo",
-    category: "Trending",
-    genres: ["Action", "Thriller"],
-    year: 2023,
-    durationMin: 164,
-    maturity: "UA",
-    rating: 8.2,
-    hue: 240,
-    synopsis:
-      "A mild-mannered cafe owner becomes a local hero, but his past soon catches up with him.",
-    posterUrl:
-      "https://image.tmdb.org/t/p/original/sv1BmbzF9MLVVREPU4jQBMxBl4e.jpg",
-    backdropUrl:
-      "https://image.tmdb.org/t/p/original/A5zPrUIv0BstbrEzEXMOyWsJfPA.jpg",
-    director: "Lokesh Kanagaraj",
-    cast: ["Vijay", "Sanjay Dutt", "Trisha"],
-    hlsUrl: "",
-    language: "Tamil",
-  },
-  {
-    id: "dummy-m5",
-    name: "Dunki",
-    category: "Recommended",
-    genres: ["Comedy", "Drama"],
-    year: 2023,
-    durationMin: 142,
-    maturity: "UA",
-    rating: 7.9,
-    hue: 180,
-    synopsis:
-      "A group of friends use a back-door route called 'Donkey Flight' to immigrate to London.",
-    posterUrl:
-      "https://image.tmdb.org/t/p/original/kPRb1mbVHGop0egQ7153y0lhzGL.jpg",
-    backdropUrl:
-      "https://image.tmdb.org/t/p/original/uuw0PRR4sgGi1IV4CYYpEYtez9y.jpg",
-    director: "Rajkumar Hirani",
-    cast: ["Shah Rukh Khan", "Taapsee Pannu", "Vicky Kaushal"],
     hlsUrl: "",
     language: "Hindi",
   },
@@ -752,48 +670,7 @@ export const DUMMY_MOVIES: Title[] = [
     hlsUrl: "",
     language: "Telugu",
   },
-  {
-    id: "dummy-m9",
-    name: "RRR",
-    category: "New Releases",
-    genres: ["Action", "Drama", "Historical"],
-    year: 2022,
-    durationMin: 182,
-    maturity: "UA",
-    rating: 9.0,
-    hue: 60,
-    synopsis:
-      "A fictitious story about two legendary revolutionaries and their journey before fighting for their country in 1920s India.",
-    posterUrl:
-      "https://image.tmdb.org/t/p/original/tjpiEnZBUAA8pdNPRKa5vP2Zpqw.jpg",
-    backdropUrl:
-      "https://image.tmdb.org/t/p/original/kOGM01ZhELmJCxdVObqQbRwXXH3.jpg",
-    director: "S.S. Rajamouli",
-    cast: ["N. T. Rama Rao Jr.", "Ram Charan", "Ajay Devgn", "Alia Bhatt"],
-    hlsUrl: "",
-    language: "Telugu",
-  },
-  {
-    id: "dummy-m10",
-    name: "12th Fail",
-    category: "New Releases",
-    genres: ["Drama", "Biographical"],
-    year: 2023,
-    durationMin: 147,
-    maturity: "U",
-    rating: 9.1,
-    hue: 210,
-    synopsis:
-      "The true story of IPS Officer Manoj Kumar Sharma, who refused to give up despite failing his 12th-grade exams.",
-    posterUrl:
-      "https://image.tmdb.org/t/p/original/eebUPRI4Z5e1Z7Hev4JZAwMIFkX.jpg",
-    backdropUrl:
-      "https://image.tmdb.org/t/p/original/6RV2o8PBCEyw9ylOWViV1CtULIF.jpg",
-    director: "Vidhu Vinod Chopra",
-    cast: ["Vikrant Massey", "Medha Shankar", "Anshuman Pushkar"],
-    hlsUrl: "",
-    language: "Hindi",
-  },
+
   {
     id: "dummy-m11",
     name: "Laapataa Ladies",
@@ -814,27 +691,6 @@ export const DUMMY_MOVIES: Title[] = [
     cast: ["Pratibha Ranta", "Nitanshi Goel", "Sparsh Shrivastava"],
     hlsUrl: "",
     language: "Hindi",
-  },
-  {
-    id: "dummy-m12",
-    name: "Pushpa 2: The Rule",
-    category: "New Releases",
-    genres: ["Action", "Crime"],
-    year: 2024,
-    durationMin: 190,
-    maturity: "UA",
-    rating: 8.8,
-    hue: 30,
-    synopsis:
-      "Pushpa Raj continues his defiant rise against the forces that want to bring him down, cementing his rule.",
-    posterUrl:
-      "https://image.tmdb.org/t/p/original/xkYGdKuK8jfqvGNCZV1uNdYkIfS.jpg",
-    backdropUrl:
-      "https://image.tmdb.org/t/p/original/lgbMRcbGAbLr6LxF4wi514TpFpj.jpg",
-    director: "Sukumar",
-    cast: ["Allu Arjun", "Rashmika Mandanna", "Fahadh Faasil"],
-    hlsUrl: "",
-    language: "Telugu",
   },
 ];
 
@@ -951,24 +807,6 @@ export const TOP_10_INDIA_HINDI: Title[] = [
     hlsUrl: "",
     language: "Hindi",
     trending: true,
-  },
-  {
-    id: "top10-h7",
-    name: "Laapataa Ladies",
-    category: "Most Watched",
-    genres: ["Comedy", "Drama"],
-    year: 2023,
-    durationMin: 121,
-    maturity: "U",
-    rating: 8.5,
-    hue: 160,
-    synopsis: "Two newly-wed brides get misplaced during a train journey, uncovering a story of identity and freedom.",
-    posterUrl: "https://image.tmdb.org/t/p/original/g8kvGupn62RdywcE85QO2S0v3r8.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/original/uuw0PRR4sgGi1IV4CYYpEYtez9y.jpg",
-    director: "Kiran Rao",
-    cast: ["Pratibha Ranta", "Nitanshi Goel", "Sparsh Shrivastava"],
-    hlsUrl: "",
-    language: "Hindi",
   },
   {
     id: "top10-h8",

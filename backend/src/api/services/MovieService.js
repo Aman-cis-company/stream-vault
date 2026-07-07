@@ -35,6 +35,26 @@ class MovieService {
       is_age_restricted, minimum_age, warning_flags_json,
     } = data;
 
+    let categoryIds = [];
+    if (data.category_ids) {
+      if (Array.isArray(data.category_ids)) {
+        categoryIds = data.category_ids.map(Number).filter(Boolean);
+      } else if (typeof data.category_ids === 'string') {
+        try {
+          categoryIds = JSON.parse(data.category_ids);
+          if (!Array.isArray(categoryIds)) {
+            categoryIds = [categoryIds];
+          }
+          categoryIds = categoryIds.map(Number).filter(Boolean);
+        } catch {
+          categoryIds = data.category_ids.split(',').map(id => Number(id.trim())).filter(Boolean);
+        }
+      }
+    } else if (category_id) {
+      categoryIds = [Number(category_id)];
+    }
+    const primaryCategoryId = categoryIds[0] || category_id || null;
+
     const slug = await generateUniqueSlug(title, async (s) => {
       const existing = await MovieRepository.findBySlug(s);
       return !!existing;
@@ -89,7 +109,7 @@ class MovieService {
     }
 
     const movie = await MovieRepository.create({
-      category_id: category_id || null,
+      category_id: primaryCategoryId,
       title,
       slug,
       description,
@@ -110,6 +130,10 @@ class MovieService {
       created_by: userId,
       updated_by: userId,
     });
+
+    if (categoryIds.length > 0) {
+      await movie.setCategories(categoryIds);
+    }
 
     // Queue transcoding and subtitle/audio generation job for local uploads
     if (localVideoPath) {
@@ -136,7 +160,29 @@ class MovieService {
       throw err;
     }
 
+    let categoryIds = undefined;
+    if (data.category_ids !== undefined) {
+      if (data.category_ids === null || data.category_ids === '') {
+        categoryIds = [];
+      } else if (Array.isArray(data.category_ids)) {
+        categoryIds = data.category_ids.map(Number).filter(Boolean);
+      } else if (typeof data.category_ids === 'string') {
+        try {
+          categoryIds = JSON.parse(data.category_ids);
+          if (!Array.isArray(categoryIds)) {
+            categoryIds = [categoryIds];
+          }
+          categoryIds = categoryIds.map(Number).filter(Boolean);
+        } catch {
+          categoryIds = data.category_ids.split(',').map(id => Number(id.trim())).filter(Boolean);
+        }
+      }
+    }
+
     const updateData = { ...data, updated_by: userId };
+    if (categoryIds !== undefined) {
+      updateData.category_id = categoryIds[0] || null;
+    }
 
     // Regenerate slug if title changed
     if (data.title && data.title !== movie.title) {
@@ -210,6 +256,13 @@ class MovieService {
     }
 
     await MovieRepository.updateById(id, updateData);
+
+    if (categoryIds !== undefined) {
+      const movieInstance = await MovieRepository.findById(id);
+      if (movieInstance) {
+        await movieInstance.setCategories(categoryIds);
+      }
+    }
 
     // Queue transcoding and subtitle/audio generation job for local uploads
     if (localVideoPath) {

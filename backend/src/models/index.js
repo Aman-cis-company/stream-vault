@@ -38,6 +38,8 @@ Category.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
 // ── Category ↔ Movie ─────────────────────────────────────────────────────────
 Category.hasMany(Movie, { foreignKey: 'category_id', as: 'movies' });
 Movie.belongsTo(Category, { foreignKey: 'category_id', as: 'category' });
+Movie.belongsToMany(Category, { through: 'movie_categories', foreignKey: 'movie_id', otherKey: 'category_id', as: 'categories' });
+Category.belongsToMany(Movie, { through: 'movie_categories', foreignKey: 'category_id', otherKey: 'movie_id', as: 'moviesList' });
 
 // ── User ↔ Movie (created_by / updated_by) ───────────────────────────────────
 User.hasMany(Movie, { foreignKey: 'created_by', as: 'createdMovies' });
@@ -72,6 +74,8 @@ WatchHistory.belongsTo(Movie, { foreignKey: 'movie_id', as: 'movie' });
 // ── Category ↔ Series ────────────────────────────────────────────────────────
 Category.hasMany(Series, { foreignKey: 'category_id', as: 'seriesList' });
 Series.belongsTo(Category, { foreignKey: 'category_id', as: 'category' });
+Series.belongsToMany(Category, { through: 'series_categories', foreignKey: 'series_id', otherKey: 'category_id', as: 'categories' });
+Category.belongsToMany(Series, { through: 'series_categories', foreignKey: 'category_id', otherKey: 'series_id', as: 'seriesListMany' });
 
 // ── User ↔ Series (created_by / updated_by) ──────────────────────────────────
 User.hasMany(Series, { foreignKey: 'created_by', as: 'createdSeries' });

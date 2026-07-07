@@ -124,9 +124,11 @@ export default function Library() {
         !targetGenre ||
         t.genres.some((g) => g.toLowerCase() === targetGenre);
 
+      const targetCatName = categories.find((c) => c.id === filter)?.name;
       const matchF =
         filter === "all" ||
-        t.category === categories.find((c) => c.id === filter)?.name;
+        t.category === targetCatName ||
+        t.categories?.some((c) => c.id === filter || c.name === targetCatName);
 
       return matchQ && matchLang && matchGenre && matchF;
     });
