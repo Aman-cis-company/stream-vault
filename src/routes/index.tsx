@@ -557,7 +557,7 @@ export default function Landing() {
                   src={`/images/categories/${g.src}`}
                   alt={g.name}
                   className="absolute inset-0 size-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-                  style={{ filter: "brightness(0.65) contrast(1.15)" }}
+                  style={{ filter: "brightness(0.85) contrast(1.05)" }}
                   loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10 transition-all duration-500 group-hover:from-black/95 group-hover:via-black/50" />
@@ -583,7 +583,7 @@ export default function Landing() {
                     src={`/images/categories/${g.src}`}
                     alt={g.name}
                     className="absolute inset-0 size-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-                    style={{ filter: "brightness(0.6) contrast(1.15)" }}
+                    style={{ filter: "brightness(0.8) contrast(1.05)" }}
                     loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10 transition-all duration-500 group-hover:from-black/95 group-hover:via-black/50" />

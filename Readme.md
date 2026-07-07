@@ -23,7 +23,6 @@ password = Aman@123
 https://github.com/Aman-cis-company/stream-vault.git
 
 
-
 run this command to generate credentials 
 
 node -e "const n = require('nodemailer'); n.createTestAccount().then(a => { console.log('MAIL_USER=' + a.user); console.log('MAIL_PASSWORD=' + a.pass); });"
@@ -61,8 +60,6 @@ npm run logs:services
 
 4. Stop Services
 npm run stop:services
-
-
 
 http://vnak3000.elb.cisinlive.com
 http://vnak5000.elb.cisinlive.com

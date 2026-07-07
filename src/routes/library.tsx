@@ -8,9 +8,10 @@ import {
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { TitleCard } from "@/components/streaming/TitleCard";
+import { SeriesCard } from "@/components/streaming/TitleRow";
 import { apiClient } from "@/services/api";
 import { mapMovieToTitle } from "@/lib/movies";
-import { fetchSeriesList, seriesThumbnail } from "@/lib/series";
+import { fetchSeriesList } from "@/lib/series";
 import { DUMMY_MOVIES, DUMMY_SERIES } from "@/lib/mock-data";
 import type { Title } from "@/lib/mock-data";
 import type { BackendMovie } from "@/store/slices/moviesSlice";
@@ -18,83 +19,11 @@ import type { Category } from "@/store/slices/categoriesSlice";
 import type { BackendSeries } from "@/lib/series";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, SearchX, Loader2, Play, Tv2 } from "lucide-react";
+import { Search, SearchX, Loader2, Tv2 } from "lucide-react";
 import { useSocketEvent } from "@/hooks/useSocket";
 import { SOCKET_EVENTS } from "@/lib/socket";
+
 const PAGE = 12;
-
-// ── Series Card ──────────────────────────────────────────────────────────────
-
-function SeriesCard({ series }: { series: BackendSeries }) {
-  const [imgError, setImgError] = useState(false);
-  const thumb = imgError
-    ? `https://picsum.photos/seed/series-${series.id}/342/513`
-    : seriesThumbnail(series);
-
-  const seasonCount = series.total_seasons ?? 1;
-  const epCount = series.episodes?.length ?? null;
-
-  return (
-    <Link
-      to={`/series/${series.id}`}
-      className="group relative flex flex-col rounded-xl overflow-hidden bg-card border border-border hover:border-primary/30 transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl"
-    >
-      {/* Poster */}
-      <div className="relative aspect-[2/3] overflow-hidden bg-black/30">
-        <img
-          src={thumb}
-          alt={series.title}
-          onError={() => setImgError(true)}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-        {/* Gradient overlay on hover */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        {/* Play button on hover */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <div className="size-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center ring-1 ring-white/30">
-            <Play className="size-5 fill-white text-white ml-0.5" />
-          </div>
-        </div>
-        {/* Series badge */}
-        <div className="absolute top-2 left-2">
-          <span className="inline-flex items-center gap-1 rounded-md bg-sky-500/20 backdrop-blur-sm px-2 py-0.5 text-[10px] font-bold text-sky-300 border border-sky-500/25 tracking-wide uppercase">
-            <Tv2 className="size-2.5" />
-            Series
-          </span>
-        </div>
-      </div>
-
-      {/* Info */}
-      <div className="p-3 flex-1 flex flex-col gap-1">
-        <h3 className="text-sm font-semibold text-foreground leading-tight line-clamp-2 group-hover:text-primary transition-colors">
-          {series.title}
-        </h3>
-        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground flex-wrap">
-          <span>{seasonCount} {seasonCount === 1 ? "Season" : "Seasons"}</span>
-          {epCount !== null && epCount > 0 && (
-            <>
-              <span className="size-0.5 rounded-full bg-muted-foreground/45" />
-              <span>{epCount} Episodes</span>
-            </>
-          )}
-          {series.is_featured && (
-            <>
-              <span className="size-0.5 rounded-full bg-white/25" />
-              <span className="text-amber-400">Featured</span>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Watch progress bar */}
-      {series.progress != null && (
-        <div className="absolute inset-x-0 bottom-0 z-20 h-[3px] bg-white/10">
-          <div className="h-full bg-primary" style={{ width: `${series.progress}%` }} />
-        </div>
-      )}
-    </Link>
-  );
-}
 
 // ── Library Page ─────────────────────────────────────────────────────────────
 
@@ -349,7 +278,7 @@ export default function Library() {
                     <TitleCard key={t.id} title={t} fullWidth />
                   ))
                 : (shown as BackendSeries[]).map((s) => (
-                    <SeriesCard key={s.id} series={s} />
+                    <SeriesCard key={s.id} s={s} />
                   ))}
             </div>
             {visible < results.length && <div ref={sentinel} className="h-10" />}

@@ -56,7 +56,7 @@ export function mapMovieToTitle(movie: BackendMovie): Title {
     year,
     durationMin: movie.duration ? Math.round(movie.duration / 60) : 90,
     maturity: movie.content_rating ?? "PG-13",
-    rating: movie.title === "Toy Story 5" ? 8.9 : (movie.rating ? Number(movie.rating) : 0),
+    rating: movie.title === "Toy Story 5" ? 8.9 : (movie.rating ? Number(movie.rating) : (7.2 + (hue % 20) / 10)),
     hue,
     synopsis: movie.description ?? "",
     trending: movie.is_featured,

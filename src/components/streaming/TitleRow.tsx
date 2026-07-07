@@ -1,12 +1,12 @@
 import useEmblaCarousel from "embla-carousel-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Play, Tv2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Play, Tv2, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Title } from "@/lib/mock-data";
 import { TitleCard } from "./TitleCard";
 import type { BackendSeries } from "@/lib/series";
 import { seriesThumbnail } from "@/lib/series";
-import { AgeRatingBadge } from "./AgeRatingBadge";
+import { TitleHoverCard } from "./TitleHoverCard";
 
 // ── Skeleton card ─────────────────────────────────────────────────────────────
 
@@ -26,75 +26,78 @@ function SkeletonCard() {
 export function SeriesCard({ s }: { s: BackendSeries }) {
   const [imgErr, setImgErr] = useState(false);
 
+  const optimizedThumbnail = seriesThumbnail(s).startsWith("https://image.tmdb.org/")
+    ? seriesThumbnail(s).replace("/t/p/original/", "/t/p/w500/")
+    : seriesThumbnail(s);
+
+  const seriesHue = Array.from(s.title).reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 360;
+  const ratingVal = s.rating ? Number(s.rating) : (7.4 + (seriesHue % 18) / 10);
+
+  const hoverData = {
+    id: String(s.id),
+    name: s.title,
+    posterUrl: imgErr ? `https://picsum.photos/seed/s${s.id}/342/513` : optimizedThumbnail,
+    language: s.language,
+    year: s.release_date ? new Date(s.release_date).getFullYear() : 2025,
+    maturity: s.content_rating,
+    seasonCount: s.total_seasons,
+    synopsis: s.description,
+    progress: s.progress,
+    newRelease: false,
+    trending: s.is_featured,
+    rating: ratingVal,
+    contentType: "series" as const,
+  };
+
   return (
-    <Link
-      to={`/series/${s.id}`}
-      className={[
-        "group relative block w-full aspect-[2/3] overflow-hidden rounded-xl",
-        "ring-1 ring-white/6 shadow-[0_4px_16px_rgba(0,0,0,0.65)]",
-        "transition-all duration-300 ease-out",
-        "hover:scale-[1.04]",
-        "hover:ring-primary/55",
-        "hover:shadow-[0_20px_70px_rgba(0,0,0,0.95),0_0_0_1.5px_rgba(200,48,35,0.55),0_0_36px_rgba(200,48,35,0.22)]",
-        "hover:z-10",
-      ].join(" ")}
-    >
-      {/* Poster */}
-      <img
-        src={imgErr ? `https://picsum.photos/seed/s${s.id}/342/513` : seriesThumbnail(s)}
-        alt={s.title}
-        className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
-        loading="lazy"
-        onError={() => setImgErr(true)}
-      />
+    <TitleHoverCard data={hoverData} sideOffset={-350}>
+      <Link
+        to={`/series/${s.id}`}
+        className={[
+          "group relative block w-full aspect-[2/3] overflow-hidden rounded-xl",
+          "ring-1 ring-white/6 shadow-[0_4px_16px_rgba(0,0,0,0.65)]",
+          "transition-all duration-300 ease-out",
+        ].join(" ")}
+      >
+        {/* Poster */}
+        <img
+          src={imgErr ? `https://picsum.photos/seed/s${s.id}/342/513` : optimizedThumbnail}
+          alt={s.title}
+          className="absolute inset-0 size-full object-cover"
+          loading="lazy"
+          onError={() => setImgErr(true)}
+        />
 
-      {/* Base gradient */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/12 to-transparent pointer-events-none" />
+        {/* Base gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
 
-      {/* Hover gradient */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/97 via-black/62 to-black/18 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-
-      {/* Badges */}
-      <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
-        <span className="inline-flex items-center gap-[3px] rounded-md bg-sky-500/25 backdrop-blur-sm border border-sky-400/30 px-1.5 py-[3px] text-[9px] font-bold uppercase tracking-wide text-sky-300">
-          <Tv2 className="size-2.5 shrink-0" /> Series
-        </span>
-        {s.is_featured && (
-          <span className="rounded-md bg-amber-500/85 px-1.5 py-[3px] text-[9px] font-bold uppercase text-black">
-            Featured
+        {/* Badges */}
+        <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+          <span className="inline-flex items-center gap-[3px] rounded-md bg-sky-500/25 backdrop-blur-sm border border-sky-400/30 px-1.5 py-[3px] text-[9px] font-bold uppercase tracking-wide text-sky-300">
+            <Tv2 className="size-2.5 shrink-0" /> Series
           </span>
-        )}
-      </div>
-
-      {/* Centre play */}
-      <div className="absolute inset-0 flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-        <div className="size-13 rounded-full bg-white/96 flex items-center justify-center shadow-[0_8px_30px_rgba(0,0,0,0.7)] scale-75 group-hover:scale-100 transition-transform duration-300 ease-out">
-          <Play className="size-6 fill-black text-black ml-0.5" />
-        </div>
-      </div>
-
-      {/* Bottom info */}
-      <div className="absolute inset-x-0 bottom-0 p-3 z-10">
-        <p className="text-[20px] font-bold text-white drop-shadow-lg leading-tight line-clamp-2">
-          {s.title}
-        </p>
-        <div className="mt-1.5 flex items-center gap-1.5 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-[60ms]">
-          <span className="text-white/55">
-            {s.total_seasons} Season{s.total_seasons !== 1 ? "s" : ""}
-          </span>
-          {s.content_rating && (
-            <AgeRatingBadge rating={s.content_rating} className="text-[9px]" />
+          {s.is_featured && (
+            <span className="rounded-md bg-amber-500/85 px-1.5 py-[3px] text-[9px] font-bold uppercase text-black">
+              Featured
+            </span>
           )}
         </div>
-      </div>
 
-      {/* Watch progress bar */}
-      {s.progress != null && (
-        <div className="absolute inset-x-0 bottom-0 z-20 h-[3px] bg-white/10">
-          <div className="h-full bg-primary" style={{ width: `${s.progress}%` }} />
+        {/* Bottom info */}
+        <div className="absolute inset-x-0 bottom-0 p-3 z-10">
+          <p className="text-[20px] font-bold text-white drop-shadow-lg leading-tight line-clamp-2">
+            {s.title}
+          </p>
         </div>
-      )}
-    </Link>
+
+        {/* Watch progress bar */}
+        {s.progress != null && (
+          <div className="absolute inset-x-0 bottom-0 z-20 h-[3px] bg-white/10">
+            <div className="h-full bg-primary" style={{ width: `${s.progress}%` }} />
+          </div>
+        )}
+      </Link>
+    </TitleHoverCard>
   );
 }
 

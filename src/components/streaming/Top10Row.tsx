@@ -1,7 +1,8 @@
 import useEmblaCarousel from "embla-carousel-react";
 import { useCallback, useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Play, Clock, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, Play, Clock, Star, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
+import { TitleHoverCard } from "./TitleHoverCard";
 import type { Title } from "@/lib/mock-data";
 
 // ── Number Component ──────────────────────────────────────────────────────────
@@ -74,6 +75,24 @@ function RankNumber({ rank }: { rank: number }) {
 function Top10Card({ title, rank }: { title: Title; rank: number }) {
   const [imgErr, setImgErr] = useState(false);
 
+  const hoverData = {
+    id: title.id,
+    name: title.name,
+    posterUrl: title.posterUrl?.startsWith("https://image.tmdb.org/")
+      ? title.posterUrl.replace("/t/p/original/", "/t/p/w500/")
+      : title.posterUrl || "",
+    language: title.language,
+    year: title.year,
+    maturity: title.maturity,
+    durationMin: title.durationMin,
+    rating: title.rating,
+    synopsis: title.synopsis,
+    progress: title.progress,
+    newRelease: title.newRelease,
+    trending: title.trending,
+    contentType: "movie" as const,
+  };
+
   return (
     <div
       className="relative flex flex-col shrink-0 select-none"
@@ -87,61 +106,52 @@ function Top10Card({ title, rank }: { title: Title; rank: number }) {
         <RankNumber rank={rank} />
 
         {/* Poster Card */}
-        <Link
-          to={title.id ? `/watch/${title.id}` : "#"}
-          className={[
-            "relative block overflow-hidden rounded-xl ml-auto z-10",
-            "ring-1 ring-white/10",
-            "shadow-[0_8px_32px_rgba(0,0,0,0.75)]",
-            "transition-all duration-400 ease-out",
-            "hover:scale-[1.06]",
-            "hover:ring-primary/60",
-            "hover:shadow-[0_20px_50px_rgba(0,0,0,0.9),0_0_0_2px_rgba(200,48,35,0.55),0_0_30px_rgba(200,48,35,0.2)]",
-            "hover:z-20 group",
-          ].join(" ")}
-          style={{ width: "160px", height: "235px" }}
-        >
-          {/* Poster Image */}
-          <img
-            src={
-              imgErr
-                ? `https://picsum.photos/seed/top10-${rank}/300/450`
-                : title.posterUrl?.startsWith("https://image.tmdb.org/")
-                  ? title.posterUrl.replace("/t/p/original/", "/t/p/w500/")
-                  : title.posterUrl
-            }
-            alt={title.name}
-            className="absolute inset-0 size-full object-cover transition-transform duration-600 ease-out group-hover:scale-[1.1]"
-            loading="lazy"
-            onError={() => setImgErr(true)}
-          />
+        <TitleHoverCard data={hoverData} sideOffset={-300}>
+          <Link
+            to={title.id ? `/watch/${title.id}` : "#"}
+            className={[
+              "relative block overflow-hidden rounded-xl ml-auto z-10",
+              "ring-1 ring-white/10",
+              "shadow-[0_8px_32px_rgba(0,0,0,0.75)]",
+              "transition-all duration-400 ease-out",
+              "group",
+            ].join(" ")}
+            style={{ width: "160px", height: "235px" }}
+          >
+            {/* Poster Image */}
+            <img
+              src={
+                imgErr
+                  ? `https://picsum.photos/seed/top10-${rank}/300/450`
+                  : title.posterUrl?.startsWith("https://image.tmdb.org/")
+                    ? title.posterUrl.replace("/t/p/original/", "/t/p/w500/")
+                    : title.posterUrl
+              }
+              alt={title.name}
+              className="absolute inset-0 size-full object-cover"
+              loading="lazy"
+              onError={() => setImgErr(true)}
+            />
 
-          {/* Hover highlight overlays */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+            {/* Base bottom gradient */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
 
-          {/* Top badges */}
-          <div className="absolute top-2 left-2 right-2 z-10 flex items-start justify-between">
-            {/* Rank badge */}
-            <span className="inline-flex items-center gap-[3px] rounded-md bg-gradient-to-r from-red-600 to-red-700 backdrop-blur-sm px-1.5 py-[3px] text-[9px] font-black uppercase tracking-wide text-white shadow-[0_2px_8px_rgba(220,38,38,0.5)]">
-              #{rank}
-            </span>
-            {/* Rating */}
-            {title.rating > 0 && (
-              <span className="inline-flex items-center gap-[2px] rounded-md bg-black/60 backdrop-blur-sm border border-white/10 px-1.5 py-[3px] text-[9px] font-bold text-amber-400">
-                <Star className="size-[8px] fill-amber-400 text-amber-400" />
-                {title.rating.toFixed(1)}
+            {/* Top badges */}
+            <div className="absolute top-2 left-2 right-2 z-10 flex items-start justify-between">
+              {/* Rank badge */}
+              <span className="inline-flex items-center gap-[3px] rounded-md bg-gradient-to-r from-red-600 to-red-700 backdrop-blur-sm px-1.5 py-[3px] text-[9px] font-black uppercase tracking-wide text-white shadow-[0_2px_8px_rgba(220,38,38,0.5)]">
+                #{rank}
               </span>
-            )}
-          </div>
-
-          {/* Centre play on hover */}
-          <div className="absolute inset-0 flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none">
-            <div className="size-11 rounded-full bg-white/95 flex items-center justify-center shadow-[0_8px_32px_rgba(0,0,0,0.7)] scale-75 group-hover:scale-100 transition-transform duration-300 ease-out">
-              <Play className="size-4.5 fill-black text-black ml-0.5" />
+              {/* Rating */}
+              {title.rating > 0 && (
+                <span className="inline-flex items-center gap-[2px] rounded-md bg-black/60 backdrop-blur-sm border border-white/10 px-1.5 py-[3px] text-[9px] font-bold text-amber-400">
+                  <Star className="size-[8px] fill-amber-400 text-amber-400" />
+                  {title.rating.toFixed(1)}
+                </span>
+              )}
             </div>
-          </div>
-        </Link>
+          </Link>
+        </TitleHoverCard>
       </div>
 
       {/* Title + Subtitle centered below the poster card */}
