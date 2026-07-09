@@ -237,7 +237,7 @@ export function Navbar() {
             )}
 
             {/* Theme picker */}
-            <DropdownMenu>
+            {/* <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   aria-label="Theme"
@@ -257,7 +257,7 @@ export function Navbar() {
                   <Monitor className="mr-2 size-3.5" /> System
                 </DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>
+            </DropdownMenu> */}
 
             {/* ── Authenticated: avatar dropdown ── */}
             {isAuthenticated ? (

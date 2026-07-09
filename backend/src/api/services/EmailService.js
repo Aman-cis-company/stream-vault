@@ -141,6 +141,22 @@ class EmailService {
       throw err;
     }
   }
+
+  async sendLoginEmail(user) {
+    try {
+      logger.info('Enqueuing login email job', { to: user.email });
+      return await addNotificationJob('send_email_template', {
+        template: 'login',
+        to: user.email,
+        data: {
+          first_name: user.first_name,
+        },
+      });
+    } catch (err) {
+      logger.error('Failed to enqueue login email', { to: user.email, error: err.message });
+      throw err;
+    }
+  }
 }
 
 module.exports = new EmailService();

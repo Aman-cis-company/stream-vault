@@ -175,6 +175,9 @@ class AuthService {
     });
 
     const safeUser = await UserRepository.findById(user.id);
+    EmailService.sendLoginEmail(safeUser).catch((e) =>
+      logger.warn('Login email failed', { userId: safeUser.id, error: e.message })
+    );
     return { user: safeUser, accessToken, refreshToken: refreshTokenValue };
   }
 
@@ -412,6 +415,9 @@ class AuthService {
     });
 
     const safeUser = await UserRepository.findById(user.id);
+    EmailService.sendLoginEmail(safeUser).catch((e) =>
+      logger.warn('Login email failed', { userId: safeUser.id, error: e.message })
+    );
     return { user: safeUser, accessToken, refreshToken: refreshTokenValue };
   }
 }

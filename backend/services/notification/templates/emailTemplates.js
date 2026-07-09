@@ -121,6 +121,32 @@ const templates = {
       }
     ]
   }),
+
+  login: (data) => ({
+    subject: 'StreamVault - New Login Detected',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; border: 1px solid #222; border-radius: 12px; background-color: #0c0a09; color: #f5f5f4;">
+        <div style="text-align: center; margin-bottom: 25px;">
+          <h2 style="color: #a855f7; font-size: 24px; font-weight: 800; margin: 0; letter-spacing: -0.5px;">StreamVault</h2>
+          <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #a855f7; opacity: 0.8;">Security Alert</span>
+        </div>
+        <h3 style="color: #ffffff; font-size: 18px; margin-top: 0; font-weight: 700;">New Login Detected</h3>
+        <p style="color: #e7e5e4; font-size: 14px; line-height: 1.5;">Hello ${data.first_name},</p>
+        <p style="color: #d6d3d1; font-size: 14px; line-height: 1.6;">We detected a new login to your StreamVault account on <strong>${new Date().toLocaleString('en-IN')}</strong>.</p>
+        <p style="color: #a8a29e; font-size: 13px; line-height: 1.6; margin-top: 20px;">If this was you, no action is needed. Keep enjoying unlimited access to movies and shows. If you did not log in, please secure your account immediately by resetting your password.</p>
+        <div style="text-align: center; margin: 30px 0 20px 0;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/profile"
+             style="background-color: #a855f7; color: white; padding: 12px 28px;
+                    text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 700; display: inline-block; box-shadow: 0 4px 12px rgba(168, 85, 247, 0.35);">
+            Manage Account Settings
+          </a>
+        </div>
+        <hr style="border: 0; border-top: 1px solid #292524; margin: 30px 0 20px 0;">
+        <p style="color: #78716c; font-size: 11px; text-align: center; margin: 0;">StreamVault &mdash; Your ultimate streaming destination</p>
+      </div>
+    `,
+    text: `Hello ${data.first_name}, a new login was detected on your StreamVault account at ${new Date().toLocaleString('en-IN')}. If this wasn't you, please secure your account.`,
+  }),
 };
 
 module.exports = { templates, FROM };
