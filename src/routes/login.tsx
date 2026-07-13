@@ -293,10 +293,10 @@ export default function LoginPage() {
             Sign in
           </Button>
 
-          <p className="text-center text-xs text-muted-foreground">
+          {/* <p className="text-center text-xs text-muted-foreground">
             Demo — use <code className="text-foreground">admin@streamvault.com</code> /{" "}
             <code className="text-foreground">Admin@123456</code>
-          </p>
+          </p> */}
         </form>
       ) : (
         /* --- Phone Login OTP Flow --- */
