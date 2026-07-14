@@ -36,8 +36,8 @@ class UserInteractionService {
     if (geminiKey) {
       try {
         const [movies, series, plans] = await Promise.all([
-          Movie.findAll({ where: { status: 'published' }, limit: 20, attributes: ['title', 'description', 'content_rating', 'slug'] }),
-          Series.findAll({ where: { status: 'published' }, limit: 20, attributes: ['title', 'description', 'content_rating', 'slug'] }),
+          Movie.findAll({ where: { status: 'published' }, limit: 100, attributes: ['title', 'description', 'content_rating', 'slug', 'language'] }),
+          Series.findAll({ where: { status: 'published' }, limit: 100, attributes: ['title', 'description', 'content_rating', 'slug', 'language'] }),
           SubscriptionPlan.findAll({ where: { status: 'active' }, attributes: ['name', 'price', 'billing_cycle'] })
         ]);
 
@@ -46,10 +46,10 @@ Your role is to help users find movies/series, summarize plots, and handle suppo
 
 Here is the current live information about StreamVault:
 1. Available Movies:
-${movies.map(m => `- ${m.title}: ${m.description || 'No description'} (Rating: ${m.content_rating || 'G'}, Link: /watch/${m.slug})`).join('\n')}
+${movies.map(m => `- ${m.title}: ${m.description || 'No description'} (Language: ${m.language || 'English'}, Rating: ${m.content_rating || 'G'}, Link: /watch/${m.slug})`).join('\n')}
 
 2. Available Web Series:
-${series.map(s => `- ${s.title}: ${s.description || 'No description'} (Rating: ${s.content_rating || 'G'}, Link: /series/${s.slug})`).join('\n')}
+${series.map(s => `- ${s.title}: ${s.description || 'No description'} (Language: ${s.language || 'English'}, Rating: ${s.content_rating || 'G'}, Link: /series/${s.slug})`).join('\n')}
 
 3. Active Subscription Plans:
 ${plans.map(p => `- ${p.name}: $${p.price}/${p.billing_cycle}`).join('\n')}
@@ -59,6 +59,7 @@ ${plans.map(p => `- ${p.name}: $${p.price}/${p.billing_cycle}`).join('\n')}
 - To view billing details and invoices: Go to /profile?tab=billing.
 - To change password: Go to /profile, scroll to 'Change Password' section, fill in current password and new password (min 6 chars), and click 'Update password'.
 - To change profile name: Go to /profile, under 'Account Information', edit First/Last name, and click 'Save changes'.
+- To view saved, bookmarked, or liked movies/series: Go to the "My List" page at /my-list in the top navigation. Here you will find all movies/series where you have clicked the 'My List' button.
 - Profile Photo / Avatar: StreamVault uses dynamically generated initial-based gradient avatars (using the user's name initial and a custom hue value). There is no manual image upload feature for avatars.
 - General library: /library
 
@@ -97,6 +98,16 @@ Instructions:
   async chatLocal(userId, message) {
     const text = message.toLowerCase().trim();
 
+    // Detect language filter
+    const languages = ['english', 'hindi', 'tamil', 'telugu', 'spanish', 'korean', 'malayalam', 'kannada', 'bengali', 'marathi', 'gujarati', 'punjabi'];
+    let languageFilter = null;
+    for (const lang of languages) {
+      if (text.includes(lang)) {
+        languageFilter = lang;
+        break;
+      }
+    }
+
     // 1. Parental controls PIN intent
     if (text.includes('pin') || text.includes('parental') || text.includes('restrict')) {
       return `To manage parental controls and your parental PIN on StreamVault:
@@ -132,6 +143,15 @@ Currently, there is no manual image upload feature for profile photos. Your avat
 3. Click the **'Save changes'** button.
 
 *Note: If you need to change your registered Email address, please contact support.*`;
+    }
+
+    if (text.includes('liked') || text.includes('my list') || text.includes('watchlist') || text.includes('favorite') || text.includes('bookmark') || text.includes('saved')) {
+      return `To view your saved, bookmarked, or liked movies and series on StreamVault:
+1. Make sure you are logged in to your account.
+2. In the top navigation bar, click on **[My List](/my-list)**.
+3. On this page, you will find all the movies and web series that you have saved by clicking the **'My List'** bookmark button on their detail or watch page.
+
+*Note: Clicking the thumbs-up **'Like'** button on a watch page marks it as liked, while the **'My List'** button bookmarks it to your personal list for quick access.*`;
     }
 
     // 2. Subscription / Plans intent
@@ -211,11 +231,12 @@ ${series.description || 'No description available.'}
       }
 
       // Extract search keywords from the query
-      const stopWords = ['give', 'me', 'best', 'latest', 'good', 'movie', 'movies', 'series', 'show', 'shows', 'recommend', 'recommendation', 'recommendations', 'suggest', 'suggestion', 'suggestions', 'similar', 'to', 'of', 'about', 'a', 'an', 'the', 'in', 'on', 'at', 'with', 'by', 'who', 'is', 'actor', 'actress', 'director'];
+      const stopWords = ['give', 'me', 'best', 'latest', 'good', 'movie', 'movies', 'series', 'show', 'shows', 'recommend', 'recommendation', 'recommendations', 'suggest', 'suggestion', 'suggestions', 'similar', 'to', 'of', 'about', 'a', 'an', 'the', 'in', 'on', 'at', 'with', 'by', 'who', 'is', 'actor', 'actress', 'director', 'language', 'languages', 'dubbed', 'subtitled'];
       if (genreMatched) {
         stopWords.push(genreMatched.name.toLowerCase());
         stopWords.push(genreMatched.slug.toLowerCase());
       }
+      languages.forEach(l => stopWords.push(l));
       
       const words = text.split(/\s+/).filter(word => !stopWords.includes(word) && word.length > 1);
       const searchKeyword = words.join(' ').trim();
@@ -273,65 +294,145 @@ ${series.description || 'No description available.'}
         let movies = [];
         let series = [];
         
+        let movieIds = [];
+        let seriesIds = [];
+        try {
+          const movieCategoryRows = await Movie.sequelize.query(
+            "SELECT movie_id FROM movie_categories WHERE category_id = :categoryId",
+            {
+              replacements: { categoryId: genreMatched.id },
+              type: Movie.sequelize.QueryTypes.SELECT
+            }
+          );
+          movieIds = movieCategoryRows.map(r => r.movie_id);
+        } catch (e) {
+          console.error("Failed to query movie_categories:", e.message);
+        }
+
+        try {
+          const seriesCategoryRows = await Series.sequelize.query(
+            "SELECT series_id FROM series_categories WHERE category_id = :categoryId",
+            {
+              replacements: { categoryId: genreMatched.id },
+              type: Series.sequelize.QueryTypes.SELECT
+            }
+          );
+          seriesIds = seriesCategoryRows.map(r => r.series_id);
+        } catch (e) {
+          console.error("Failed to query series_categories:", e.message);
+        }
+
+        const categoryOrCondition = [
+          { category_id: genreMatched.id },
+          { title: { [Op.like]: `%${genreMatched.name}%` } },
+          { description: { [Op.like]: `%${genreMatched.name}%` } }
+        ];
+        if (movieIds.length > 0) {
+          categoryOrCondition.push({ id: { [Op.in]: movieIds } });
+        }
+
+        const seriesCategoryOrCondition = [
+          { category_id: genreMatched.id },
+          { title: { [Op.like]: `%${genreMatched.name}%` } },
+          { description: { [Op.like]: `%${genreMatched.name}%` } }
+        ];
+        if (seriesIds.length > 0) {
+          seriesCategoryOrCondition.push({ id: { [Op.in]: seriesIds } });
+        }
+
+        const movieWhereAnd = [
+          { status: 'published' },
+          { [Op.or]: categoryOrCondition }
+        ];
+
+        const seriesWhereAnd = [
+          { status: 'published' },
+          { [Op.or]: seriesCategoryOrCondition }
+        ];
+
+        if (languageFilter) {
+          movieWhereAnd.push({ language: { [Op.like]: `%${languageFilter}%` } });
+          seriesWhereAnd.push({ language: { [Op.like]: `%${languageFilter}%` } });
+        }
+
         if (searchKeyword) {
-          movies = await Movie.findAll({
-            where: {
-              category_id: genreMatched.id,
-              status: 'published',
+          movieWhereAnd.push({
+            [Op.or]: [
+              { title: { [Op.like]: `%${searchKeyword}%` } },
+              { description: { [Op.like]: `%${searchKeyword}%` } }
+            ]
+          });
+          seriesWhereAnd.push({
+            [Op.or]: [
+              { title: { [Op.like]: `%${searchKeyword}%` } },
+              { description: { [Op.like]: `%${searchKeyword}%` } }
+            ]
+          });
+        }
+
+        movies = await Movie.findAll({
+          where: {
+            [Op.and]: movieWhereAnd
+          },
+          limit: 3
+        });
+
+        series = await Series.findAll({
+          where: {
+            [Op.and]: seriesWhereAnd
+          },
+          limit: 3
+        });
+
+        // Fallback search across all categories if none match in the category
+        if (movies.length === 0 && series.length === 0 && (searchKeyword || languageFilter)) {
+          const fallbackMovieAnd = [{ status: 'published' }];
+          const fallbackSeriesAnd = [{ status: 'published' }];
+
+          if (languageFilter) {
+            fallbackMovieAnd.push({ language: { [Op.like]: `%${languageFilter}%` } });
+            fallbackSeriesAnd.push({ language: { [Op.like]: `%${languageFilter}%` } });
+          }
+          if (searchKeyword) {
+            fallbackMovieAnd.push({
               [Op.or]: [
                 { title: { [Op.like]: `%${searchKeyword}%` } },
                 { description: { [Op.like]: `%${searchKeyword}%` } }
               ]
-            },
+            });
+            fallbackSeriesAnd.push({
+              [Op.or]: [
+                { title: { [Op.like]: `%${searchKeyword}%` } },
+                { description: { [Op.like]: `%${searchKeyword}%` } }
+              ]
+            });
+          }
+
+          movies = await Movie.findAll({
+            where: { [Op.and]: fallbackMovieAnd },
             limit: 3
           });
           series = await Series.findAll({
-            where: {
-              category_id: genreMatched.id,
-              status: 'published',
-              [Op.or]: [
-                { title: { [Op.like]: `%${searchKeyword}%` } },
-                { description: { [Op.like]: `%${searchKeyword}%` } }
-              ]
-            },
+            where: { [Op.and]: fallbackSeriesAnd },
             limit: 3
           });
-
-          // Fallback search across all categories if none match in the category
-          if (movies.length === 0 && series.length === 0) {
-            movies = await Movie.findAll({
-              where: {
-                status: 'published',
-                [Op.or]: [
-                  { title: { [Op.like]: `%${searchKeyword}%` } },
-                  { description: { [Op.like]: `%${searchKeyword}%` } }
-                ]
-              },
-              limit: 3
-            });
-            series = await Series.findAll({
-              where: {
-                status: 'published',
-                [Op.or]: [
-                  { title: { [Op.like]: `%${searchKeyword}%` } },
-                  { description: { [Op.like]: `%${searchKeyword}%` } }
-                ]
-              },
-              limit: 3
-            });
-          }
-        } else {
-          movies = await Movie.findAll({ where: { category_id: genreMatched.id, status: 'published' }, limit: 3 });
-          series = await Series.findAll({ where: { category_id: genreMatched.id, status: 'published' }, limit: 3 });
         }
 
         if (movies.length === 0 && series.length === 0) {
-          return `Currently, we don't have any published titles matching **"${searchKeyword || genreMatched.name}"** on StreamVault. Try checking out our **[Library](/library)** page for all available content!`;
+          const matchingQuery = searchKeyword
+            ? `matching "${searchKeyword}"`
+            : `in ${genreMatched.name}`;
+          const langText = languageFilter ? ` in ${languageFilter}` : "";
+          return `Currently, we don't have any published titles ${matchingQuery}${langText} on StreamVault. Try checking out our **[Library](/library)** page for all available content!`;
         }
 
-        let reply = searchKeyword
-          ? `Here are titles matching **"${searchKeyword}"** on StreamVault:\n\n`
-          : `Here are some popular **${genreMatched.name}** titles on StreamVault:\n\n`;
+        let reply = "";
+        const langText = languageFilter ? ` **${languageFilter.charAt(0).toUpperCase() + languageFilter.slice(1)}**` : "";
+        if (searchKeyword) {
+          reply = `Here are${langText} titles matching **"${searchKeyword}"** on StreamVault:\n\n`;
+        } else {
+          reply = `Here are some popular${langText} **${genreMatched.name}** titles on StreamVault:\n\n`;
+        }
           
         if (movies.length > 0) {
           reply += `### Movies\n`;
@@ -348,31 +449,45 @@ ${series.description || 'No description available.'}
         return reply;
       }
 
-      // If we don't have a genre matched but have search keywords
-      if (searchKeyword) {
-        const movies = await Movie.findAll({
-          where: {
-            status: 'published',
+      // If we don't have a genre matched but have search keywords or language
+      if (searchKeyword || languageFilter) {
+        const fallbackMovieAnd = [{ status: 'published' }];
+        const fallbackSeriesAnd = [{ status: 'published' }];
+
+        if (languageFilter) {
+          fallbackMovieAnd.push({ language: { [Op.like]: `%${languageFilter}%` } });
+          fallbackSeriesAnd.push({ language: { [Op.like]: `%${languageFilter}%` } });
+        }
+        if (searchKeyword) {
+          fallbackMovieAnd.push({
             [Op.or]: [
               { title: { [Op.like]: `%${searchKeyword}%` } },
               { description: { [Op.like]: `%${searchKeyword}%` } }
             ]
-          },
+          });
+          fallbackSeriesAnd.push({
+            [Op.or]: [
+              { title: { [Op.like]: `%${searchKeyword}%` } },
+              { description: { [Op.like]: `%${searchKeyword}%` } }
+            ]
+          });
+        }
+
+        const movies = await Movie.findAll({
+          where: { [Op.and]: fallbackMovieAnd },
           limit: 3
         });
         const series = await Series.findAll({
-          where: {
-            status: 'published',
-            [Op.or]: [
-              { title: { [Op.like]: `%${searchKeyword}%` } },
-              { description: { [Op.like]: `%${searchKeyword}%` } }
-            ]
-          },
+          where: { [Op.and]: fallbackSeriesAnd },
           limit: 3
         });
 
         if (movies.length > 0 || series.length > 0) {
-          let reply = `Here are titles matching **"${searchKeyword}"** on StreamVault:\n\n`;
+          const langText = languageFilter ? ` **${languageFilter.charAt(0).toUpperCase() + languageFilter.slice(1)}**` : "";
+          let reply = searchKeyword 
+            ? `Here are${langText} titles matching **"${searchKeyword}"** on StreamVault:\n\n`
+            : `Here are some popular${langText} titles on StreamVault:\n\n`;
+
           if (movies.length > 0) {
             reply += `### Movies\n`;
             movies.forEach(m => {
@@ -387,7 +502,11 @@ ${series.description || 'No description available.'}
           }
           return reply;
         } else {
-          return `I couldn't find any titles matching **"${searchKeyword}"** on StreamVault. Try looking for different titles or visit the **[Library](/library)** page.`;
+          const matchingQuery = searchKeyword
+            ? `matching "${searchKeyword}"`
+            : `titles`;
+          const langText = languageFilter ? ` in ${languageFilter}` : "";
+          return `I couldn't find any ${matchingQuery}${langText} on StreamVault. Try looking for different titles or visit the **[Library](/library)** page.`;
         }
       }
 

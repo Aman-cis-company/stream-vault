@@ -48,7 +48,13 @@ function MyListInner() {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+    <div 
+      className="gap-4 md:gap-6"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(clamp(155px, 13vw, 205px), 1fr))"
+      }}
+    >
       {items.map(({ interaction, detail }) => {
         if (interaction.content_type === "movie") {
           const title = mapMovieToTitle(detail as any);
@@ -73,16 +79,18 @@ export default function MyList() {
   return (
     <Protected>
       <MainLayout>
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">My List</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Movies and series you've saved</p>
+        <div className="mx-auto max-w-[1600px] w-full">
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">My List</h1>
+              <p className="mt-1 text-sm text-muted-foreground">Movies and series you've saved</p>
+            </div>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/browse">+ Add more</Link>
+            </Button>
           </div>
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/browse">+ Add more</Link>
-          </Button>
+          <MyListInner />
         </div>
-        <MyListInner />
       </MainLayout>
     </Protected>
   );
