@@ -65,6 +65,20 @@ class UserInteractionController {
       return errorResponse(res, 'Internal error', STATUS_CODES.INTERNAL_SERVER_ERROR);
     }
   }
+
+  async chat(req, res) {
+    try {
+      const { message } = req.body;
+      if (!message || !message.trim()) {
+        return errorResponse(res, 'Message is required', STATUS_CODES.BAD_REQUEST);
+      }
+      const response = await UserInteractionService.chat(req.user.id, message);
+      return successResponse(res, 'Chat response generated', { response });
+    } catch (err) {
+      logger.error('UserInteractionController.chat error', { error: err.message });
+      return errorResponse(res, 'Internal error', STATUS_CODES.INTERNAL_SERVER_ERROR);
+    }
+  }
 }
 
 module.exports = new UserInteractionController();

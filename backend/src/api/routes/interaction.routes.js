@@ -10,5 +10,6 @@ router.post('/toggle-like', UserInteractionController.toggleLike.bind(UserIntera
 router.post('/toggle-list', UserInteractionController.toggleList.bind(UserInteractionController));
 router.get('/my-list', UserInteractionController.getMyList.bind(UserInteractionController));
 router.get('/liked', UserInteractionController.getLiked.bind(UserInteractionController));
+router.post('/chat', UserInteractionController.chat.bind(UserInteractionController));
 
 module.exports = router;

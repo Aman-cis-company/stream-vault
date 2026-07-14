@@ -20,6 +20,7 @@ import PaymentCancel from "./routes/payment-cancel";
 import NotFound from "./pages/NotFound";
 import ParentalControls from "./pages/ParentalControls";
 import { AgeVerificationModal } from "./components/streaming/AgeVerificationModal";
+import { VaultAssistant } from "./components/streaming/VaultAssistant";
 import SeriesDetail from "./routes/series.$seriesId";
 import WatchEpisode from "./routes/watch.series.$seriesId.episode.$episodeId";
 import AdminSeries from "./pages/admin/AdminSeries";
@@ -38,6 +39,7 @@ export default function App() {
   return (
     <>
       <AgeVerificationModal />
+      <VaultAssistant />
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/browse" element={<Browse />} />

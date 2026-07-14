@@ -61,11 +61,21 @@ npm run logs:services
 4. Stop Services
 npm run stop:services
 
+5. Restart Services
+npx pm2 restart all
+
+
+
 http://vnak3000.elb.cisinlive.com
 http://vnak5000.elb.cisinlive.com
 
 
-run build on browser
-
+-run build on browser
 npm run preview
+
+VaultAssistant:-
+use gemini key for free
+1. AI Studio Free Key: The API key you got from Google AI Studio is on the Free Tier by default. Google does not request or require billing information to create or use these keys.                                      
+2. Free Limits: The key allows up to 15 requests per minute and 1,500 requests per day, which is plenty for development and testing.
+3. No-Cost Fallback: Even if you exceed those daily limits, the application will automatically fall back to your local, offline database search engine. You will never face unexpected charges. 
 

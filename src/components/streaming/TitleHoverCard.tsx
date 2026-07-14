@@ -28,7 +28,6 @@ interface TitleHoverCardProps {
 
 export function TitleHoverCard({ children, data, sideOffset = -405 }: TitleHoverCardProps) {
   const watchUrl = data.contentType === "movie" ? `/watch/${data.id}` : `/series/${data.id}`;
-  console.log("data",data);
   return (
     <HoverCard openDelay={350} closeDelay={150}>
       <HoverCardTrigger asChild>

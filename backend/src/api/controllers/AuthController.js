@@ -40,7 +40,6 @@ class AuthController {
 
   async login(req, res) {
     try {
-      console.log("--- AuthController.login request body ---", req.body);
       const { email, password, forceLogout } = req.body;
       const { user, accessToken, refreshToken } = await AuthService.login(
         email,
@@ -218,10 +217,7 @@ class AuthController {
   }
 
   async updateProfile(req, res) {
-    try {
-      console.log("Content-Type:", req.headers["content-type"]); // ← check this
-      console.log("req.body:", req.body);
-      
+    try {      
       const user = await AuthService.updateProfile(req.user.id, req.body);
       return successResponse(res, MESSAGES.PROFILE_UPDATED, { user });
     } catch (err) {
