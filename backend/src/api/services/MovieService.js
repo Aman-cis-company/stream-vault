@@ -330,6 +330,121 @@ class MovieService {
   }
 
   async getAll(query, userControls = null) {
+    const { search } = query;
+    const geminiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+
+    // Route to semantic search if search is a descriptive concept (length > 3) and Gemini key is present
+    if (search && search.trim().length > 3 && geminiKey) {
+      return this.getAllSemantic(query, userControls);
+    }
+
+    return this.getAllFallback(query, userControls);
+  }
+
+  async getAllSemantic(query, userControls = null) {
+    const { page, limit, offset } = getPagination(query);
+    const { search, category_id, is_featured, is_banner, status } = query;
+
+    let isFeatured = undefined;
+    if (is_featured === 'true') isFeatured = true;
+    else if (is_featured === 'false') isFeatured = false;
+
+    let isBanner = undefined;
+    if (is_banner === 'true') isBanner = true;
+    else if (is_banner === 'false') isBanner = false;
+
+    try {
+      // 1. Fetch matching candidate movies (all published movies matching non-search filters)
+      const { rows } = await MovieRepository.findAll({
+        limit: 200, // Fetch the full catalog of matching movies to re-rank
+        offset: 0,
+        categoryId: category_id,
+        isFeatured,
+        isBanner,
+        status: status || 'published',
+        userControls,
+      });
+
+      if (!rows || rows.length === 0) {
+        return {
+          movies: [],
+          meta: paginationMeta(0, page, limit),
+        };
+      }
+
+      // 2. If there's only 1 movie, no ranking needed
+      if (rows.length === 1) {
+        if (rows[0].provider_name === 'bunny' && rows[0].provider_video_id) {
+          rows[0].setDataValue('video_url', BunnyStreamService.generateEmbedUrl(rows[0].provider_video_id));
+        }
+        return {
+          movies: rows,
+          meta: paginationMeta(1, page, limit),
+        };
+      }
+
+      // 3. Ask Gemini to rank them semantically based on title and description
+      const geminiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+      const movieListData = rows.map(m => ({
+        id: m.id,
+        title: m.title,
+        description: m.description || ''
+      }));
+
+      const prompt = `You are the StreamVault Semantic Search Ranker.
+Your task is to rank the following movies based on how well they match the semantic meaning of the user query: "${search}".
+
+Movies to rank:
+${movieListData.map(m => `- ID ${m.id} (${m.title}): ${m.description}`).join('\n')}
+
+Respond ONLY with a valid JSON array of movie IDs in order of relevance (most relevant first), for example: [14, 32, 19].
+Do not include any explanation, conversational text, or markdown formatting (do not wrap in markdown code blocks like \`\`\`json).`;
+
+      const axios = require('axios');
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${geminiKey}`;
+      const response = await axios.post(url, {
+        contents: [{ role: 'user', parts: [{ text: prompt }] }]
+      }, { timeout: 8000 });
+
+      const reply = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (reply) {
+        const cleanedReply = reply.replace(/```json/g, '').replace(/```/g, '').trim();
+        const rankedIds = JSON.parse(cleanedReply);
+        if (Array.isArray(rankedIds)) {
+          // Sort rows based on the ranked IDs order
+          rows.sort((a, b) => {
+            let indexA = rankedIds.indexOf(a.id);
+            let indexB = rankedIds.indexOf(b.id);
+            
+            // If an ID is not in the ranked list, push it to the end
+            if (indexA === -1) indexA = 9999;
+            if (indexB === -1) indexB = 9999;
+            
+            return indexA - indexB;
+          });
+        }
+      }
+
+      // 4. Paginate the re-ranked results in memory
+      const paginatedRows = rows.slice(offset, offset + limit);
+
+      paginatedRows.forEach(movie => {
+        if (movie.provider_name === 'bunny' && movie.provider_video_id) {
+          movie.setDataValue('video_url', BunnyStreamService.generateEmbedUrl(movie.provider_video_id));
+        }
+      });
+
+      return {
+        movies: paginatedRows,
+        meta: paginationMeta(rows.length, page, limit),
+      };
+    } catch (err) {
+      console.error('Semantic search ranking failed, falling back to database search:', err.message);
+      return this.getAllFallback(query, userControls);
+    }
+  }
+
+  async getAllFallback(query, userControls = null) {
     const { page, limit, offset } = getPagination(query);
     const { search, category_id, is_featured, is_banner, status } = query;
 
