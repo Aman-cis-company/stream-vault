@@ -143,6 +143,7 @@ class MovieService {
         outputName: localVideoOutputName,
         title: title,
         slug: slug,
+        language: movie.language,
         generateSubtitles: !!(files && files.video && files.video[0])
       }).catch((err) => {
         logger.error('Failed to enqueue movie transcoding job', { movieId: movie.id, error: err.message });
@@ -272,6 +273,7 @@ class MovieService {
         outputName: localVideoOutputName,
         title: updateData.title || movie.title,
         slug: updateData.slug || movie.slug,
+        language: updateData.language || movie.language,
         generateSubtitles: !!(files && files.video && files.video[0])
       }).catch((err) => {
         logger.error('Failed to enqueue movie update transcoding job', { movieId: id, error: err.message });

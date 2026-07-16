@@ -32,7 +32,6 @@ class UserInteractionService {
 
   async chat(userId, message) {
     const geminiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-    console.log("-------------------geminiKey------------",geminiKey);
     if (geminiKey) {
       try {
         const [movies, series, plans] = await Promise.all([

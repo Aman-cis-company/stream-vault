@@ -36,9 +36,10 @@ if (!fs.existsSync(SUBTITLES_DIR)) {
  * @param {string} videoPath - Path to the video file
  * @param {string} title - Title of the content (used for mock dialogue generation)
  * @param {string} slug - Unique slug (used as filename)
+ * @param {string} [language=null] - Spoken language of the video
  * @returns {Promise<string>} Relative URL of the generated VTT subtitle file
  */
-function generateSubtitles(videoPath, title, slug) {
+function generateSubtitles(videoPath, title, slug, language = null) {
   return new Promise((resolve) => {
     // Generate clean filename using slug
     const outputFilename = `${slug}_subtitles.vtt`;
@@ -84,7 +85,7 @@ function generateSubtitles(videoPath, title, slug) {
     }
 
     function runWhisper(whisperCmd) {
-      logger.info(`[Subtitle Generator] Whisper AI detected: ${whisperCmd}. Generating subtitles for: ${title}`);
+      logger.info(`[Subtitle Generator] Whisper AI detected: ${whisperCmd}. Generating subtitles for: ${title} in language: ${language || 'Auto-detect'}`);
       
       // Resolve path to static ffmpeg binary from ffmpeg-static npm package
       let ffmpegDir = '';
@@ -96,8 +97,16 @@ function generateSubtitles(videoPath, title, slug) {
       }
 
       const envPrefix = ffmpegDir ? `PATH="${ffmpegDir}:$PATH" ` : '';
-      // Run Whisper: whisper [video] --task transcribe --output_format vtt --output_dir [dir]
-      const cmd = `${envPrefix}"${whisperCmd}" "${tempVideoPath}" --task transcribe --output_format vtt --output_dir "${SUBTITLES_DIR}"`;
+      
+      // Construct language parameter if specified
+      let languageParam = '';
+      if (language) {
+        const formattedLang = language.charAt(0).toUpperCase() + language.slice(1).toLowerCase();
+        languageParam = ` --language "${formattedLang}"`;
+      }
+
+      // Run Whisper: whisper [video] --task transcribe --output_format vtt --output_dir [dir] [--language lang]
+      const cmd = `${envPrefix}"${whisperCmd}" "${tempVideoPath}" --task transcribe --output_format vtt --output_dir "${SUBTITLES_DIR}"${languageParam}`;
       exec(cmd, (execErr) => {
         // Clean up temp file
         try {

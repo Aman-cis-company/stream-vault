@@ -99,6 +99,7 @@ class EpisodeService {
         outputName: localVideoOutputName,
         title: episodeTitle,
         slug: episodeSlug,
+        language: series.language,
         generateSubtitles: !!(files?.video?.[0])
       }).catch((err) => {
         logger.error('Failed to enqueue episode transcoding job', { episodeId: episode.id, error: err.message });
@@ -176,6 +177,7 @@ class EpisodeService {
         outputName: localVideoOutputName,
         title: episodeTitle,
         slug: episodeSlug,
+        language: series ? series.language : null,
         generateSubtitles: !!(files?.video?.[0])
       }).catch((err) => {
         logger.error('Failed to enqueue episode update transcoding job', { episodeId, error: err.message });

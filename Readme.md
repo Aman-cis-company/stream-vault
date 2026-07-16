@@ -74,6 +74,7 @@ http://vnak5000.elb.cisinlive.com
 npm run preview
 
 VaultAssistant:-
+https://aistudio.google.com/
 use gemini key for free
 1. AI Studio Free Key: The API key you got from Google AI Studio is on the Free Tier by default. Google does not request or require billing information to create or use these keys.                                      
 2. Free Limits: The key allows up to 15 requests per minute and 1,500 requests per day, which is plenty for development and testing.

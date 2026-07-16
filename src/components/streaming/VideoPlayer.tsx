@@ -5,7 +5,7 @@ import {
   SkipBack, SkipForward, Loader2, RotateCcw,
   Subtitles, Settings, Check, Globe
 } from "lucide-react";
-import { assetUrl } from "@/services/api";
+import { assetUrl, apiClient } from "@/services/api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
@@ -354,21 +354,35 @@ function NativeHlsPlayer({
       setSubtitlesEnabled(false);
       return;
     }
-    const url = assetUrl(subtitleUrl);
-    fetch(url)
-      .then((r) => {
-        if (!r.ok) throw new Error("VTT file not found");
-        return r.text();
-      })
-      .then((text) => {
-        const cues = parseVtt(text);
+    const baseSubUrl = assetUrl(subtitleUrl);
+    // Append a timestamp to bypass browser/CDN caching of VTT files
+    const url = baseSubUrl.includes("?")
+      ? `${baseSubUrl}&t=${Date.now()}`
+      : `${baseSubUrl}?t=${Date.now()}`;
+
+    apiClient.get(url, { responseType: "text" })
+      .then((res) => {
+        const cues = parseVtt(res.data);
         setSubtitleCues(cues);
         setSubtitlesEnabled(true); // Enable by default if subtitles are present!
       })
       .catch((err) => {
-        console.error("Failed to fetch/parse subtitles:", err);
-        setSubtitleCues([]);
-        setSubtitlesEnabled(false);
+        console.error("Failed to fetch/parse subtitles via apiClient, trying fallback fetch:", err);
+        fetch(url)
+          .then((r) => {
+            if (!r.ok) throw new Error("VTT file not found");
+            return r.text();
+          })
+          .then((text) => {
+            const cues = parseVtt(text);
+            setSubtitleCues(cues);
+            setSubtitlesEnabled(true);
+          })
+          .catch((fetchErr) => {
+            console.error("Fallback fetch also failed:", fetchErr);
+            setSubtitleCues([]);
+            setSubtitlesEnabled(false);
+          });
       });
   }, [subtitleUrl]);
 

@@ -96,7 +96,7 @@ function initTranscodingWorker(redisConnection) {
     logger.info(`[Transcoding Worker] Starting job ${job.id}: ${name}`);
 
     if (name === 'transcode_movie') {
-      const { movieId, inputPath, outputName, title, slug, generateSubtitles: runSubtitles } = data;
+      const { movieId, inputPath, outputName, title, slug, language, generateSubtitles: runSubtitles } = data;
       const outputDir = path.join(HLS_DIR, outputName);
 
       try {
@@ -121,7 +121,7 @@ function initTranscodingWorker(redisConnection) {
 
         if (runSubtitles) {
           try {
-            subtitleUrl = await generateSubtitles(inputPath, title, slug);
+            subtitleUrl = await generateSubtitles(inputPath, title, slug, language);
             if (subtitleUrl) {
               const absoluteVttPath = path.resolve(__dirname, '../../../', subtitleUrl.replace(/^\//, ''));
               dubbedAudioUrl = await dubVideo(absoluteVttPath, slug);
@@ -159,7 +159,7 @@ function initTranscodingWorker(redisConnection) {
         throw err;
       }
     } else if (name === 'transcode_episode') {
-      const { episodeId, inputPath, outputName, title, slug, generateSubtitles: runSubtitles } = data;
+      const { episodeId, inputPath, outputName, title, slug, language, generateSubtitles: runSubtitles } = data;
       const outputDir = path.join(HLS_DIR, outputName);
 
       try {
@@ -184,7 +184,7 @@ function initTranscodingWorker(redisConnection) {
 
         if (runSubtitles) {
           try {
-            subtitleUrl = await generateSubtitles(inputPath, title, slug);
+            subtitleUrl = await generateSubtitles(inputPath, title, slug, language);
             if (subtitleUrl) {
               const absoluteVttPath = path.resolve(__dirname, '../../../', subtitleUrl.replace(/^\//, ''));
               dubbedAudioUrl = await dubVideo(absoluteVttPath, slug);
