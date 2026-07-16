@@ -584,18 +584,34 @@ function Admin() {
                         {m.category?.name ?? "No category"}
                       </p>
                     </div>
-                    <Badge
-                      variant="outline"
-                      className={`text-[10px] font-bold uppercase tracking-wider ${
-                        m.status === "published"
-                          ? "border-success/40 text-success bg-success/10"
-                          : m.status === "draft"
-                            ? "border-warning/40 text-warning bg-warning/10"
-                            : "border-muted-foreground/30 text-muted-foreground"
-                      }`}
-                    >
-                      {m.status}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] font-bold uppercase tracking-wider ${
+                          m.status === "published"
+                            ? "border-success/40 text-success bg-success/10"
+                            : m.status === "draft"
+                              ? "border-warning/40 text-warning bg-warning/10"
+                              : "border-muted-foreground/30 text-muted-foreground"
+                        }`}
+                      >
+                        {m.status}
+                      </Badge>
+                      {m.transcoding_status && (
+                        <span
+                          className={`size-2 rounded-full shrink-0 ${
+                            m.transcoding_status === "completed"
+                              ? "bg-success"
+                              : m.transcoding_status === "processing"
+                                ? "bg-warning animate-pulse"
+                                : m.transcoding_status === "failed"
+                                  ? "bg-destructive"
+                                  : "bg-muted-foreground/40"
+                          }`}
+                          title={`Transcoding: ${m.transcoding_status}`}
+                        />
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

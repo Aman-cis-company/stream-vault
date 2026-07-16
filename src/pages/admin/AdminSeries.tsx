@@ -254,6 +254,20 @@ function EpisodeManager({ series, onClose }: { series: BackendSeries; onClose: (
                             <p className="font-medium text-sm truncate">E{ep.episode_number} · {ep.title}</p>
                             <div className="flex items-center gap-2 mt-0.5">
                               <Badge variant="outline" className={`text-[10px] ${STATUS_COLORS[ep.status] ?? ""}`}>{ep.status}</Badge>
+                              {ep.transcoding_status && (
+                                <span
+                                  className={`size-2 rounded-full shrink-0 ${
+                                    ep.transcoding_status === "completed"
+                                      ? "bg-success"
+                                      : ep.transcoding_status === "processing"
+                                        ? "bg-warning animate-pulse"
+                                        : ep.transcoding_status === "failed"
+                                          ? "bg-destructive"
+                                          : "bg-muted-foreground/40"
+                                  }`}
+                                  title={`Transcoding: ${ep.transcoding_status}`}
+                                />
+                              )}
                               {ep.duration && <span className="text-xs text-muted-foreground">{Math.round(ep.duration / 60)}m</span>}
                               {ep.video_url && <span className="text-xs text-muted-foreground truncate max-w-[200px]">{ep.video_url.length > 40 ? ep.video_url.slice(0, 40) + "…" : ep.video_url}</span>}
                             </div>

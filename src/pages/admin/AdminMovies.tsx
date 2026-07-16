@@ -414,14 +414,30 @@ function MoviesPage() {
                         ) : "—"}
                       </td>
                       <td className="px-6 py-3">
-                        <Badge
-                          variant="outline"
-                          className={`text-xs cursor-pointer ${STATUS_COLORS[movie.status] ?? ""}`}
-                          onClick={() => toggleStatus(movie)}
-                          title="Click to toggle publish"
-                        >
-                          {movie.status}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className={`text-xs cursor-pointer ${STATUS_COLORS[movie.status] ?? ""}`}
+                            onClick={() => toggleStatus(movie)}
+                            title="Click to toggle publish"
+                          >
+                            {movie.status}
+                          </Badge>
+                          {movie.transcoding_status && (
+                            <span
+                              className={`size-2.5 rounded-full shrink-0 ${
+                                movie.transcoding_status === "completed"
+                                  ? "bg-success"
+                                  : movie.transcoding_status === "processing"
+                                    ? "bg-warning animate-pulse"
+                                    : movie.transcoding_status === "failed"
+                                      ? "bg-destructive"
+                                      : "bg-muted-foreground/40"
+                              }`}
+                              title={`Transcoding: ${movie.transcoding_status}`}
+                            />
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-3 hidden xl:table-cell text-xs text-muted-foreground">
                         {movie.is_featured ? "Yes" : "No"}

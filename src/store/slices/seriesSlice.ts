@@ -21,6 +21,7 @@ export interface BackendEpisode {
   subtitle_url?: string | null;
   dubbed_audio_url?: string | null;
   rating?: number | null;
+  transcoding_status?: "pending" | "processing" | "completed" | "failed" | null;
 }
 
 export interface BackendSeries {
