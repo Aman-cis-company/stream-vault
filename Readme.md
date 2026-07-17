@@ -80,3 +80,28 @@ use gemini key for free
 2. Free Limits: The key allows up to 15 requests per minute and 1,500 requests per day, which is plenty for development and testing.
 3. No-Cost Fallback: Even if you exceed those daily limits, the application will automatically fall back to your local, offline database search engine. You will never face unexpected charges. 
 
+--------------------------------------------------------------------------------------
+To run this code on new machine with docker
+-docker compose up --build -d (detached mode) 
+
+Initialize the Database (Migrations & Seeds)
+# Run migrations to create tables
+    docker exec -it streamvault-api-gateway npx sequelize-cli db:migrate
+
+# Run seeds to insert default admin users, plans, and categories
+    docker exec -it streamvault-api-gateway npx sequelize-cli db:seed:all
+
+### Steps: Useful Commands for Maintenance
+  
+  • Check if everything is running:
+    docker compose ps
+  
+  • View live logs of all services:
+    docker compose logs -f
+  
+  • View logs of a specific service (e.g. transcoding):
+    docker compose logs transcoding-service -f
+  
+  • Stop all services:
+    docker compose down
+

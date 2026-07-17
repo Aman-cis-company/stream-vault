@@ -3,7 +3,8 @@ uploads
 dist
 .codex
 .env
-.zip
+*.zip
+.vscode
 backend/.env
 **/.env.local
 **/.env.production
