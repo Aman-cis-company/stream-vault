@@ -75,8 +75,8 @@ class MovieController {
     try {
       let userControls = null;
       if (req.user) {
-        const { ParentalControl } = require('../../models');
-        userControls = await ParentalControl.findOne({ where: { user_id: req.user.id } });
+        const { getEffectiveParentalControls } = require('../helpers/profileHelper');
+        userControls = await getEffectiveParentalControls(req);
       }
       const { movies, meta } = await MovieService.getAll(req.query, userControls);
       
@@ -130,8 +130,8 @@ class MovieController {
     try {
       let userControls = null;
       if (req.user) {
-        const { ParentalControl } = require('../../models');
-        userControls = await ParentalControl.findOne({ where: { user_id: req.user.id } });
+        const { getEffectiveParentalControls } = require('../helpers/profileHelper');
+        userControls = await getEffectiveParentalControls(req);
       }
       const movie = await MovieService.getById(req.params.id, userControls);
       

@@ -20,6 +20,7 @@ const ContentComplianceRecord = require('./ContentComplianceRecord');
 const Invoice = require('./Invoice');
 const Permission = require('./Permission');
 const ActivityLog = require('./ActivityLog');
+const UserProfile = require('./UserProfile');
 
 // ── Role ↔ User ─────────────────────────────────────────────────────────────
 Role.hasMany(User, { foreignKey: 'role_id', as: 'users' });
@@ -149,6 +150,18 @@ Invoice.belongsTo(UserSubscription, { foreignKey: 'subscription_id', as: 'subscr
 Payment.hasOne(Invoice, { foreignKey: 'payment_id', as: 'invoice' });
 Invoice.belongsTo(Payment, { foreignKey: 'payment_id', as: 'payment' });
 
+// ── User ↔ UserProfile ────────────────────────────────────────────────────────
+User.hasMany(UserProfile, { foreignKey: 'user_id', as: 'profiles', onDelete: 'CASCADE' });
+UserProfile.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+// ── UserProfile ↔ WatchHistory ────────────────────────────────────────────────
+UserProfile.hasMany(WatchHistory, { foreignKey: 'profile_id', as: 'watchHistory', onDelete: 'CASCADE' });
+WatchHistory.belongsTo(UserProfile, { foreignKey: 'profile_id', as: 'profile' });
+
+// ── UserProfile ↔ UserInteraction ──────────────────────────────────────────────
+UserProfile.hasMany(UserInteraction, { foreignKey: 'profile_id', as: 'interactions', onDelete: 'CASCADE' });
+UserInteraction.belongsTo(UserProfile, { foreignKey: 'profile_id', as: 'profile' });
+
 module.exports = {
   sequelize,
   Sequelize,
@@ -172,4 +185,5 @@ module.exports = {
   Invoice,
   Permission,
   ActivityLog,
+  UserProfile,
 };

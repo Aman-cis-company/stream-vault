@@ -10,8 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Smartphone, Monitor, ShieldCheck, Loader2, User, Lock, Laptop } from "lucide-react";
+import { Smartphone, Monitor, ShieldCheck, Loader2, User, Lock, Laptop, Users, Plus, Edit3 } from "lucide-react";
 import { Billing } from "@/components/billing/Billing";
+import { useProfile } from "@/context/ProfileContext";
+import { PRESET_AVATARS, UserProfile } from "@/lib/profiles";
+import { ProfileManagerModal } from "@/components/profiles/ProfileManagerModal";
 
 export default function ProfilePage() {
   const [searchParams] = useSearchParams();
@@ -218,6 +221,9 @@ function Profile() {
         </div>
 
         <div className="space-y-6">
+          {/* Sub-Profiles & Kids Mode */}
+          <ProfileSubProfilesCard />
+
           {/* Change password */}
           <div className="rounded-2xl border border-border/60 bg-card shadow-card overflow-hidden">
             <div className="flex items-center gap-3 border-b border-border/60 px-6 py-4">
@@ -284,5 +290,115 @@ function Profile() {
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+function ProfileSubProfilesCard() {
+  const { profiles, activeProfile, switchProfile } = useProfile();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [targetProfile, setTargetProfile] = useState<UserProfile | null>(null);
+
+  const handleOpenAdd = () => {
+    setTargetProfile(null);
+    setModalOpen(true);
+  };
+
+  const handleOpenEdit = (p: UserProfile) => {
+    setTargetProfile(p);
+    setModalOpen(true);
+  };
+
+  return (
+    <>
+      <div className="rounded-2xl border border-border/60 bg-card shadow-card overflow-hidden">
+        <div className="flex items-center justify-between border-b border-border/60 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="inline-flex size-8 items-center justify-center rounded-xl bg-primary/15 text-primary">
+              <Users className="size-4" />
+            </div>
+            <h2 className="font-extrabold tracking-tight">Sub-Profiles & Kids Mode</h2>
+          </div>
+          {profiles.length < 5 && (
+            <Button size="sm" onClick={handleOpenAdd} className="h-8 px-3 rounded-lg text-xs font-bold gap-1 bg-primary text-white hover:bg-primary/90">
+              <Plus className="size-3.5" /> Add Profile
+            </Button>
+          )}
+        </div>
+
+        <div className="p-6 space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Manage up to 5 individual sub-profiles (Adult, Teen, Kids) with isolated watch history and custom age rating restrictions.
+          </p>
+
+          <div className="grid gap-2.5">
+            {profiles.map((p) => {
+              const preset = PRESET_AVATARS.find((av) => av.id === p.avatar) || PRESET_AVATARS[0];
+              const isActive = activeProfile?.id === p.id;
+              const isKids = p.is_kids || p.profile_type === "kids";
+
+              return (
+                <div
+                  key={p.id}
+                  className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                    isActive ? "border-primary bg-primary/5" : "border-border/60 hover:bg-secondary/30"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl bg-gradient-to-br ${preset.color} shadow-sm`}>
+                      {preset.icon}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm">{p.name}</span>
+                        {isActive && (
+                          <Badge className="bg-primary/20 text-primary border-primary/30 text-[9px] font-bold uppercase">
+                            Active
+                          </Badge>
+                        )}
+                        {isKids && (
+                          <Badge className="bg-yellow-400/20 text-yellow-500 border-yellow-400/30 text-[9px] font-extrabold uppercase">
+                            Kids
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {p.profile_type.toUpperCase()} • Max Rating: {p.max_rating} {(p.has_pin || (p as any).hasPin) ? "• PIN Locked" : ""}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {!isActive && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => switchProfile(p)}
+                        className="h-8 rounded-lg text-xs font-semibold"
+                      >
+                        Switch
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleOpenEdit(p)}
+                      className="size-8 rounded-lg text-muted-foreground hover:text-foreground"
+                    >
+                      <Edit3 className="size-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <ProfileManagerModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        editProfile={targetProfile}
+      />
+    </>
   );
 }

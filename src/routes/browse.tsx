@@ -16,6 +16,8 @@ import type { Category } from "@/store/slices/categoriesSlice";
 import { useSocketEvent } from "@/hooks/useSocket";
 import { SOCKET_EVENTS } from "@/lib/socket";
 import { Loader2, ChevronRight } from "lucide-react";
+import { useProfile } from "@/context/ProfileContext";
+import { filterTitlesForActiveProfile } from "@/lib/profiles";
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 
@@ -262,6 +264,7 @@ const POPULAR_CHANNELS = [
 // ── Browse page ───────────────────────────────────────────────────────────────
 
 export default function Browse() {
+  const { activeProfile } = useProfile();
   const [categories, setCategories] = useState<Category[]>([]);
   const [moviesByCategory, setMoviesByCategory] = useState<Record<number, Title[]>>({});
   const [extras, setExtras] = useState<Title[]>([]);
@@ -286,18 +289,19 @@ export default function Browse() {
       const movies: BackendMovie[] = movRes.data.data.movies ?? [];
       setCategories(cats);
       
-      const finalSeries = [...seriesData];
+      let finalSeries = [...seriesData];
       DUMMY_SERIES.forEach((ds) => {
         if (!seriesData.some(s => s.title === ds.title)) {
           finalSeries.push(ds);
         }
       });
+      finalSeries = filterTitlesForActiveProfile(finalSeries, activeProfile);
       setSeriesList(finalSeries);
       setContinueWatching(continueRes.data.data.continueWatching ?? []);
 
       // Process Top 10 — real data first, fill with dummy fallback
       const top10Raw: BackendMovie[] = top10Res?.data?.data?.movies ?? [];
-      const top10Mapped = top10Raw.map(mapMovieToTitle);
+      let top10Mapped = top10Raw.map(mapMovieToTitle);
       if (top10Mapped.length < 5) {
         const existingNames = new Set(top10Mapped.map((m) => m.name.toLowerCase()));
         DUMMY_MOVIES.forEach((dm) => {
@@ -305,10 +309,9 @@ export default function Browse() {
             top10Mapped.push(dm);
           }
         });
-        setTop10Movies(top10Mapped.slice(0, 10));
-      } else {
-        setTop10Movies(top10Mapped.slice(0, 10));
       }
+      top10Mapped = filterTitlesForActiveProfile(top10Mapped, activeProfile);
+      setTop10Movies(top10Mapped.slice(0, 10));
 
       const byCat: Record<number, Title[]> = {};
       const rest: Title[] = [];
@@ -341,11 +344,18 @@ export default function Browse() {
         }
       });
 
+      // Filter all categories with active profile restrictions
+      Object.keys(byCat).forEach((catId) => {
+        const numId = Number(catId);
+        byCat[numId] = filterTitlesForActiveProfile(byCat[numId], activeProfile);
+      });
+      const filteredExtras = filterTitlesForActiveProfile(rest, activeProfile);
+
       setMoviesByCategory(byCat);
-      setExtras(rest);
+      setExtras(filteredExtras);
     } catch {
       // silent — empty state
-      setTop10Movies(TOP_10_INDIA_HINDI);
+      setTop10Movies(filterTitlesForActiveProfile(TOP_10_INDIA_HINDI, activeProfile));
     } finally {
       setLoading(false);
       setTop10Loading(false);

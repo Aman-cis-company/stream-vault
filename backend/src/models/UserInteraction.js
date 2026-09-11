@@ -4,6 +4,7 @@ const { sequelize } = require('../config/database');
 const UserInteraction = sequelize.define('UserInteraction', {
   id: { type: DataTypes.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
   user_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+  profile_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
   content_type: { type: DataTypes.ENUM('movie', 'series'), allowNull: false },
   content_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
   is_liked: { type: DataTypes.BOOLEAN, defaultValue: false },

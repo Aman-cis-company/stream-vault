@@ -9,11 +9,15 @@ export const apiClient = axios.create({
   withCredentials: true,
 });
 
-// Attach JWT on every request
+// Attach JWT and active profile ID on every request
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem("sv.access_token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  const activeProfileId = localStorage.getItem("sv.active_profile_id");
+  if (activeProfileId) {
+    config.headers["X-Profile-ID"] = activeProfileId;
   }
   return config;
 });

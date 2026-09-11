@@ -11,6 +11,10 @@ const WatchHistory = sequelize.define('WatchHistory', {
     type: DataTypes.INTEGER.UNSIGNED,
     allowNull: false,
   },
+  profile_id: {
+    type: DataTypes.INTEGER.UNSIGNED,
+    allowNull: true,
+  },
   movie_id: {
     type: DataTypes.INTEGER.UNSIGNED,
     allowNull: true,

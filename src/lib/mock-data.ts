@@ -610,6 +610,8 @@ export const DUMMY_MOVIES: Title[] = [
     cast: ["Ranbir Kapoor", "Anil Kapoor", "Bobby Deol", "Rashmika Mandanna"],
     hlsUrl: "",
     language: "Hindi",
+    content_rating: "18+",
+    is_age_restricted: true,
   },
   {
     id: "dummy-m6",
@@ -631,6 +633,8 @@ export const DUMMY_MOVIES: Title[] = [
     cast: ["Ranveer Singh", "Alia Bhatt", "Dharmendra"],
     hlsUrl: "",
     language: "Hindi",
+    content_rating: "PG-13",
+    is_age_restricted: false,
   },
   {
     id: "dummy-m7",
@@ -652,6 +656,8 @@ export const DUMMY_MOVIES: Title[] = [
     cast: ["Rajkummar Rao", "Shraddha Kapoor", "Aparshakti Khurana"],
     hlsUrl: "",
     language: "Hindi",
+    content_rating: "PG-13",
+    is_age_restricted: false,
   },
   {
     id: "dummy-m8",
@@ -673,6 +679,8 @@ export const DUMMY_MOVIES: Title[] = [
     cast: ["Prabhas", "Deepika Padukone", "Amitabh Bachchan", "Kamal Haasan"],
     hlsUrl: "",
     language: "Telugu",
+    content_rating: "PG-13",
+    is_age_restricted: false,
   },
 
   {
@@ -695,6 +703,8 @@ export const DUMMY_MOVIES: Title[] = [
     cast: ["Pratibha Ranta", "Nitanshi Goel", "Sparsh Shrivastava"],
     hlsUrl: "",
     language: "Hindi",
+    content_rating: "G",
+    is_age_restricted: false,
   },
 ];
 
@@ -717,6 +727,8 @@ export const TOP_10_INDIA_HINDI: Title[] = [
     cast: ["Rajkummar Rao", "Shraddha Kapoor", "Aparshakti Khurana"],
     hlsUrl: "",
     language: "Hindi",
+    content_rating: "PG-13",
+    is_age_restricted: false,
     trending: true,
   },
   {
@@ -736,6 +748,8 @@ export const TOP_10_INDIA_HINDI: Title[] = [
     cast: ["Shah Rukh Khan", "Nayanthara", "Vijay Sethupathi"],
     hlsUrl: "",
     language: "Hindi",
+    content_rating: "16+",
+    is_age_restricted: false,
     trending: true,
   },
   {
@@ -755,6 +769,8 @@ export const TOP_10_INDIA_HINDI: Title[] = [
     cast: ["Vikrant Massey", "Medha Shankar", "Anshuman Pushkar"],
     hlsUrl: "",
     language: "Hindi",
+    content_rating: "G",
+    is_age_restricted: false,
   },
   {
     id: "top10-h4",
@@ -773,6 +789,8 @@ export const TOP_10_INDIA_HINDI: Title[] = [
     cast: ["Shah Rukh Khan", "Deepika Padukone", "John Abraham"],
     hlsUrl: "",
     language: "Hindi",
+    content_rating: "16+",
+    is_age_restricted: false,
     trending: true,
   },
   {
@@ -792,6 +810,8 @@ export const TOP_10_INDIA_HINDI: Title[] = [
     cast: ["Ranbir Kapoor", "Anil Kapoor", "Bobby Deol", "Rashmika Mandanna"],
     hlsUrl: "",
     language: "Hindi",
+    content_rating: "18+",
+    is_age_restricted: true,
   },
   {
     id: "top10-h6",
@@ -810,6 +830,8 @@ export const TOP_10_INDIA_HINDI: Title[] = [
     cast: ["Ranveer Singh", "Alia Bhatt", "Dharmendra"],
     hlsUrl: "",
     language: "Hindi",
+    content_rating: "PG-13",
+    is_age_restricted: false,
     trending: true,
   },
   {
@@ -829,6 +851,8 @@ export const TOP_10_INDIA_HINDI: Title[] = [
     cast: ["Shah Rukh Khan", "Taapsee Pannu", "Vicky Kaushal"],
     hlsUrl: "",
     language: "Hindi",
+    content_rating: "PG",
+    is_age_restricted: false,
   },
   {
     id: "top10-h9",
@@ -847,6 +871,8 @@ export const TOP_10_INDIA_HINDI: Title[] = [
     cast: ["Kartik Aaryan", "Vidya Balan", "Madhuri Dixit", "Triptii Dimri"],
     hlsUrl: "",
     language: "Hindi",
+    content_rating: "PG-13",
+    is_age_restricted: false,
     newRelease: true,
   },
   {
@@ -866,6 +892,8 @@ export const TOP_10_INDIA_HINDI: Title[] = [
     cast: ["Ajay Devgn", "Akshay Kumar", "Ranveer Singh", "Deepika Padukone", "Tiger Shroff"],
     hlsUrl: "",
     language: "Hindi",
+    content_rating: "16+",
+    is_age_restricted: false,
     newRelease: true,
   },
 ];

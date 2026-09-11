@@ -2,6 +2,7 @@ const WatchProgressRepository = require('../repositories/WatchProgressRepository
 const { successResponse, errorResponse } = require('../../helpers/responseHelper');
 const STATUS_CODES = require('../../constants/statusCodes');
 const logger = require('../../config/logger');
+const { getActiveProfile } = require('../helpers/profileHelper');
 
 class ProgressController {
   async saveEpisodeProgress(req, res) {
@@ -13,6 +14,9 @@ class ProgressController {
         return errorResponse(res, 'watch_time is required', STATUS_CODES.UNPROCESSABLE_ENTITY);
       }
 
+      const activeProfile = await getActiveProfile(req);
+      const profileId = activeProfile ? activeProfile.id : null;
+
       const watchTimeSec = Math.max(0, Math.floor(Number(watch_time)));
       const durationSec = duration ? Math.max(1, Math.floor(Number(duration))) : null;
       const completionPct = durationSec
@@ -23,7 +27,8 @@ class ProgressController {
         req.user.id,
         episodeId,
         watchTimeSec,
-        completionPct
+        completionPct,
+        profileId
       );
 
       return successResponse(res, 'Progress saved', { progress });
@@ -36,7 +41,10 @@ class ProgressController {
   async getEpisodeProgress(req, res) {
     try {
       const { episodeId } = req.params;
-      const progress = await WatchProgressRepository.getEpisodeProgress(req.user.id, episodeId);
+      const activeProfile = await getActiveProfile(req);
+      const profileId = activeProfile ? activeProfile.id : null;
+
+      const progress = await WatchProgressRepository.getEpisodeProgress(req.user.id, episodeId, profileId);
       return successResponse(res, 'Progress retrieved', { progress: progress ?? null });
     } catch (err) {
       logger.error('ProgressController.getEpisodeProgress error', { error: err.message });
@@ -53,6 +61,9 @@ class ProgressController {
         return errorResponse(res, 'watch_time is required', STATUS_CODES.UNPROCESSABLE_ENTITY);
       }
 
+      const activeProfile = await getActiveProfile(req);
+      const profileId = activeProfile ? activeProfile.id : null;
+
       const watchTimeSec = Math.max(0, Math.floor(Number(watch_time)));
       const durationSec = duration ? Math.max(1, Math.floor(Number(duration))) : null;
       const completionPct = durationSec
@@ -63,7 +74,8 @@ class ProgressController {
         req.user.id,
         movieId,
         watchTimeSec,
-        completionPct
+        completionPct,
+        profileId
       );
 
       return successResponse(res, 'Progress saved', { progress });
@@ -76,7 +88,10 @@ class ProgressController {
   async getMovieProgress(req, res) {
     try {
       const { movieId } = req.params;
-      const progress = await WatchProgressRepository.getMovieProgress(req.user.id, movieId);
+      const activeProfile = await getActiveProfile(req);
+      const profileId = activeProfile ? activeProfile.id : null;
+
+      const progress = await WatchProgressRepository.getMovieProgress(req.user.id, movieId, profileId);
       return successResponse(res, 'Progress retrieved', { progress: progress ?? null });
     } catch (err) {
       logger.error('ProgressController.getMovieProgress error', { error: err.message });

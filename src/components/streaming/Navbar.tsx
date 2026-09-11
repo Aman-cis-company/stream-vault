@@ -29,7 +29,11 @@ import {
   Lock,
   LogOut,
   Sparkles,
+  UserCheck,
 } from "lucide-react";
+import { useProfile } from "@/context/ProfileContext";
+import { ProfileSelectorModal } from "@/components/profiles/ProfileSelectorModal";
+import { PRESET_AVATARS } from "@/lib/profiles";
 
 const NAV_PUBLIC = [
   { to: "/browse", label: "Home" },
@@ -55,6 +59,7 @@ function StreamVaultLogo() {
 
 export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
+  const { activeProfile, isKidsMode } = useProfile();
   const { mode, setMode } = useTheme();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -62,6 +67,7 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchVal, setSearchVal] = useState("");
+  const [showProfileSelectorModal, setShowProfileSelectorModal] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const ThemeIcon = mode === "light" ? Sun : mode === "dark" ? Moon : Monitor;
@@ -303,6 +309,19 @@ export function Navbar() {
 
                   <DropdownMenuSeparator className="mx-2 bg-border dark:bg-white/[0.07]" />
 
+                  <DropdownMenuItem
+                    className="rounded-xl mx-0.5 text-[13px] gap-2.5 font-semibold text-primary focus:text-primary focus:bg-primary/10 cursor-pointer"
+                    onClick={() => setShowProfileSelectorModal(true)}
+                  >
+                    <UserCheck className="size-3.5" />
+                    Switch Profile ({activeProfile ? activeProfile.name : "Main"})
+                    {isKidsMode && (
+                      <span className="ml-auto bg-yellow-400 text-black text-[10px] font-extrabold px-1.5 py-0.5 rounded">
+                        KIDS
+                      </span>
+                    )}
+                  </DropdownMenuItem>
+
                   <DropdownMenuItem asChild className="rounded-xl mx-0.5 text-[13px] gap-2.5">
                     <Link to="/dashboard">
                       <LayoutDashboard className="size-3.5 text-muted-foreground" /> Dashboard
@@ -464,6 +483,12 @@ export function Navbar() {
           onClick={() => setMobileOpen(false)}
         />
       )}
+
+      {/* Profile Selector Modal */}
+      <ProfileSelectorModal
+        open={showProfileSelectorModal}
+        onOpenChange={setShowProfileSelectorModal}
+      />
     </>
   );
 }

@@ -11,6 +11,8 @@ import { store, persistor } from "./store";
 import App from "./App";
 import "./styles.css";
 
+import { ProfileProvider } from "./context/ProfileContext";
+
 // Sync persisted tokens back to localStorage on startup
 store.subscribe(() => {
   const auth = store.getState().auth as {
@@ -27,10 +29,12 @@ createRoot(document.getElementById("root")!).render(
         <BrowserRouter>
           <ThemeProvider>
             <AuthProvider>
-              <SocketProvider>
-                <App />
-                <Toaster position="top-right" richColors />
-              </SocketProvider>
+              <ProfileProvider>
+                <SocketProvider>
+                  <App />
+                  <Toaster position="top-right" richColors />
+                </SocketProvider>
+              </ProfileProvider>
             </AuthProvider>
           </ThemeProvider>
         </BrowserRouter>

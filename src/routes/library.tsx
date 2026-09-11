@@ -23,6 +23,9 @@ import { Search, SearchX, Loader2, Tv2 } from "lucide-react";
 import { useSocketEvent } from "@/hooks/useSocket";
 import { SOCKET_EVENTS } from "@/lib/socket";
 
+import { useProfile } from "@/context/ProfileContext";
+import { filterTitlesForActiveProfile } from "@/lib/profiles";
+
 const PAGE = 12;
 
 // ── Library Page ─────────────────────────────────────────────────────────────
@@ -30,6 +33,7 @@ const PAGE = 12;
 type ContentType = "movies" | "series";
 
 export default function Library() {
+  const { activeProfile } = useProfile();
   const [allTitles, setAllTitles] = useState<Title[]>([]);
   const [allSeries, setAllSeries] = useState<BackendSeries[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -67,28 +71,30 @@ export default function Library() {
       setCategories(cats);
       
       const movs = (movRes.data.data.movies as BackendMovie[]).map(mapMovieToTitle);
-      const finalMovies = [...movs];
+      let finalMovies = [...movs];
       DUMMY_MOVIES.forEach((dm) => {
         if (!movs.some(m => m.name === dm.name)) {
           finalMovies.push(dm);
         }
       });
+      finalMovies = filterTitlesForActiveProfile(finalMovies, activeProfile);
       setAllTitles(finalMovies);
 
       const sers = Array.isArray(serRes) ? serRes : [];
-      const finalSeries = [...sers];
+      let finalSeries = [...sers];
       DUMMY_SERIES.forEach((ds) => {
         if (!sers.some(s => s.title === ds.title)) {
           finalSeries.push(ds);
         }
       });
+      finalSeries = filterTitlesForActiveProfile(finalSeries, activeProfile);
       setAllSeries(finalSeries);
     } catch {
       // empty state
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeProfile]);
 
   useEffect(() => {
     load();

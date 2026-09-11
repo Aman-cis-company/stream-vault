@@ -23,8 +23,8 @@ class SeriesController {
     try {
       let userControls = null;
       if (req.user) {
-        const { ParentalControl } = require('../../models');
-        userControls = await ParentalControl.findOne({ where: { user_id: req.user.id } });
+        const { getEffectiveParentalControls } = require('../helpers/profileHelper');
+        userControls = await getEffectiveParentalControls(req);
       }
       const { series, meta } = await SeriesService.getAll(req.query, userControls);
 
@@ -83,8 +83,8 @@ class SeriesController {
     try {
       let userControls = null;
       if (req.user) {
-        const { ParentalControl } = require('../../models');
-        userControls = await ParentalControl.findOne({ where: { user_id: req.user.id } });
+        const { getEffectiveParentalControls } = require('../helpers/profileHelper');
+        userControls = await getEffectiveParentalControls(req);
       }
       const series = await SeriesService.getById(req.params.id, userControls);
 

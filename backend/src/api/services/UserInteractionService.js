@@ -4,30 +4,30 @@ const { Movie, Series, Category, ParentalControl, SubscriptionPlan } = require('
 const UserInteractionRepository = require('../repositories/UserInteractionRepository');
 
 class UserInteractionService {
-  async getStatus(userId, contentType, contentId) {
-    const record = await UserInteractionRepository.findOne(userId, contentType, Number(contentId));
+  async getStatus(userId, contentType, contentId, profileId = null) {
+    const record = await UserInteractionRepository.findOne(userId, contentType, Number(contentId), profileId);
     return {
       is_liked: record?.is_liked ?? false,
       in_list: record?.in_list ?? false,
     };
   }
 
-  async toggleLike(userId, contentType, contentId) {
-    const record = await UserInteractionRepository.upsertToggleLike(userId, contentType, Number(contentId));
+  async toggleLike(userId, contentType, contentId, profileId = null) {
+    const record = await UserInteractionRepository.upsertToggleLike(userId, contentType, Number(contentId), profileId);
     return { is_liked: record.is_liked };
   }
 
-  async toggleList(userId, contentType, contentId) {
-    const record = await UserInteractionRepository.upsertToggleList(userId, contentType, Number(contentId));
+  async toggleList(userId, contentType, contentId, profileId = null) {
+    const record = await UserInteractionRepository.upsertToggleList(userId, contentType, Number(contentId), profileId);
     return { in_list: record.in_list };
   }
 
-  async getMyList(userId) {
-    return UserInteractionRepository.getList(userId);
+  async getMyList(userId, profileId = null) {
+    return UserInteractionRepository.getList(userId, profileId);
   }
 
-  async getLiked(userId) {
-    return UserInteractionRepository.getLiked(userId);
+  async getLiked(userId, profileId = null) {
+    return UserInteractionRepository.getLiked(userId, profileId);
   }
 
   async chat(userId, message) {
