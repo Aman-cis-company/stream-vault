@@ -65,6 +65,7 @@ interface EpisodeForm {
   duration: string; release_date: string; status: "published" | "draft" | "archived";
   videoMode: "url" | "file" | "local"; video_url: string;
   rating: string;
+  intro_start: string; intro_end: string; recap_start: string; recap_end: string;
 }
 
 const EMPTY_EPISODE: EpisodeForm = {
@@ -72,6 +73,7 @@ const EMPTY_EPISODE: EpisodeForm = {
   duration: "", release_date: "", status: "draft",
   videoMode: "url", video_url: "",
   rating: "",
+  intro_start: "", intro_end: "", recap_start: "", recap_end: "",
 };
 
 // ── Episode Manager ───────────────────────────────────────────────────────────
@@ -132,6 +134,10 @@ function EpisodeManager({ series, onClose }: { series: BackendSeries; onClose: (
       videoMode: ep.provider_name === "local" ? "local" : ep.video_url ? "url" : "file",
       video_url: ep.video_url ?? "",
       rating: ep.rating ? String(ep.rating) : "",
+      intro_start: ep.intro_start !== undefined && ep.intro_start !== null ? String(ep.intro_start) : "",
+      intro_end: ep.intro_end !== undefined && ep.intro_end !== null ? String(ep.intro_end) : "",
+      recap_start: ep.recap_start !== undefined && ep.recap_start !== null ? String(ep.recap_start) : "",
+      recap_end: ep.recap_end !== undefined && ep.recap_end !== null ? String(ep.recap_end) : "",
     });
     setEpThumbFile(null);
     setEpThumbPreview(ep.thumbnail_url ? assetUrl(ep.thumbnail_url) : "");
@@ -141,7 +147,7 @@ function EpisodeManager({ series, onClose }: { series: BackendSeries; onClose: (
   }
 
   async function handleSaveEpisode() {
-    if (!epForm.title.trim()) { toast.error("Episode title is required"); return; }
+    if (!epForm.title.trim()) { toast.error("Title is required"); return; }
     if (!epForm.episode_number) { toast.error("Episode number is required"); return; }
     setSavingEp(true);
     setEpUploadProgress(0);
@@ -165,6 +171,10 @@ function EpisodeManager({ series, onClose }: { series: BackendSeries; onClose: (
       } else {
         fd.append("rating", "");
       }
+      fd.append("intro_start", epForm.intro_start.trim());
+      fd.append("intro_end", epForm.intro_end.trim());
+      fd.append("recap_start", epForm.recap_start.trim());
+      fd.append("recap_end", epForm.recap_end.trim());
       if (epForm.videoMode === "url" && epForm.video_url.trim()) fd.append("video_url", epForm.video_url.trim());
       else if (epForm.videoMode === "file" && epVideoFile) { fd.append("video", epVideoFile); fd.append("provider_name", "bunny"); }
       else if (epForm.videoMode === "local" && epVideoFile) { fd.append("video", epVideoFile); fd.append("provider_name", "local"); }
@@ -346,6 +356,46 @@ function EpisodeManager({ series, onClose }: { series: BackendSeries; onClose: (
                   value={epForm.rating}
                   onChange={(e) => setEpForm({ ...epForm, rating: e.target.value })}
                   placeholder="e.g. 8.5"
+                />
+              </div>
+            </div>
+
+            {/* Intro & Recap Timestamps */}
+            <div className="grid grid-cols-2 gap-3 border-t border-border/50 pt-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Intro Start (sec)</Label>
+                <Input
+                  type="number"
+                  placeholder="e.g. 10"
+                  value={epForm.intro_start}
+                  onChange={(e) => setEpForm({ ...epForm, intro_start: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Intro End (sec)</Label>
+                <Input
+                  type="number"
+                  placeholder="e.g. 85"
+                  value={epForm.intro_end}
+                  onChange={(e) => setEpForm({ ...epForm, intro_end: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Recap Start (sec)</Label>
+                <Input
+                  type="number"
+                  placeholder="e.g. 0"
+                  value={epForm.recap_start}
+                  onChange={(e) => setEpForm({ ...epForm, recap_start: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Recap End (sec)</Label>
+                <Input
+                  type="number"
+                  placeholder="e.g. 45"
+                  value={epForm.recap_end}
+                  onChange={(e) => setEpForm({ ...epForm, recap_end: e.target.value })}
                 />
               </div>
             </div>

@@ -84,6 +84,10 @@ interface MovieForm {
   minimum_age: string;
   warning_flags: WarningFlag[];
   rating: string;
+  intro_start: string;
+  intro_end: string;
+  recap_start: string;
+  recap_end: string;
 }
 
 const EMPTY_FORM: MovieForm = {
@@ -103,6 +107,10 @@ const EMPTY_FORM: MovieForm = {
   minimum_age: "",
   warning_flags: [],
   rating: "",
+  intro_start: "",
+  intro_end: "",
+  recap_start: "",
+  recap_end: "",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -181,6 +189,10 @@ function MoviesPage() {
       minimum_age: movie.minimum_age ? String(movie.minimum_age) : "",
       warning_flags: movie.warning_flags_json ?? [],
       rating: movie.rating ? String(movie.rating) : "",
+      intro_start: movie.intro_start !== undefined && movie.intro_start !== null ? String(movie.intro_start) : "",
+      intro_end: movie.intro_end !== undefined && movie.intro_end !== null ? String(movie.intro_end) : "",
+      recap_start: movie.recap_start !== undefined && movie.recap_start !== null ? String(movie.recap_start) : "",
+      recap_end: movie.recap_end !== undefined && movie.recap_end !== null ? String(movie.recap_end) : "",
     });
     setThumbnailFile(null);
     setThumbnailPreview(movie.thumbnail_url ? assetUrl(movie.thumbnail_url) : "");
@@ -235,6 +247,11 @@ function MoviesPage() {
       } else {
         fd.append("rating", "");
       }
+
+      fd.append("intro_start", form.intro_start.trim());
+      fd.append("intro_end", form.intro_end.trim());
+      fd.append("recap_start", form.recap_start.trim());
+      fd.append("recap_end", form.recap_end.trim());
 
       if (form.videoMode === "url" && form.video_url.trim()) {
         fd.append("video_url", form.video_url.trim());
@@ -709,6 +726,50 @@ function MoviesPage() {
                     </Label>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Intro & Recap Timestamps */}
+            <div className="grid grid-cols-2 gap-4 border-t border-border/50 pt-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="intro_start">Intro Start (sec)</Label>
+                <Input
+                  id="intro_start"
+                  type="number"
+                  placeholder="e.g. 10"
+                  value={form.intro_start}
+                  onChange={(e) => setForm({ ...form, intro_start: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="intro_end">Intro End (sec)</Label>
+                <Input
+                  id="intro_end"
+                  type="number"
+                  placeholder="e.g. 85"
+                  value={form.intro_end}
+                  onChange={(e) => setForm({ ...form, intro_end: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="recap_start">Recap Start (sec)</Label>
+                <Input
+                  id="recap_start"
+                  type="number"
+                  placeholder="e.g. 0"
+                  value={form.recap_start}
+                  onChange={(e) => setForm({ ...form, recap_start: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="recap_end">Recap End (sec)</Label>
+                <Input
+                  id="recap_end"
+                  type="number"
+                  placeholder="e.g. 45"
+                  value={form.recap_end}
+                  onChange={(e) => setForm({ ...form, recap_end: e.target.value })}
+                />
               </div>
             </div>
 

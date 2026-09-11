@@ -3,7 +3,7 @@ import Hls from "hls.js";
 import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   SkipBack, SkipForward, Loader2, RotateCcw,
-  Subtitles, Settings, Check, Globe
+  Subtitles, Settings, Check, Globe, FastForward, X, ChevronRight, ArrowRight
 } from "lucide-react";
 import { assetUrl, apiClient } from "@/services/api";
 import { toast } from "sonner";
@@ -142,6 +142,14 @@ function VideoPreviewTooltip({ src, hoverTime, duration }: VideoPreviewTooltipPr
 
 // ── Unified Video Player Props ────────────────────────────────────────────────
 
+export interface NextEpisodeInfo {
+  id: number;
+  title: string;
+  seasonNumber: number;
+  episodeNumber: number;
+  thumbnailUrl?: string;
+}
+
 export interface VideoPlayerProps {
   src: string;
   poster: string;
@@ -150,23 +158,23 @@ export interface VideoPlayerProps {
   resumeFrom?: number;
   subtitleUrl?: string | null;
   dubbedAudioUrl?: string | null;
+  introStart?: number | null;
+  introEnd?: number | null;
+  recapStart?: number | null;
+  recapEnd?: number | null;
+  nextEpisode?: NextEpisodeInfo | null;
+  onNextEpisode?: () => void;
   onProgress?: (currentTime: number, duration: number) => void;
   onResumeConfirmed?: () => void;
   maxQuality?: string;
 }
 
-export function VideoPlayer({
-  src,
-  poster,
-  title,
-  durationMin = 0,
-  resumeFrom = 0,
-  subtitleUrl,
-  dubbedAudioUrl,
-  onProgress,
-  onResumeConfirmed,
-  maxQuality = "720"
-}: VideoPlayerProps) {
+export function VideoPlayer(props: VideoPlayerProps) {
+  const {
+    src,
+    resumeFrom = 0,
+    title,
+  } = props;
   
   const ytId = isYoutube(src) ? extractYouTubeId(src) : null;
   const isBunnySrc = isBunny(src);
@@ -207,20 +215,7 @@ export function VideoPlayer({
   }
 
   // Otherwise, render Native HLS / Direct HTML5 Player
-  return (
-    <NativeHlsPlayer
-      src={src}
-      poster={poster}
-      title={title}
-      durationMin={durationMin}
-      resumeFrom={resumeFrom}
-      subtitleUrl={subtitleUrl}
-      dubbedAudioUrl={dubbedAudioUrl}
-      onProgress={onProgress}
-      onResumeConfirmed={onResumeConfirmed}
-      maxQuality={maxQuality}
-    />
-  );
+  return <NativeHlsPlayer {...props} />;
 }
 
 // ── Native HLS Player Implementation ──────────────────────────────────────────
@@ -233,6 +228,12 @@ function NativeHlsPlayer({
   resumeFrom = 0,
   subtitleUrl,
   dubbedAudioUrl,
+  introStart,
+  introEnd,
+  recapStart,
+  recapEnd,
+  nextEpisode,
+  onNextEpisode,
   onProgress,
   onResumeConfirmed,
   maxQuality = "720"
@@ -259,6 +260,44 @@ function NativeHlsPlayer({
   const [activeQuality, setActiveQuality] = useState("Auto");
   const [buffering, setBuffering] = useState(true);
   const [hoverTime, setHoverTime] = useState<{ pct: number; label: string } | null>(null);
+
+  // Next Episode & Skip Intro/Recap state
+  const [nextEpCancelled, setNextEpCancelled] = useState(false);
+  const [nextCountdown, setNextCountdown] = useState(10);
+
+  useEffect(() => {
+    setNextEpCancelled(false);
+    setNextCountdown(10);
+  }, [src]);
+
+  const effectiveIntroStart = (introStart !== undefined && introStart !== null) ? introStart : null;
+  const effectiveIntroEnd = (introEnd !== undefined && introEnd !== null) ? introEnd : null;
+  const inIntro = effectiveIntroStart !== null && effectiveIntroEnd !== null && currentTime >= effectiveIntroStart && currentTime < effectiveIntroEnd;
+
+  const effectiveRecapStart = (recapStart !== undefined && recapStart !== null) ? recapStart : null;
+  const effectiveRecapEnd = (recapEnd !== undefined && recapEnd !== null) ? recapEnd : null;
+  const inRecap = effectiveRecapStart !== null && effectiveRecapEnd !== null && currentTime >= effectiveRecapStart && currentTime < effectiveRecapEnd;
+
+  const isNearEnd = duration > 0 && (duration - currentTime <= 15 || (videoRef.current?.ended ?? false));
+  const showNextEpCard = !!(nextEpisode && onNextEpisode && isNearEnd && !nextEpCancelled);
+
+  useEffect(() => {
+    if (!showNextEpCard) {
+      setNextCountdown(10);
+      return;
+    }
+    const timer = setInterval(() => {
+      setNextCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          onNextEpisode?.();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [showNextEpCard, onNextEpisode]);
 
   // Subtitles custom styling states
   const [subtitlesEnabled, setSubtitlesEnabled] = useState(false);
@@ -721,6 +760,83 @@ function NativeHlsPlayer({
             Start over
           </button>
           <button className="ml-1 text-white/40 hover:text-white transition-colors" onClick={() => setShowResumeBanner(false)}>✕</button>
+        </div>
+      )}
+
+      {/* Skip Intro Floating Button */}
+      {inIntro && (
+        <button
+          onClick={() => {
+            const v = videoRef.current;
+            if (v && effectiveIntroEnd !== null) {
+              v.currentTime = effectiveIntroEnd;
+              toast.info("Skipped Intro");
+            }
+          }}
+          className="absolute bottom-20 right-6 z-40 flex items-center gap-2 rounded-lg bg-black/85 hover:bg-black backdrop-blur-md px-4 py-2.5 text-sm font-semibold text-white border border-white/20 shadow-2xl transition-all hover:scale-105 active:scale-95 cursor-pointer"
+        >
+          <FastForward className="size-4 text-primary fill-primary" />
+          <span>Skip Intro</span>
+        </button>
+      )}
+
+      {/* Skip Recap Floating Button */}
+      {inRecap && (
+        <button
+          onClick={() => {
+            const v = videoRef.current;
+            if (v && effectiveRecapEnd !== null) {
+              v.currentTime = effectiveRecapEnd;
+              toast.info("Skipped Recap");
+            }
+          }}
+          className="absolute bottom-20 right-6 z-40 flex items-center gap-2 rounded-lg bg-black/85 hover:bg-black backdrop-blur-md px-4 py-2.5 text-sm font-semibold text-white border border-white/20 shadow-2xl transition-all hover:scale-105 active:scale-95 cursor-pointer"
+        >
+          <FastForward className="size-4 text-primary fill-primary" />
+          <span>Skip Recap</span>
+        </button>
+      )}
+
+      {/* Next Episode Auto-Play Card */}
+      {showNextEpCard && nextEpisode && onNextEpisode && (
+        <div className="absolute bottom-20 right-6 z-50 flex items-center gap-3.5 rounded-xl bg-black/90 backdrop-blur-md border border-white/20 p-3 shadow-2xl max-w-sm">
+          {nextEpisode.thumbnailUrl && (
+            <div className="relative w-24 aspect-video rounded-lg overflow-hidden shrink-0 bg-zinc-900 border border-white/10">
+              <img src={nextEpisode.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                <Play className="size-5 fill-white text-white" />
+              </div>
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between text-xs text-primary font-bold mb-0.5">
+              <span>Next episode in {nextCountdown}s</span>
+              <button
+                onClick={() => setNextEpCancelled(true)}
+                className="text-white/40 hover:text-white transition-colors p-0.5"
+                title="Cancel auto-play"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+            <p className="text-xs font-semibold text-white truncate">{nextEpisode.title}</p>
+            <p className="text-[11px] text-white/50">S{nextEpisode.seasonNumber} E{nextEpisode.episodeNumber}</p>
+
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                onClick={() => onNextEpisode()}
+                className="flex-1 rounded-md bg-white text-black text-xs font-bold py-1 px-3 hover:bg-white/90 transition-all flex items-center justify-center gap-1 cursor-pointer"
+              >
+                <Play className="size-3 fill-black text-black" /> Play Now
+              </button>
+              <button
+                onClick={() => setNextEpCancelled(true)}
+                className="rounded-md bg-white/10 hover:bg-white/20 text-white text-xs font-medium py-1 px-2.5 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

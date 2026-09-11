@@ -33,6 +33,7 @@ class MovieService {
       provider_video_id, video_url, duration, release_date,
       is_featured, status, language, content_rating,
       is_age_restricted, minimum_age, warning_flags_json,
+      intro_start, intro_end, recap_start, recap_end,
     } = data;
 
     let categoryIds = [];
@@ -127,6 +128,10 @@ class MovieService {
       is_age_restricted: is_age_restricted || false,
       minimum_age: minimum_age || null,
       warning_flags_json: warning_flags_json || null,
+      intro_start: (intro_start !== undefined && intro_start !== '' && intro_start !== null && !isNaN(Number(intro_start))) ? Number(intro_start) : null,
+      intro_end: (intro_end !== undefined && intro_end !== '' && intro_end !== null && !isNaN(Number(intro_end))) ? Number(intro_end) : null,
+      recap_start: (recap_start !== undefined && recap_start !== '' && recap_start !== null && !isNaN(Number(recap_start))) ? Number(recap_start) : null,
+      recap_end: (recap_end !== undefined && recap_end !== '' && recap_end !== null && !isNaN(Number(recap_end))) ? Number(recap_end) : null,
       created_by: userId,
       updated_by: userId,
     });
@@ -181,6 +186,12 @@ class MovieService {
     }
 
     const updateData = { ...data, updated_by: userId };
+    ['intro_start', 'intro_end', 'recap_start', 'recap_end', 'duration', 'rating', 'minimum_age'].forEach(f => {
+      if (f in updateData) {
+        const val = updateData[f];
+        updateData[f] = (val !== '' && val !== null && val !== undefined && !isNaN(Number(val))) ? Number(val) : null;
+      }
+    });
     if (categoryIds !== undefined) {
       updateData.category_id = categoryIds[0] || null;
     }

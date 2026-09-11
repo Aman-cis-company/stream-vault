@@ -252,6 +252,20 @@ function WatchEpisodeInner() {
                 resumeFrom={resumeFrom}
                 subtitleUrl={currentEp.subtitle_url}
                 dubbedAudioUrl={currentEp.dubbed_audio_url}
+                introStart={currentEp.intro_start}
+                introEnd={currentEp.intro_end}
+                recapStart={currentEp.recap_start}
+                recapEnd={currentEp.recap_end}
+                nextEpisode={nextEp ? {
+                  id: nextEp.id,
+                  title: nextEp.title,
+                  seasonNumber: nextEp.season_number,
+                  episodeNumber: nextEp.episode_number,
+                  thumbnailUrl: episodeThumbnail(nextEp),
+                } : null}
+                onNextEpisode={() => {
+                  if (nextEp) selectEpisode(nextEp);
+                }}
                 onProgress={handleProgress}
                 onResumeConfirmed={() => {
                   lastSavedRef.current = 0;

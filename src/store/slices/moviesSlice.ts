@@ -37,6 +37,10 @@ export interface BackendMovie {
   dubbed_audio_url?: string | null;
   rating?: number | null;
   progress?: number | null;
+  intro_start?: number | null;
+  intro_end?: number | null;
+  recap_start?: number | null;
+  recap_end?: number | null;
 }
 
 interface MoviesState {

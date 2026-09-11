@@ -43,6 +43,10 @@ export interface Title {
   dubbed_audio_url?: string | null;
   categories?: { id: number; name: string; slug: string }[];
   category_id?: number | null;
+  intro_start?: number | null;
+  intro_end?: number | null;
+  recap_start?: number | null;
+  recap_end?: number | null;
 }
 
 export interface Plan {

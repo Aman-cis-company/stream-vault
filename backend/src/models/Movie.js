@@ -105,6 +105,26 @@ const Movie = sequelize.define('Movie', {
     allowNull: true,
     defaultValue: null,
   },
+  intro_start: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: null,
+  },
+  intro_end: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: null,
+  },
+  recap_start: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: null,
+  },
+  recap_end: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: null,
+  },
   created_by: {
     type: DataTypes.INTEGER.UNSIGNED,
     allowNull: true,

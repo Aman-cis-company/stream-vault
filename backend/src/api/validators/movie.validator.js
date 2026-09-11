@@ -29,6 +29,10 @@ const createSchema = Joi.object({
       Joi.string().max(500),
     )
     .optional().allow(null, '').label('Warning flags'),
+  intro_start: Joi.number().integer().min(0).optional().allow(null, '').label('Intro start'),
+  intro_end: Joi.number().integer().min(0).optional().allow(null, '').label('Intro end'),
+  recap_start: Joi.number().integer().min(0).optional().allow(null, '').label('Recap start'),
+  recap_end: Joi.number().integer().min(0).optional().allow(null, '').label('Recap end'),
 });
 
 const updateSchema = Joi.object({
@@ -57,6 +61,10 @@ const updateSchema = Joi.object({
       Joi.string().max(500),
     )
     .optional().allow(null, '').label('Warning flags'),
+  intro_start: Joi.number().integer().min(0).optional().allow(null, '').label('Intro start'),
+  intro_end: Joi.number().integer().min(0).optional().allow(null, '').label('Intro end'),
+  recap_start: Joi.number().integer().min(0).optional().allow(null, '').label('Recap start'),
+  recap_end: Joi.number().integer().min(0).optional().allow(null, '').label('Recap end'),
 }).min(1);
 
 const validate = (schema) => (req, res, next) => {
@@ -73,7 +81,8 @@ const validate = (schema) => (req, res, next) => {
     return res.status(422).json({ success: false, message: 'Validation failed.', errors });
   }
   ['category_id', 'category_ids', 'description', 'provider_video_id', 'video_url', 'duration', 'release_date',
-   'language', 'content_rating', 'minimum_age', 'warning_flags_json', 'rating'].forEach((key) => {
+   'language', 'content_rating', 'minimum_age', 'warning_flags_json', 'rating',
+   'intro_start', 'intro_end', 'recap_start', 'recap_end'].forEach((key) => {
     if (value[key] === '') value[key] = null;
   });
   // Parse category_ids if it came in as a JSON string

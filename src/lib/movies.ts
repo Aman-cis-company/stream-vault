@@ -102,6 +102,10 @@ export function mapMovieToTitle(movie: BackendMovie): Title {
     progress: movie.progress !== undefined && movie.progress !== null ? Number(movie.progress) : undefined,
     categories: (movie as any).categories || [],
     category_id: movie.category_id || null,
+    intro_start: movie.intro_start ?? null,
+    intro_end: movie.intro_end ?? null,
+    recap_start: movie.recap_start ?? null,
+    recap_end: movie.recap_end ?? null,
   };
 }
 

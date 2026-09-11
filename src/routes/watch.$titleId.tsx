@@ -313,6 +313,10 @@ function WatchInner() {
             resumeFrom={resumeFrom}
             subtitleUrl={title.subtitle_url}
             dubbedAudioUrl={title.dubbed_audio_url}
+            introStart={title.intro_start}
+            introEnd={title.intro_end}
+            recapStart={title.recap_start}
+            recapEnd={title.recap_end}
             onProgress={handleProgress}
             onResumeConfirmed={() => {
               lastSavedRef.current = 0;

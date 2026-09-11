@@ -19,6 +19,10 @@ const Episode = sequelize.define('Episode', {
   release_date: { type: DataTypes.DATEONLY, allowNull: true },
   subtitle_url: { type: DataTypes.STRING(500), allowNull: true, defaultValue: null },
   dubbed_audio_url: { type: DataTypes.STRING(500), allowNull: true, defaultValue: null },
+  intro_start: { type: DataTypes.INTEGER, allowNull: true, defaultValue: null },
+  intro_end: { type: DataTypes.INTEGER, allowNull: true, defaultValue: null },
+  recap_start: { type: DataTypes.INTEGER, allowNull: true, defaultValue: null },
+  recap_end: { type: DataTypes.INTEGER, allowNull: true, defaultValue: null },
   created_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
   updated_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
 }, {

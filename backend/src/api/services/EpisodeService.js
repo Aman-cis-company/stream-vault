@@ -25,7 +25,7 @@ class EpisodeService {
     const series = await SeriesRepository.findById(seriesId);
     if (!series) { const e = new Error('Series not found'); e.statusCode = 404; throw e; }
 
-    const { season_number = 1, episode_number, title, description, duration, release_date, status, provider_name, provider_video_id, video_url, rating } = data;
+    const { season_number = 1, episode_number, title, description, duration, release_date, status, provider_name, provider_video_id, video_url, rating, intro_start, intro_end, recap_start, recap_end } = data;
  
     if (!episode_number) { const e = new Error('episode_number is required'); e.statusCode = 422; throw e; }
  
@@ -85,6 +85,10 @@ class EpisodeService {
       rating: rating || null,
       status: status || 'draft',
       release_date: release_date || null,
+      intro_start: (intro_start !== undefined && intro_start !== '' && intro_start !== null && !isNaN(Number(intro_start))) ? Number(intro_start) : null,
+      intro_end: (intro_end !== undefined && intro_end !== '' && intro_end !== null && !isNaN(Number(intro_end))) ? Number(intro_end) : null,
+      recap_start: (recap_start !== undefined && recap_start !== '' && recap_start !== null && !isNaN(Number(recap_start))) ? Number(recap_start) : null,
+      recap_end: (recap_end !== undefined && recap_end !== '' && recap_end !== null && !isNaN(Number(recap_end))) ? Number(recap_end) : null,
       created_by: userId,
       updated_by: userId,
     });
@@ -120,7 +124,12 @@ class EpisodeService {
     if (!episode) { const e = new Error('Episode not found'); e.statusCode = 404; throw e; }
  
     const updateData = { ...data, updated_by: userId };
-    if (updateData.rating === '') updateData.rating = null;
+    ['intro_start', 'intro_end', 'recap_start', 'recap_end', 'duration', 'rating'].forEach(f => {
+      if (f in updateData) {
+        const val = updateData[f];
+        updateData[f] = (val !== '' && val !== null && val !== undefined && !isNaN(Number(val))) ? Number(val) : null;
+      }
+    });
 
     if (files?.thumbnail?.[0]) updateData.thumbnail_url = `/uploads/thumbnails/${files.thumbnail[0].filename}`;
 
